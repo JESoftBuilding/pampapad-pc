@@ -151,7 +151,7 @@ public class ValidatorEdgeTests
     }
 
     [Fact]
-    public void Every_problem_is_reported_in_file_order_with_the_index_it_has_in_the_file()
+    public void Every_problem_is_reported_with_the_index_it_has_in_the_file()
     {
         string json = """
             {
