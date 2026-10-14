@@ -181,7 +181,8 @@ public class DispatcherRunTests
         };
 
         rig.Windows.Press(Short);
-        ActionResult second = await await again.Task;
+        // Con tope: si Finished nunca llega (la acción no corrió), la prueba falla en vez de colgarse.
+        ActionResult second = await (await again.Task.WaitAsync(TimeSpan.FromSeconds(5))).WaitAsync(TimeSpan.FromSeconds(5));
 
         Assert.True(second.Ok);
         Assert.Equal(2, rig.Marker.Runs.Count);
