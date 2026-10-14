@@ -52,6 +52,9 @@ internal sealed class Composition : IAsyncDisposable
 
     public Library Library { get; private set; } = null!;
 
+    /// <summary>Lo que el programa sabe ahora. La prueba de humo lo lee: los problemas del estado incluyen los de los pasos, que la biblioteca sola no ve.</summary>
+    public AppState Snapshot => _state.Current;
+
     public static Composition Build(string? root, SynchronizationContext ui) =>
         Build(
             DataRoot.LibraryFolder(root, AppIdentity.Dev, Environment.GetEnvironmentVariable, AppContext.BaseDirectory),

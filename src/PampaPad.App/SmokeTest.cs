@@ -4,7 +4,7 @@ namespace PampaPad.App;
 
 /// <summary>
 /// --smoke-test: arma todo sin bandeja con la biblioteca de ejemplo, comprueba que cargue limpia y que el registro
-/// llegue al disco, y sale con 0 (05 §9). Sale con 2 si la biblioteca de ejemplo no carga limpia.
+/// llegue al disco, y sale con 0 (05 §9). Sale con 2 si la biblioteca de ejemplo no carga limpia o alguna de sus acciones tiene un problema.
 /// </summary>
 internal static class SmokeTest
 {
@@ -16,11 +16,15 @@ internal static class SmokeTest
             var composition = Composition.Build(exampleFolder, new SynchronizationContext(), folder, headless: true);
             composition.StartAsync().GetAwaiter().GetResult();
             Library library = composition.Library;
-            composition.Log.Info("smoke", $"Biblioteca de ejemplo: {exampleFolder}. Estado: {library.Status}; problemas: {library.Problems.Count}");
+
+            // Los problemas del estado son los de la carga más los de los pasos (los junta el Dispatcher): con un catálogo sin obs.marker
+            // la biblioteca de ejemplo cargaría limpia y ninguna de sus acciones correría.
+            IReadOnlyList<Problem> problems = composition.Snapshot.Problems;
+            composition.Log.Info("smoke", $"Biblioteca de ejemplo: {exampleFolder}. Estado: {library.Status}; problemas: {problems.Count}");
             composition.DisposeAsync().AsTask().GetAwaiter().GetResult();
-            if (library.Status != LibraryStatus.Loaded || library.Problems.Count > 0)
+            if (library.Status != LibraryStatus.Loaded || library.Problems.Count > 0 || problems.Count > 0)
             {
-                foreach (Problem problem in library.Problems)
+                foreach (Problem problem in problems)
                 {
                     Console.Error.WriteLine($"La biblioteca de ejemplo tiene un problema en \"{problem.Where}\": {problem.Message}");
                 }
