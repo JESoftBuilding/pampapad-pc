@@ -55,7 +55,7 @@ public sealed class Dispatcher
             var problems = new List<Problem>(_library.Problems);
             foreach ((int index, Action action) in config.Actions.Indexed())
             {
-                problems.AddRange(_executor.Check(action).Select(problem => problem with { Where = $"actions[{index}].{problem.Where}" }));
+                problems.AddRange(CheckAction(action, index));
             }
 
             (int pageIndex, Page? page) = config.Pages.Indexed().FirstOrDefault(candidate => navigation.BasePage.Length > 0 && candidate.Item.Id == navigation.BasePage);
@@ -68,8 +68,7 @@ public sealed class Dispatcher
             // Sin biblioteca la configuración está vacía: la página vacía hace que cada fuente suelte todo.
             foreach (IInputSource source in sources)
             {
-                problems.AddRange(source.Apply(page ?? new Page(), config.Hotkeys ?? []).Select(problem =>
-                    problem.Where.StartsWith("keys[", StringComparison.Ordinal) ? problem with { Where = $"pages[{pageIndex}].{problem.Where}" } : problem));
+                problems.AddRange(ApplyTo(source, page ?? new Page(), config.Hotkeys ?? [], pageIndex));
             }
 
             // El validador y el ejecutor informan los dos un paso sin "type": queda una vez.
@@ -81,6 +80,34 @@ public sealed class Dispatcher
                 BasePage = navigation.BasePage,
                 ActivePage = navigation.ActivePage,
             });
+        }
+    }
+
+    // Refresh corre en el arranque y en cada recarga: un tipo de paso o una fuente que tiren no pueden dejar al programa sin teclas ni sin arrancar.
+    private IEnumerable<Problem> CheckAction(Action action, int index)
+    {
+        try
+        {
+            return [.. _executor.Check(action).Select(problem => problem with { Where = $"actions[{index}].{problem.Where}" })];
+        }
+        catch (Exception error)
+        {
+            _log.Error("dispatcher", $"No se pudo revisar la acción {action.Id}: {error.Message}", ErrorCodes.InternalError);
+            return [new Problem($"actions[{index}]", ProblemCodes.ParameterInvalid, $"No se pudo revisar esta acción: {error.Message}", Severity.Error)];
+        }
+    }
+
+    private IEnumerable<Problem> ApplyTo(IInputSource source, Page page, IReadOnlyList<HotkeyBinding> hotkeys, int pageIndex)
+    {
+        try
+        {
+            return [.. source.Apply(page, hotkeys).Select(problem =>
+                problem.Where.StartsWith("keys[", StringComparison.Ordinal) ? problem with { Where = $"pages[{pageIndex}].{problem.Where}" } : problem)];
+        }
+        catch (Exception error)
+        {
+            _log.Error("dispatcher", $"La fuente {source.Id} no pudo tomar sus teclas: {error.Message}", ErrorCodes.InternalError);
+            return [new Problem("", ErrorCodes.InternalError, $"La fuente {source.Id} no pudo tomar sus teclas: {error.Message}", Severity.Error)];
         }
     }
 
@@ -126,7 +153,8 @@ public sealed class Dispatcher
         Action? action = _library.Current.FindAction(actionId);
         if (action is null)
         {
-            return Task.FromResult(Finish(Rejected(actionId, invocation, ErrorCodes.ConfigInvalid, $"La acción \"{actionId}\" no existe.")));
+            // Finished siempre sale de un hilo del grupo: el de una fuente (el de los atajos) no se presta a lo que haga quien lo escucha.
+            return Task.Run(() => Finish(Rejected(actionId, invocation, ErrorCodes.ConfigInvalid, $"La acción \"{actionId}\" no existe.")));
         }
 
         var run = new Run(invocation.RunId, invocation.RequestedBy, new CancellationTokenSource());
