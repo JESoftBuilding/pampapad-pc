@@ -264,7 +264,8 @@ public class DispatcherTests
         rig.Windows.Press(Short);
         await Poll.Until(() => rig.Finished.Count == 2);
 
-        Assert.Contains(rig.Log.Recent(), entry => entry.Code == ErrorCodes.InternalError && entry.Message.Contains("roto a propósito", StringComparison.Ordinal));
+        // El Enqueue del Rig sube Finished.Count antes de que el suscriptor que tira desenrolle y el catch escriba la línea: se espera la línea.
+        await Poll.Until(() => rig.Log.Recent().Any(entry => entry.Code == ErrorCodes.InternalError && entry.Message.Contains("roto a propósito", StringComparison.Ordinal)));
     }
 
     private sealed class Rig : IAsyncDisposable
