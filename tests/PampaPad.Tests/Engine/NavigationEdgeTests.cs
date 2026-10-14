@@ -53,6 +53,14 @@ public class NavigationEdgeTests
         Assert.Equal(expected, Navigation.Resolve(new("fuera", null, RecordingState.Stopped, "grabacion", destination, Cycle)).BasePage);
     }
 
+    [Theory]
+    [InlineData("next")]
+    [InlineData("previous")]
+    public void Without_pages_in_the_cycle_next_and_previous_stay_where_they_are_and_not_on_the_main_page(string destination)
+    {
+        Assert.Equal("luces", Navigation.Resolve(new("luces", null, RecordingState.Stopped, "grabacion", destination, [])).BasePage);
+    }
+
     [Fact]
     public void Going_to_the_page_it_is_already_on_changes_nothing()
     {
