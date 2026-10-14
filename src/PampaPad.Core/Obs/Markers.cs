@@ -33,12 +33,19 @@ public static class Markers
         return response.Code switch
         {
             NoAnswer when response.Comment == ErrorCodes.ObsTimeout => new Failure(ErrorCodes.ObsTimeout, "OBS no contestó: la marca no entró."),
+            // Cancelar no es un OBS ausente (01 §4.5). Y no se sabe si la marca llegó a salir: el pedido pudo irse antes del corte.
+            NoAnswer when response.Comment == ErrorCodes.Cancelled => new Failure(ErrorCodes.Cancelled, "Se canceló: no se sabe si la marca entró."),
             NoAnswer => new Failure(ErrorCodes.ObsDisconnected, NoObs),
             NotRecording => new Failure(ErrorCodes.MarkerNotRecording, "No estás grabando: la marca no entró."),
             ProcessingFailed when recording == RecordingState.Paused => new Failure(ErrorCodes.MarkerPaused, "Estás en pausa: la marca no entró."),
             ProcessingFailed => new Failure(ErrorCodes.MarkerRejected, "OBS rechazó la marca: el formato de grabación no admite capítulos."),
             UnknownRequest => new Failure(ErrorCodes.MarkerUnsupported, Unsupported),
-            _ => new Failure(ErrorCodes.ObsRequestFailed, $"OBS rechazó la marca (código {response.Code}): {response.Comment}"),
+            _ => new Failure(ErrorCodes.ObsRequestFailed, Rejected(response)),
         };
     }
+
+    // Algunos códigos de OBS vienen sin comentario: sin él no queda un "(código 600): " colgando.
+    private static string Rejected(ObsResponse response) => string.IsNullOrWhiteSpace(response.Comment)
+        ? $"OBS rechazó la marca (código {response.Code})."
+        : $"OBS rechazó la marca (código {response.Code}): {response.Comment}";
 }
