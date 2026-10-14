@@ -109,8 +109,10 @@ public sealed class Log : IAsyncDisposable
             File.AppendAllText(Path.Combine(_folder, FileName(day)), line, Utf8);
             _diskFailed = false;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex)
         {
+            // Cualquier falla, no sólo las de disco: si el consumidor único muriera, FlushAsync no volvería nunca
+            // y DisposeAsync tiraría al apagar. El registro no puede tirar abajo al programa.
             if (!_diskFailed)
             {
                 _diskFailed = true;
@@ -126,9 +128,19 @@ public sealed class Log : IAsyncDisposable
         {
             var name = Path.GetFileNameWithoutExtension(file);
             var isOurs = DateOnly.TryParseExact(name, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day);
-            if (isOurs && day < oldestKept)
+            if (!isOurs || day >= oldestKept)
+            {
+                continue;
+            }
+
+            try
             {
                 File.Delete(file);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Un archivo viejo abierto en un editor no puede frenar el registro de hoy: se avisa y se intenta mañana.
+                Remember(new LogEntry(_clock.GetLocalNow(), LogLevel.Warning, "log", $"No se pudo borrar {Path.GetFileName(file)}: {ex.Message}"));
             }
         }
     }
