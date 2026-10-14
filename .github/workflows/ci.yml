@@ -25,3 +25,20 @@ jobs:
       - name: Verificar
         shell: powershell
         run: ./build/verify.ps1
+
+  # Lo mismo que hace el workflow publish, sin subir nada: publicar, revisar las rutas, la prueba de humo y empaquetar.
+  # Así un paquete que no se puede armar se ve en la rama y no el día de la etiqueta. Corre aparte de verify, en paralelo.
+  package:
+    runs-on: windows-latest
+    env:
+      DOTNET_NOLOGO: true
+      # Como en publish: vpk es una herramienta de .NET y si pide un runtime que el runner no tiene, usa el que hay.
+      DOTNET_ROLL_FORWARD: Major
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Empaquetar sin subir
+        shell: powershell
+        run: ./build/publish.ps1 -Version 0.0.1
