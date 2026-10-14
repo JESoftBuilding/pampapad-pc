@@ -38,12 +38,13 @@ public sealed class UpdateCycleTests : IAsyncLifetime
         var loop = Cycle().KeepCheckingAsync(stop.Token);
 
         _clock.Advance(TimeSpan.FromSeconds(14));
-        Assert.Equal(0, _feed.Finds);
+        Assert.False(await _feed.WaitForFindAsync(TimeSpan.FromMilliseconds(250)));
 
         _clock.Advance(TimeSpan.FromSeconds(1));
         Assert.True(await _feed.WaitForFindAsync());
 
         _clock.Advance(TimeSpan.FromHours(6) - TimeSpan.FromSeconds(1));
+        Assert.False(await _feed.WaitForFindAsync(TimeSpan.FromMilliseconds(250)));
         Assert.Equal(1, _feed.Finds);
 
         _clock.Advance(TimeSpan.FromSeconds(1));

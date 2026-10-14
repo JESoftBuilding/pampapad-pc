@@ -22,7 +22,10 @@ internal sealed class FakeUpdateFeed
     public UpdateFeed AsFeed() => new(Find, Download, Apply);
 
     /// <summary>Espera a la próxima búsqueda. Falso si no llegó en cinco segundos.</summary>
-    public Task<bool> WaitForFindAsync() => _found.WaitAsync(TimeSpan.FromSeconds(5));
+    public Task<bool> WaitForFindAsync() => WaitForFindAsync(TimeSpan.FromSeconds(5));
+
+    /// <summary>Espera a la próxima búsqueda con el tope dado. Falso si no llegó.</summary>
+    public Task<bool> WaitForFindAsync(TimeSpan patience) => _found.WaitAsync(patience);
 
     private Task<Result<string?>> Find(CancellationToken ct)
     {
