@@ -20,6 +20,18 @@ public class DispatcherEdgeTests
         }
         """;
 
+    private const string WithGeneral = """
+        {
+          "version": 1,
+          "pages": [ { "id": "p", "name": "P", "keys": [ { "position": 5, "label": "Short", "action": "marca-short" } ] } ],
+          "actions": [
+            { "id": "marca-short", "name": "Marca: short", "steps": [ { "type": "obs.marker", "marker": "short" } ] },
+            { "id": "marca-largo", "name": "Marca: largo", "steps": [ { "type": "obs.marker", "marker": "largo" } ] }
+          ],
+          "hotkeys": [ { "hotkey": "Ctrl+Alt+X", "action": "marca-short" }, { "hotkey": "Ctrl+Alt+Y", "action": "marca-largo" } ]
+        }
+        """;
+
     private const string WithNulls = """
         {
           "version": 1,
@@ -36,10 +48,11 @@ public class DispatcherEdgeTests
     [InlineData(Gesture.Hold)]
     public async Task Only_a_tap_runs_an_action(Gesture gesture)
     {
-        await using var rig = new DispatcherRig(DispatcherRig.Example);
+        await using var rig = new DispatcherRig(WithGeneral);
 
         rig.Dispatcher.Receive(new InputEvent("console", "key.5", gesture));
-        rig.Dispatcher.Receive(new InputEvent("hotkeys", "hotkey", gesture));
+        rig.Dispatcher.Receive(new InputEvent("hotkeys", "hotkey", gesture, 0));
+        rig.Dispatcher.Receive(new InputEvent("hotkeys", "hotkey", gesture, 1));
 
         Assert.Empty(rig.Marker.Runs);
         Assert.Empty(rig.State.Current.Running);
@@ -69,18 +82,33 @@ public class DispatcherEdgeTests
 
     [Theory]
     [InlineData(-1)]
-    [InlineData(0)]
-    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
     [InlineData(99)]
+    [InlineData(int.MaxValue)]
+    [InlineData(int.MinValue)]
     public async Task A_general_hotkey_that_is_not_in_the_list_does_nothing(int place)
     {
-        await using var rig = new DispatcherRig(DispatcherRig.Example);
+        await using var rig = new DispatcherRig(WithGeneral);
 
         rig.Dispatcher.Receive(new InputEvent("hotkeys", "hotkey", Gesture.Tap, place));
 
         Assert.Empty(rig.Marker.Runs);
         Assert.Empty(rig.Finished);
         Assert.DoesNotContain(rig.Log.Recent(), entry => entry.Level == LogLevel.Error);
+    }
+
+    [Theory]
+    [InlineData(0, "marca-short")]
+    [InlineData(1, "marca-largo")]
+    public async Task A_general_hotkey_runs_the_action_at_its_place_in_the_list(int place, string expected)
+    {
+        await using var rig = new DispatcherRig(WithGeneral);
+
+        rig.Dispatcher.Receive(new InputEvent("hotkeys", "hotkey", Gesture.Tap, place));
+        await Poll.Until(() => rig.Finished.Count == 1);
+
+        Assert.Equal(expected, Assert.Single(rig.Finished).ActionId);
     }
 
     [Fact]
