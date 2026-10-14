@@ -34,6 +34,9 @@ internal sealed class Composition : IAsyncDisposable
     private readonly ObsClient _obs;
     private readonly Updater _updater;
     private IDisposable? _painter;
+    private Dispatcher? _dispatcher;
+    private HotkeySource? _hotkeys;
+    private SystemHotkeys? _systemHotkeys;
 
     private Composition(Log log, StateStore state, ObsClient obs, Updater updater)
     {
@@ -74,21 +77,29 @@ internal sealed class Composition : IAsyncDisposable
 
         var state = new StateStore(log);
 
-        // Provisorio: en E3-7 lo reemplaza el Dispatcher, que además junta los problemas de los pasos y de los atajos.
-        void PublishLibrary() => state.Update(s => s with
-        {
-            Library = new LibraryState(library.Status, library.Folder),
-            Problems = library.Problems,
-        });
-        library.Changed += _ => PublishLibrary();
-        PublishLibrary();
-
         // OBS: la dirección y la clave salen del archivo del propio OBS en cada intento (03 §2). El programa no guarda la clave.
         var obsFiles = new ObsFiles(ObsFiles.DefaultFolder);
         var obs = new ObsClient(obsFiles.Address, obsFiles.Password, state, log, clock, ObsIsRunning);
+
+        // El Dispatcher publica la biblioteca en el estado al construirse y en cada recarga, junto con los problemas de los pasos y de los atajos.
+        IReadOnlyList<IStepType> catalog = Catalog.Build(obs, state);
+        var executor = new Executor(catalog, clock);
+        var dispatcher = new Dispatcher(library, state, executor, log);
         var updater = new Updater(state, settings, log, clock);
         var composition = new Composition(log, state, obs, updater);
         composition.Library = library;
+        composition._dispatcher = dispatcher;
+        if (!headless && (settings.Current.HotkeysEnabled ?? !AppIdentity.Dev))
+        {
+            // Los atajos son globales. La copia de desarrollo no los toma, para no sacárselos a la instalada (05 §10);
+            // se encienden a mano con "hotkeysEnabled": true en su local.json. La prueba de humo tampoco los toma.
+            var systemHotkeys = new SystemHotkeys();
+            var hotkeys = new HotkeySource(systemHotkeys, state, log);
+            dispatcher.Attach(hotkeys);
+            composition._systemHotkeys = systemHotkeys;
+            composition._hotkeys = hotkeys;
+        }
+
         if (!headless)
         {
             Application.ThreadException += (_, e) =>
@@ -147,6 +158,11 @@ internal sealed class Composition : IAsyncDisposable
     {
         _loops.Add(_obs.KeepConnectedAsync(_life.Token));
         _loops.Add(_updater.KeepCheckingAsync(_life.Token));
+        if (_hotkeys is not null)
+        {
+            _loops.Add(_hotkeys.StartAsync(_life.Token));
+        }
+
         if (Tray is not null)
         {
             SystemEvents.PowerModeChanged += OnPowerModeChanged;
@@ -164,6 +180,7 @@ internal sealed class Composition : IAsyncDisposable
         _painter?.Dispose();
         Tray?.Dispose();
         _life.Cancel();
+        _dispatcher?.CancelAll();
         try
         {
             await Task.WhenAll(_loops).WaitAsync(ShutdownLimit).ConfigureAwait(false);
@@ -177,6 +194,13 @@ internal sealed class Composition : IAsyncDisposable
             Log.Error("app", "Un bucle terminó con error: " + ex.Message, ErrorCodes.InternalError);
         }
 
+        // El orden de 01 §4.3: cancelar, esperar los bucles, soltar los atajos y recién después cerrar OBS.
+        if (_hotkeys is not null)
+        {
+            await _hotkeys.DisposeAsync().ConfigureAwait(false);
+        }
+
+        _systemHotkeys?.Dispose();
         await _obs.DisposeAsync().ConfigureAwait(false);
         await _state.DisposeAsync().ConfigureAwait(false);
         Log.Info("app", "Salida ordenada");
