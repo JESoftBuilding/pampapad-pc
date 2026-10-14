@@ -28,6 +28,10 @@ jobs:
 
   # Lo mismo que hace el workflow publish, sin subir nada: publicar, revisar las rutas, la prueba de humo y empaquetar.
   # Así un paquete que no se puede armar se ve en la rama y no el día de la etiqueta. Corre aparte de verify, en paralelo.
+  # La versión es 999.0.0 a propósito: tiene que ser mayor que cualquier versión publicada. publish.ps1 baja la última
+  # con vpk download y vpk pack rechaza una versión menor o igual (FTL "There is a release in channel win which is
+  # equal or greater"). Con la v0.1.0 ya publicada, una versión baja pondría el CI en rojo en cada empuje. Así, además,
+  # el trabajo arma el paquete de diferencias contra la última versión publicada, como lo hará la v0.1.1.
   package:
     runs-on: windows-latest
     env:
@@ -41,4 +45,4 @@ jobs:
           global-json-file: global.json
       - name: Empaquetar sin subir
         shell: powershell
-        run: ./build/publish.ps1 -Version 0.0.1
+        run: ./build/publish.ps1 -Version 999.0.0
