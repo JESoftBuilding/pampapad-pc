@@ -158,6 +158,12 @@ public class ObsMessagesTests
     [InlineData("[1,2,3]")]
     [InlineData("""{"d":{}}""")]
     [InlineData("""{"op":"siete","d":{}}""")]
+    [InlineData("")]
+    [InlineData("""{"op":7,"d":""")]
+    [InlineData("null")]
+    [InlineData("5")]
+    [InlineData("""{"op":1.5,"d":{}}""")]
+    [InlineData("""{"op":99999999999,"d":{}}""")]
     public void What_is_not_a_message_is_rejected(string text)
     {
         Assert.False(ObsMessages.TryParse(Encoding.UTF8.GetBytes(text), out _));
