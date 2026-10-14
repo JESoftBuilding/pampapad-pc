@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PampaPad.App/PampaPad.App.csproj" />
+    <Project Path="src/PampaPad.Core/PampaPad.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PampaPad.Tests/PampaPad.Tests.csproj" />
+  </Folder>
+</Solution>

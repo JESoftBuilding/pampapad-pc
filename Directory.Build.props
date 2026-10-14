@@ -1,0 +1,28 @@
+<Project>
+
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Avisos de vulnerabilidades de NuGet: una que se publique mañana no puede romper el build de hoy. Se ven, no frenan. -->
+    <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+    <!-- La PC de desarrollo tiene dos orígenes de NuGet (nuget.org y el de Visual Studio) y la versión central avisa por eso. -->
+    <NoWarn>$(NoWarn);NU1507</NoWarn>
+    <!-- Mismo código, mismos bytes: lo que se publica no depende de la PC ni de la hora en que se compiló. -->
+    <Deterministic>true</Deterministic>
+    <!-- La versión real la pone la etiqueta al publicar, con -p:Version. -->
+    <Version>0.0.0</Version>
+    <Product>PampaPad</Product>
+    <Company>JESoftBuilding</Company>
+  </PropertyGroup>
+
+  <!--
+    En GitHub Actions y al publicar, las rutas del código y del .pdb se guardan relativas al repo: las DLL publicadas
+    no llevan rutas del disco de quien compiló. En la copia de desarrollo quedan completas, que sirven para depurar.
+  -->
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true' Or '$(_IsPublishing)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+</Project>
