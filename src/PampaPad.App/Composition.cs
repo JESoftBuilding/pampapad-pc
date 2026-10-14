@@ -84,7 +84,7 @@ internal sealed class Composition : IAsyncDisposable
             {
                 var now = state.Current;
                 tray.Paint(TraySummary.From(now));
-                tray.PaintUpdate(now.Update);
+                tray.PaintUpdate(TraySummary.UpdateItems(now));
             }
 
             Repaint();

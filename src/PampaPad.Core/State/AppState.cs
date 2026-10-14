@@ -9,7 +9,10 @@ public enum UpdatePhase
     Applying,
 }
 
-/// <summary>En qué anda la actualización. Version es la que se ofrece; Detail, por qué no se instaló la última vez que se intentó.</summary>
+/// <summary>
+/// En qué anda la actualización. Version es la que se ofrece; Detail, la última falla al bajarla o al dejarla instalada.
+/// Que RestartPolicy no deje instalar no va acá: se calcula del estado cada vez (TraySummary.UpdateItems).
+/// </summary>
 public sealed record UpdateState(UpdatePhase Phase, string? Version = null, string? Detail = null)
 {
     public static UpdateState Idle { get; } = new(UpdatePhase.Idle);

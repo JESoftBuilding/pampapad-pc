@@ -57,24 +57,22 @@ internal sealed class Tray : ApplicationContext
         _reconnect.Visible = summary.CanReconnect;
     }
 
-    /// <summary>Los dos ítems de actualización, que sólo existen en la copia instalada. Sólo desde el hilo de la interfaz.</summary>
-    public void PaintUpdate(UpdateState update)
+    /// <summary>
+    /// Pinta los dos ítems de actualización que calculó TraySummary.UpdateItems; sólo existen en la copia instalada.
+    /// Sólo desde el hilo de la interfaz.
+    /// </summary>
+    public void PaintUpdate(UpdateMenu menu)
     {
         if (_check is null || _install is null)
         {
             return;
         }
 
-        _check.Enabled = update.Phase is UpdatePhase.Idle or UpdatePhase.Available;
-        _check.Text = update.Phase == UpdatePhase.Checking ? "Buscando actualización…" : "Buscar actualización";
-        _install.Visible = update.Version is not null && update.Phase != UpdatePhase.Idle;
-        _install.Enabled = update.Phase == UpdatePhase.Available;
-        _install.Text = update.Phase switch
-        {
-            UpdatePhase.Downloading => $"Bajando la versión {update.Version}…",
-            UpdatePhase.Applying => $"Instalando la versión {update.Version}…",
-            _ => $"Instalar versión {update.Version}",
-        };
+        _check.Enabled = menu.CheckEnabled;
+        _check.Text = menu.CheckText;
+        _install.Visible = menu.InstallVisible;
+        _install.Enabled = menu.InstallEnabled;
+        _install.Text = menu.InstallText;
     }
 
     protected override void Dispose(bool disposing)

@@ -181,6 +181,11 @@ public sealed class UpdateCycle(
         return Result.Success;
     }
 
+    /// <summary>
+    /// Si la política no deja, la oferta vuelve a quedar como estaba y el motivo va al registro y a la falla, no al estado:
+    /// la bandeja lo calcula de AppState cada vez que pinta (TraySummary.UpdateItems), así que se va solo cuando la toma
+    /// termina. Guardado en Detail duraba hasta la próxima búsqueda buena (revisión de la etapa 2).
+    /// </summary>
     private Failure? Refusal(string version)
     {
         var verdict = policy(state.Current);
@@ -189,9 +194,9 @@ public sealed class UpdateCycle(
             return null;
         }
 
-        var reason = verdict.Reason ?? "Ahora no se puede reiniciar el programa";
+        var reason = verdict.Reason ?? RestartPolicy.UnnamedReason;
         log.Info("update", $"No se instala la versión {version}: {reason}");
-        Publish(new UpdateState(UpdatePhase.Available, version, reason));
+        Publish(new UpdateState(UpdatePhase.Available, version));
         return new Failure(ErrorCodes.ReadOnlyWhileRecording, reason);
     }
 

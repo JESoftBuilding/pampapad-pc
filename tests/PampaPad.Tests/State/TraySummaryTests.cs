@@ -132,7 +132,7 @@ public class TraySummaryTests
         Assert.Equal(TrayIcon.UpdateReady, TraySummary.From(offered).Icon);
         Assert.Equal("Versión 0.1.1 lista para instalar", TraySummary.From(offered).Tooltip);
         Assert.Equal(TrayIcon.Recording, TraySummary.From(recording).Icon);
-        Assert.Equal("Grabando 0:00:05 · Versión 0.1.1 lista para instalar", TraySummary.From(recording).Tooltip);
+        Assert.Equal("Grabando 0:00:05 · Versión 0.1.1 lista para instalar. Se está grabando", TraySummary.From(recording).Tooltip);
     }
 
     // Lo que sigue cierra huecos que el plan no probaba (cada caso hace fallar una mutación a mano; ver el informe de E2-6).
@@ -185,41 +185,12 @@ public class TraySummaryTests
         var idle = AppState.Initial with { Obs = Connected with { MicMuted = true }, Update = update };
 
         Assert.Equal(TrayIcon.Paused, TraySummary.From(paused).Icon);
-        Assert.Equal("En pausa: las marcas no entran · Versión 0.1.1 lista para instalar", TraySummary.From(paused).Tooltip);
+        Assert.Equal("En pausa: las marcas no entran · Versión 0.1.1 lista para instalar. La grabación está en pausa", TraySummary.From(paused).Tooltip);
         Assert.Equal(TrayIcon.Streaming, TraySummary.From(streaming).Icon);
-        Assert.Equal("Transmitiendo · Versión 0.1.1 lista para instalar · micrófono silenciado", TraySummary.From(streaming).Tooltip);
+        Assert.Equal("Transmitiendo · Versión 0.1.1 lista para instalar. Se está transmitiendo · micrófono silenciado", TraySummary.From(streaming).Tooltip);
         Assert.Equal(TrayIcon.UpdateReady, TraySummary.From(idle).Icon);
         Assert.Equal("Versión 0.1.1 lista para instalar · micrófono silenciado", TraySummary.From(idle).Tooltip);
     }
 
-    [Theory]
-    [InlineData(UpdatePhase.Available, "0.1.1", null, "Versión 0.1.1 lista para instalar")]
-    [InlineData(UpdatePhase.Available, "0.1.1", "Se está grabando", "Versión 0.1.1 lista para instalar. Se está grabando")]
-    [InlineData(UpdatePhase.Downloading, "0.1.1", null, "Bajando la versión 0.1.1")]
-    [InlineData(UpdatePhase.Applying, "0.1.1", null, "Instalando la versión 0.1.1")]
-    [InlineData(UpdatePhase.Idle, "0.1.1", null, null)]
-    [InlineData(UpdatePhase.Idle, null, null, null)]
-    [InlineData(UpdatePhase.Available, null, null, null)]
-    [InlineData(UpdatePhase.Downloading, null, null, null)]
-    [InlineData(UpdatePhase.Applying, null, null, null)]
-    public void The_update_text_follows_the_phase(UpdatePhase phase, string? version, string? detail, string? expected)
-    {
-        Assert.Equal(expected, TraySummary.UpdateText(new UpdateState(phase, version, detail)));
-    }
-
-    [Fact]
-    public void Looking_again_while_an_update_is_offered_keeps_the_offer_in_the_tray()
-    {
-        // UpdateCycle.CheckAsync publica "before with { Phase = Checking }": la versión y el motivo siguen ahí hasta que
-        // la búsqueda termine, y el ítem "Instalar" del menú sigue visible. La flecha no puede apagarse y prenderse.
-        var checking = AppState.Initial with { Obs = Connected, Update = new UpdateState(UpdatePhase.Checking, "0.1.1") };
-        var withReason = checking with { Update = new UpdateState(UpdatePhase.Checking, "0.1.1", "Se está grabando") };
-        var first = AppState.Initial with { Obs = Connected, Update = new UpdateState(UpdatePhase.Checking) };
-
-        Assert.Equal(TrayIcon.UpdateReady, TraySummary.From(checking).Icon);
-        Assert.Equal("Versión 0.1.1 lista para instalar", TraySummary.From(checking).Tooltip);
-        Assert.Equal("Versión 0.1.1 lista para instalar. Se está grabando", TraySummary.From(withReason).Tooltip);
-        Assert.Equal(TrayIcon.Idle, TraySummary.From(first).Icon);
-        Assert.Equal("PampaPad · OBS conectado", TraySummary.From(first).Tooltip);
-    }
+    // El texto de la actualización por fase y los ítems del menú están en TraySummaryUpdateTests.
 }

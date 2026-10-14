@@ -9,6 +9,9 @@ public readonly record struct RestartVerdict(bool Allowed, string? Reason = null
 /// </summary>
 public static class RestartPolicy
 {
+    /// <summary>Lo que se dice si un veredicto que no deja llega sin motivo. Evaluate siempre lo trae; UpdateCycle recibe la política de afuera.</summary>
+    internal const string UnnamedReason = "Ahora no se puede reiniciar el programa";
+
     public static RestartVerdict Evaluate(AppState state)
     {
         ArgumentNullException.ThrowIfNull(state);
