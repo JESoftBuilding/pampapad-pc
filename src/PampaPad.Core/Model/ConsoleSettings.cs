@@ -5,7 +5,7 @@ namespace PampaPad.Core;
 
 /// <summary>
 /// El bloque <c>console</c> (02 §4.10). Los valores por defecto no se escriben nunca: se resuelven al usar.
-/// En esta etapa el programa sólo lee <c>muteSoundWhileRecording</c>, por los sonidos de la PC.
+/// Por ahora el programa sólo lee <c>muteSoundWhileRecording</c>, por los sonidos de la PC, y <c>holdMs</c>, el umbral del mantenido (una sola vez, al arrancar).
 /// </summary>
 public sealed record ConsoleSettings
 {

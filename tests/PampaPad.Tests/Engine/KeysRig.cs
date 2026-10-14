@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Threading.Channels;
 using Microsoft.Extensions.Time.Testing;
 using PampaPad.Core;
@@ -34,20 +35,22 @@ internal sealed class KeysRig : IAsyncDisposable
     private readonly Channel<(string Marker, Trigger By)> _ran = Channel.CreateUnbounded<(string Marker, Trigger By)>();
     private int _runs;
 
-    public KeysRig()
+    public KeysRig(string? config = null, FakeTimeProvider? clock = null)
     {
+        Clock = clock ?? new FakeTimeProvider();
         Log = new Log(_temp.Combine("log"), Clock);
         Marker.Behavior = (step, invocation, _) =>
         {
             Interlocked.Increment(ref _runs);
+            Invocations.Enqueue(invocation);
             _ran.Writer.TryWrite((step.Parameters["marker"].GetString() ?? string.Empty, invocation.RequestedBy));
             return Task.FromResult(new StepResult(null));
         };
         var gestures = new Gestures(Clock, Gestures.HoldFrom(null), Gestures.DefaultFreshness);
-        Dispatcher = new Dispatcher(LoadLibrary(_temp), Store, new Executor([Marker], Clock), gestures, Log);
+        Dispatcher = new Dispatcher(LoadLibrary(_temp, config), Store, new Executor([Marker], Clock), gestures, Log);
     }
 
-    public FakeTimeProvider Clock { get; } = new();
+    public FakeTimeProvider Clock { get; }
 
     public StateStore Store { get; } = new();
 
@@ -55,17 +58,20 @@ internal sealed class KeysRig : IAsyncDisposable
 
     public Log Log { get; }
 
+    /// <summary>De dónde vino cada corrida del paso, en orden.</summary>
+    public ConcurrentQueue<Invocation> Invocations { get; } = new();
+
     public Dispatcher Dispatcher { get; }
 
     /// <summary>Cuántas veces corrió el paso hasta ahora.</summary>
     public int Runs => Volatile.Read(ref _runs);
 
-    /// <summary>Escribe la biblioteca de prueba en una carpeta temporal y la carga.</summary>
-    public static CoreLibrary LoadLibrary(TempFolder temp)
+    /// <summary>Escribe la biblioteca de prueba (la de siempre, o el config que se pase) en una carpeta temporal y la carga.</summary>
+    public static CoreLibrary LoadLibrary(TempFolder temp, string? config = null)
     {
         var folder = temp.Combine("library");
         Directory.CreateDirectory(folder);
-        File.WriteAllText(Path.Combine(folder, "config.json"), Config);
+        File.WriteAllText(Path.Combine(folder, "config.json"), config ?? Config);
         var library = new CoreLibrary(folder, temp.Combine("backup"));
         library.Load();
         return library;
