@@ -9,12 +9,12 @@ Lo que no tiene prueba automática: todo `PampaPad.App`. Se repasa con la copia 
 | N | Qué hacer | Qué tiene que pasar |
 |---|---|---|
 | 1 | Correr `PampaPad.exe --smoke-test` sobre la carpeta publicada (`build\publish.ps1 -Version 999.0.0` lo hace solo, sin subir nada) | Sale con código 0 |
-| 2 | Abrir el programa | Aparece el ícono en la bandeja; el texto de ayuda dice `PampaPad` y la versión |
+| 2 | Abrir el programa | Aparece el ícono: X gris con "Sin OBS: no está abierto" si OBS está cerrado, o contorno gris con "PampaPad · OBS conectado". La versión está en la línea "<título> <versión>: compuesto" del registro |
 | 3 | Abrirlo de nuevo con la primera copia corriendo | La segunda copia sale sola; sigue habiendo un solo proceso `PampaPad`; el registro dice "Otra copia pidió abrir la ventana" |
 | 4 | Clic derecho en el ícono, con la copia instalada | El menú tiene "Buscar actualización" y "Salir" |
 | 5 | Clic derecho en el ícono, con la copia de desarrollo | El menú tiene sólo "Salir" y el registro dice "Copia sin instalar: no busca actualizaciones" |
 | 6 | Elegir "Salir" | El ícono desaparece, no queda proceso y la última línea del registro dice "Salida ordenada" |
-| 7 | Con una versión más nueva publicada, abrir el programa y esperar medio minuto sin tocar nada | El ícono pasa a la flecha y el menú ofrece "Instalar versión X". El programa sigue en la versión anterior: nada se bajó ni se instaló solo |
+| 7 | Con una versión más nueva publicada, abrir el programa y esperar medio minuto sin tocar nada | Con OBS abierto y sin grabar, el ícono pasa a la flecha y el texto dice "Versión X lista para instalar". Con OBS cerrado queda la X y el texto suma la versión. El menú ofrece "Instalar versión X"; si OBS está grabando, queda el círculo rojo y el ítem figura apagado, como "Instalar versión X (Se está grabando)". El programa sigue en la versión anterior: nada se bajó ni se instaló solo |
 | 8 | Elegir "Instalar versión X" | El ítem dice "Bajando la versión X…", el programa se cierra y vuelve a abrirse solo en la versión X; el registro, en orden, "La versión X se instala al salir" y "PampaPad X: compuesto" |
 | 9 | Desconectar la red y elegir "Buscar actualización" | No aparece ningún cartel; el registro tiene una línea de nivel `warning` con `no_response` |
 | 10 | Cerrar la sesión de Windows y volver a entrar | El programa está corriendo, en la última versión instalada |
