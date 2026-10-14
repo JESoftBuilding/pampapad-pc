@@ -1,7 +1,7 @@
 namespace PampaPad.Core;
 
 /// <summary>Qué ícono muestra la bandeja. Las formas y los colores los pone la cáscara (spec 05 §3); acá sólo se elige cuál.</summary>
-public enum TrayIcon { Idle, NoObs, Recording, Paused, Streaming, UpdateReady, ConfigProblem }
+public enum TrayIcon { Idle, NoObs, Recording, Paused, Streaming, UpdateReady, ConfigProblem, ActionFailed }
 
 /// <summary>
 /// Los dos ítems de actualización del menú (05 §3 y §8), calculados del estado. Sólo los muestra la copia instalada.
@@ -22,6 +22,13 @@ public sealed record TraySummary(TrayIcon Icon, string Tooltip, bool CanReconnec
         var obs = state.Obs;
         var icons = new List<TrayIcon>();
         var texts = new List<string>();
+
+        // Falló una acción es el estado de más arriba en la tabla de 05 §3. El texto lleva la acción, el paso y el mensaje de la falla.
+        if (state.LastFailure is { } failure)
+        {
+            Add(TrayIcon.ActionFailed, failure.Message.Length == 0 ? failure.Summary : $"{failure.Summary}. {failure.Message}");
+        }
+
         if (obs.Link == ObsLinkState.Ready)
         {
             if (obs.Recording == RecordingState.Recording)

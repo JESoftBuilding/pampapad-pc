@@ -173,10 +173,10 @@ public class TraySummaryLibraryEdgeTests
     }
 
     [Fact]
-    public void The_config_problem_icon_is_the_last_of_the_enum_so_no_other_value_moves()
+    public void A_new_icon_goes_at_the_end_of_the_enum_so_no_other_value_moves()
     {
         Assert.Equal(
-            ["Idle", "NoObs", "Recording", "Paused", "Streaming", "UpdateReady", "ConfigProblem"],
+            ["Idle", "NoObs", "Recording", "Paused", "Streaming", "UpdateReady", "ConfigProblem", "ActionFailed"],
             Enum.GetNames<TrayIcon>());
     }
 }

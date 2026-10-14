@@ -50,8 +50,14 @@ public sealed record AppState
 
     /// <summary>Las acciones en curso (01 §4.5).</summary>
     public IReadOnlyList<RunningAction> Running { get; init; } = [];
+
+    /// <summary>La última acción que falló. Se borra cuando la próxima termina bien o cuando se abre el menú de la bandeja.</summary>
+    public ActionFailure? LastFailure { get; init; }
 }
 
 public sealed record HotkeysState(int Registered, int Rejected);
 
 public sealed record RunningAction(Guid RunId, string ActionId, Trigger RequestedBy);
+
+/// <summary>NoticeId es el id del aviso (marker_failed o action_failed); Summary, "Falló acción: paso n (tipo)".</summary>
+public sealed record ActionFailure(string NoticeId, string Summary, string Message);
