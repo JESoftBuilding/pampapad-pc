@@ -5,22 +5,24 @@ namespace PampaPad.Core;
 /// y la misma acción no se pisa. Además es quien sabe qué página rige: por eso le aplica la página a cada fuente de entrada
 /// y junta en el estado todos los problemas de la configuración.
 /// </summary>
-public sealed class Dispatcher
+public sealed partial class Dispatcher
 {
     private readonly Library _library;
     private readonly StateStore _state;
     private readonly Executor _executor;
+    private readonly Gestures _gestures;
     private readonly Log _log;
     private readonly Lock _gate = new();
     private readonly Lock _refreshing = new();
     private readonly Dictionary<string, Run> _running = [];
     private readonly List<IInputSource> _sources = [];
 
-    public Dispatcher(Library library, StateStore state, Executor executor, Log log)
+    public Dispatcher(Library library, StateStore state, Executor executor, Gestures gestures, Log log)
     {
         _library = library;
         _state = state;
         _executor = executor;
+        _gestures = gestures;
         _log = log;
         _library.Changed += _ => Refresh();
         Refresh();
@@ -108,45 +110,6 @@ public sealed class Dispatcher
         {
             _log.Error("dispatcher", $"La fuente {source.Id} no pudo tomar sus teclas: {error.Message}", ErrorCodes.InternalError);
             return [new Problem("", ErrorCodes.InternalError, $"La fuente {source.Id} no pudo tomar sus teclas: {error.Message}", Severity.Error)];
-        }
-    }
-
-    /// <summary>Llega en el hilo de la fuente, así que sólo busca la acción y la lanza. Nunca tira.</summary>
-    public void Receive(InputEvent e)
-    {
-        try
-        {
-            // Press, Release y Turn son de la consola y pasan por Gestures (etapa 3b). Los atajos entregan el toque ya reconocido.
-            if (e.Gesture != Gesture.Tap)
-            {
-                return;
-            }
-
-            Config config = _library.Current;
-            string? actionId = null;
-            if (e.Control == Controls.Hotkey)
-            {
-                actionId = config.Hotkeys is { } general && e.Value >= 0 && e.Value < general.Count ? general[e.Value]?.Action : null;
-            }
-            else if (Controls.TryKey(e.Control, out int position))
-            {
-                // Siempre la acción del toque, nunca la de onHold: por teclado no existe "mantener" (02 §6).
-                // Base vacía es "no hay página" (Refresh no la toma ni para una página con el id vacío): no hay tecla a la que llevar el toque.
-                string basePage = _state.Current.BasePage;
-                actionId = basePage.Length == 0 ? null : config.FindPage(basePage)?.Keys.Indexed().Select(key => key.Item).FirstOrDefault(key => key.Position == position)?.Action;
-            }
-
-            if (actionId is null)
-            {
-                return;
-            }
-
-            Trigger trigger = e.Source == HotkeySource.SourceId ? Trigger.Hotkey : Trigger.Key;
-            _ = Launch(actionId, new Invocation(Guid.NewGuid(), trigger, e.Source, e.Control, e.Gesture, e.Value));
-        }
-        catch (Exception error)
-        {
-            _log.Error("dispatcher", $"No se pudo atender {e.Control}: {error.Message}", ErrorCodes.InternalError);
         }
     }
 

@@ -4,25 +4,6 @@ using PampaPad.Core;
 
 namespace PampaPad.App;
 
-/// <summary>Cómo se llama esta copia. En Debug lleva el sufijo -dev para convivir con la instalada (05 §10).</summary>
-internal static class AppIdentity
-{
-#if DEBUG
-    public const string Name = "PampaPad-dev";
-    public const string Title = "PampaPad (dev)";
-    public const bool Dev = true;
-#else
-    public const string Name = "PampaPad";
-    public const string Title = "PampaPad";
-    public const bool Dev = false;
-#endif
-
-    public static string Version { get; } = typeof(AppIdentity).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
-
-    public static string LocalFolder { get; } =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Name);
-}
-
 /// <summary>La única raíz de composición: todos los new, en el orden de 01 §4.3, y el apagado en orden inverso.</summary>
 internal sealed class Composition : IAsyncDisposable
 {
@@ -88,7 +69,11 @@ internal sealed class Composition : IAsyncDisposable
         // El Dispatcher publica la biblioteca en el estado al construirse y en cada recarga, junto con los problemas de los pasos y de los atajos.
         IReadOnlyList<IStepType> catalog = Catalog.Build(obs, state);
         var executor = new Executor(catalog, clock);
-        var dispatcher = new Dispatcher(library, state, executor, log);
+
+        // El umbral de mantener sale de console.holdMs de la biblioteca; si no está, es un segundo (02 §4.10).
+        // Se lee una sola vez, ahora: "Recargar biblioteca" no lo toma y cambiarlo pide reiniciar el programa.
+        var gestures = new Gestures(clock, Gestures.HoldFrom(library.Current.Console?.HoldMs), Gestures.DefaultFreshness);
+        var dispatcher = new Dispatcher(library, state, executor, gestures, log);
         var updater = new Updater(state, settings, log, clock);
         var composition = new Composition(log, state, obs, updater);
         composition.Library = library;
@@ -120,6 +105,9 @@ internal sealed class Composition : IAsyncDisposable
         {
             state.Update(s => s with { Console = new ConsoleLink(ConsoleLinkState.Waiting, consolePort) });
             composition._console = new SerialConsole(SerialPorts.Opener(consolePort), state, log, clock);
+
+            // La consola entra por la misma puerta que los atajos, y el Dispatcher le aplica la página que rige.
+            dispatcher.Attach(composition._console);
         }
 
         if (!headless)
@@ -192,6 +180,12 @@ internal sealed class Composition : IAsyncDisposable
         {
             // Vuelve en el acto: el bucle de lectura es de la consola y se cierra con su DisposeAsync.
             _loops.Add(_console.StartAsync(_life.Token));
+        }
+
+        if (_dispatcher is not null)
+        {
+            // El reloj de los gestos: sin él, un mantenido sólo saldría con el próximo estado que mande la placa.
+            _loops.Add(_dispatcher.KeepTickingAsync(TimeProvider.System, _life.Token));
         }
 
         if (Tray is not null)
