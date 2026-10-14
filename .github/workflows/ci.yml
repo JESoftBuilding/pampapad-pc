@@ -1,0 +1,48 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      # Las ramas de las etapas se verifican al empujarlas: los PR se abren sólo con el sí de Emmanuel.
+      - 'etapa-*'
+
+# El CI sólo lee el repo: no necesita permisos de escritura.
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    env:
+      DOTNET_NOLOGO: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Verificar
+        shell: powershell
+        run: ./build/verify.ps1
+
+  # Lo mismo que hace el workflow publish, sin subir nada: publicar, revisar las rutas, la prueba de humo y empaquetar.
+  # Así un paquete que no se puede armar se ve en la rama y no el día de la etiqueta. Corre aparte de verify, en paralelo.
+  # La versión es 999.0.0 a propósito: tiene que ser mayor que cualquier versión publicada. publish.ps1 baja la última
+  # con vpk download y vpk pack rechaza una versión menor o igual (FTL "There is a release in channel win which is
+  # equal or greater"). Con la v0.1.0 ya publicada, una versión baja pondría el CI en rojo en cada empuje. Así, además,
+  # el trabajo arma el paquete de diferencias contra la última versión publicada, como lo hará la v0.1.1.
+  package:
+    runs-on: windows-latest
+    env:
+      DOTNET_NOLOGO: true
+      # Como en publish: vpk es una herramienta de .NET y si pide un runtime que el runner no tiene, usa el que hay.
+      DOTNET_ROLL_FORWARD: Major
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Empaquetar sin subir
+        shell: powershell
+        run: ./build/publish.ps1 -Version 999.0.0
