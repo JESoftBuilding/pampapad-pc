@@ -1,0 +1,32 @@
+name: publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    env:
+      DOTNET_NOLOGO: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Verificar
+        shell: powershell
+        run: ./build/verify.ps1
+      - name: Publicar
+        shell: powershell
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # vpk es una herramienta de .NET: si pide un runtime que el runner no tiene, que use el que hay.
+          DOTNET_ROLL_FORWARD: Major
+        run: |
+          $version = $env:GITHUB_REF_NAME.TrimStart('v')
+          ./build/publish.ps1 -Version $version -Upload

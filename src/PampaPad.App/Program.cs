@@ -9,7 +9,11 @@ internal static class Program
     {
         // Primera línea, antes de la instancia única: Velopack ejecuta este binario con argumentos propios al instalar,
         // actualizar y desinstalar (05 §8). Y nunca aplica solo, al arrancar, una actualización ya bajada (01 §9).
-        VelopackApp.Build().SetAutoApplyOnStartup(false).Run();
+        VelopackApp.Build()
+            .SetAutoApplyOnStartup(false)
+            .OnAfterInstallFastCallback(_ => StartWithWindows.Enable())
+            .OnBeforeUninstallFastCallback(_ => StartWithWindows.Disable())
+            .Run();
 
         if (args.Contains("--smoke-test"))
         {
