@@ -61,6 +61,12 @@ public sealed class UpdateCycle(
         try
         {
             var before = state.Current.Update;
+            if (before.Phase == UpdatePhase.Applying)
+            {
+                // La versión ya quedó entregada para instalarse al salir: el programa está cerrando y la oferta no se reabre.
+                return Result.Success;
+            }
+
             Publish(before with { Phase = UpdatePhase.Checking });
             var found = await feed.Find(ct).ConfigureAwait(false);
             if (!found.Ok)

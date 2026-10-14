@@ -136,6 +136,20 @@ public sealed class UpdateCycleTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task A_check_that_lands_while_the_install_is_pending_does_not_reopen_the_offer()
+    {
+        var cycle = await CycleOfferingAsync("0.1.1");
+        await cycle.DownloadAndApplyAsync(CancellationToken.None);
+        var findsBefore = _feed.Finds;
+
+        var result = await cycle.CheckAsync(CancellationToken.None);
+
+        Assert.True(result.Ok);
+        Assert.Equal(findsBefore, _feed.Finds);
+        Assert.Equal(new UpdateState(UpdatePhase.Applying, "0.1.1"), Update);
+    }
+
+    [Fact]
     public async Task Install_is_refused_while_the_policy_says_no()
     {
         var cycle = await CycleOfferingAsync("0.1.1");
