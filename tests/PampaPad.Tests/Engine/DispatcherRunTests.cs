@@ -167,6 +167,27 @@ public class DispatcherRunTests
     }
 
     [Fact]
+    public async Task Whoever_hears_that_an_action_finished_can_launch_it_again_in_that_very_moment()
+    {
+        await using var rig = new DispatcherRig(DispatcherRig.Example);
+        var again = new TaskCompletionSource<Task<ActionResult>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        int heard = 0;
+        rig.Dispatcher.Finished += result =>
+        {
+            if (Interlocked.Increment(ref heard) == 1)
+            {
+                again.SetResult(rig.Dispatcher.Launch(result.ActionId, new Invocation(Guid.NewGuid(), Trigger.Internal, null, null, null, null)));
+            }
+        };
+
+        rig.Windows.Press(Short);
+        ActionResult second = await await again.Task;
+
+        Assert.True(second.Ok);
+        Assert.Equal(2, rig.Marker.Runs.Count);
+    }
+
+    [Fact]
     public async Task Launching_an_action_that_does_not_exist_fails_with_its_name_and_runs_nothing()
     {
         await using var rig = new DispatcherRig(DispatcherRig.Example);
