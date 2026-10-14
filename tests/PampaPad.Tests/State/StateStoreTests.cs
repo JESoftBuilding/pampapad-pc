@@ -105,6 +105,39 @@ public sealed class StateStoreTests : IDisposable
         Assert.Equal(new long[] { 1 }, seen);
     }
 
+    [Fact]
+    public async Task Subscribers_get_before_and_after_in_order()
+    {
+        var seen = new ConcurrentQueue<(bool Before, bool After)>();
+        var store = new StateStore();
+        using var subscription = store.Subscribe((before, after) => seen.Enqueue((before.Obs.MicMuted, after.Obs.MicMuted)));
+
+        store.Update(state => Mute(state, true));
+        store.Update(state => Mute(state, false));
+        await store.DisposeAsync();
+
+        Assert.Equal(new[] { (false, true), (true, false) }, seen);
+    }
+
+    [Fact]
+    public async Task Concurrent_updates_lose_nothing()
+    {
+        await using var store = new StateStore();
+
+        await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => Task.Run(() =>
+        {
+            for (var i = 0; i < 1000; i++)
+            {
+                store.Update(state => state with { Obs = state.Obs with { Recorded = state.Obs.Recorded + TimeSpan.FromMilliseconds(1) } });
+            }
+        }))).WaitAsync(Patience);
+
+        Assert.Equal(8000L, store.Current.Seq);
+        Assert.Equal(TimeSpan.FromSeconds(8), store.Current.Obs.Recorded);
+    }
+
     private static AppState Offering(AppState state, string version) =>
         state with { Update = new UpdateState(UpdatePhase.Available, version) };
+
+    private static AppState Mute(AppState state, bool muted) => state with { Obs = state.Obs with { MicMuted = muted } };
 }

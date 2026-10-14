@@ -15,7 +15,7 @@ public sealed record UpdateState(UpdatePhase Phase, string? Version = null, stri
     public static UpdateState Idle { get; } = new(UpdatePhase.Idle);
 }
 
-/// <summary>La única foto de lo que el programa sabe (01 §3.1). En la etapa 1 sólo sabe de la actualización; E2-1 le suma el resto.</summary>
+/// <summary>La única foto de lo que el programa sabe (01 §3.1). Hasta ahora: la actualización y OBS; las etapas siguientes suman el resto.</summary>
 public sealed record AppState
 {
     public static AppState Initial { get; } = new();
@@ -24,4 +24,6 @@ public sealed record AppState
     public long Seq { get; init; }
 
     public UpdateState Update { get; init; } = UpdateState.Idle;
+
+    public ObsState Obs { get; init; } = ObsState.Initial;
 }
