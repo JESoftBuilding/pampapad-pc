@@ -1,7 +1,7 @@
 namespace PampaPad.Core;
 
 /// <summary>Qué ícono muestra la bandeja. Las formas y los colores los pone la cáscara (spec 05 §3); acá sólo se elige cuál.</summary>
-public enum TrayIcon { Idle, NoObs, Recording, Paused, Streaming, UpdateReady }
+public enum TrayIcon { Idle, NoObs, Recording, Paused, Streaming, UpdateReady, ConfigProblem }
 
 /// <summary>
 /// Los dos ítems de actualización del menú (05 §3 y §8), calculados del estado. Sólo los muestra la copia instalada.
@@ -54,7 +54,13 @@ public sealed record TraySummary(TrayIcon Icon, string Tooltip, bool CanReconnec
             }
         }
 
-        // "Actualización lista" va debajo de "OBS no conectado" y arriba de "sin novedades" (05 §3).
+        // "Problema de configuración o sin biblioteca" pierde contra todo lo de arriba y le gana a lo de abajo (05 §3).
+        if (LibraryText(state) is { } library)
+        {
+            Add(TrayIcon.ConfigProblem, library);
+        }
+
+        // "Actualización lista" va debajo de "Problema de configuración" y arriba de "sin novedades" (05 §3).
         if (UpdateText(state) is { } update)
         {
             Add(TrayIcon.UpdateReady, update);
@@ -78,6 +84,21 @@ public sealed record TraySummary(TrayIcon Icon, string Tooltip, bool CanReconnec
             icons.Add(icon);
             texts.Add(text);
         }
+    }
+
+    /// <summary>Lo que el texto de ayuda dice de la biblioteca, o <c>null</c> si no hay nada que decir.</summary>
+    public static string? LibraryText(AppState state)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+
+        return state.Library.Status switch
+        {
+            LibraryStatus.NoLibrary => state.Library.Folder.Length == 0
+                ? "Sin biblioteca: elegí la carpeta de datos"
+                : $"Sin biblioteca: no encuentro {state.Library.Folder}",
+            LibraryStatus.Unreadable or LibraryStatus.Newer => state.Problems.Count > 0 ? state.Problems[0].Message : "config.json no se puede leer",
+            _ => ProblemsText(state.Problems),
+        };
     }
 
     /// <summary>
@@ -152,6 +173,35 @@ public sealed record TraySummary(TrayIcon Icon, string Tooltip, bool CanReconnec
         }
 
         return text;
+    }
+
+    private static string? ProblemsText(IReadOnlyList<Problem> problems)
+    {
+        if (problems.Count == 0)
+        {
+            return null;
+        }
+
+        if (problems.All(problem => KeyOf(problem.Where) is not null))
+        {
+            int keys = problems.Select(problem => KeyOf(problem.Where)).Distinct().Count();
+            return keys == 1 ? "1 tecla con problema" : $"{keys} teclas con problema";
+        }
+
+        return problems.Count == 1 ? "1 problema de configuración" : $"{problems.Count} problemas de configuración";
+    }
+
+    // De "pages[0].keys[2].hotkey" saca "pages[0].keys[2]"; de un problema que no es de una tecla, null.
+    private static string? KeyOf(string where)
+    {
+        int keys = where.IndexOf(".keys[", StringComparison.Ordinal);
+        if (keys < 0 || !where.StartsWith("pages[", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        int end = where.IndexOf(']', keys);
+        return end < 0 ? null : where[..(end + 1)];
     }
 
     // Tiempo grabado como 0:34:12; las horas no se cortan en 24.

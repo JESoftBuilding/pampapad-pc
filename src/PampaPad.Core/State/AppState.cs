@@ -18,7 +18,10 @@ public sealed record UpdateState(UpdatePhase Phase, string? Version = null, stri
     public static UpdateState Idle { get; } = new(UpdatePhase.Idle);
 }
 
-/// <summary>La única foto de lo que el programa sabe (01 §3.1). Hasta ahora: la actualización y OBS; las etapas siguientes suman el resto.</summary>
+/// <summary>De qué carpeta es la biblioteca y qué pasó al cargarla. Folder está vacía si no hay carpeta elegida.</summary>
+public sealed record LibraryState(LibraryStatus Status, string Folder);
+
+/// <summary>La única foto de lo que el programa sabe (01 §3.1). Hasta ahora: la actualización, OBS y la biblioteca; las etapas siguientes suman el resto.</summary>
 public sealed record AppState
 {
     public static AppState Initial { get; } = new();
@@ -29,4 +32,10 @@ public sealed record AppState
     public UpdateState Update { get; init; } = UpdateState.Idle;
 
     public ObsState Obs { get; init; } = ObsState.Initial;
+
+    /// <summary>Qué pasó con la última carga de la biblioteca, y de qué carpeta.</summary>
+    public LibraryState Library { get; init; } = new(LibraryStatus.NotLoaded, "");
+
+    /// <summary>Todos los problemas vigentes: los de la carga, los de los pasos y los atajos que Windows rechazó.</summary>
+    public IReadOnlyList<Problem> Problems { get; init; } = [];
 }
