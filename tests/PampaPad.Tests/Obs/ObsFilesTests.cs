@@ -85,6 +85,44 @@ public sealed class ObsFilesTests : IDisposable
         Assert.DoesNotContain(Password, read.Failure!.Where);
     }
 
+    // JsonDocument.Parse no valida el texto de las cadenas: GetString tira recién al pedirlo. Un archivo editado a mano
+    // y guardado en ANSI (una ñ en la clave) o con un escape suelto llega hasta ahí.
+    private void WriteServerBytes(byte[] bytes)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(ServerFile)!);
+        File.WriteAllBytes(ServerFile, bytes);
+    }
+
+    private void AssertUnreadableAndHarmless()
+    {
+        var files = new ObsFiles(_temp.Root);
+
+        var read = files.ReadServer();
+
+        Assert.False(read.Ok);
+        Assert.Equal("config_unreadable", read.Failure!.Code);
+        Assert.Equal(new Uri("ws://127.0.0.1:4455"), files.Address());
+        Assert.Null(files.Password());
+    }
+
+    [Fact]
+    public void A_password_that_is_not_valid_utf8_is_a_failure_not_an_exception()
+    {
+        var head = Encoding.UTF8.GetBytes("""{"server_port":4460,"server_password":"abc""");
+        var tail = Encoding.UTF8.GetBytes("""def"}""");
+        WriteServerBytes([.. head, 0xC3, 0x28, .. tail]);
+
+        AssertUnreadableAndHarmless();
+    }
+
+    [Fact]
+    public void A_password_with_a_lone_surrogate_escape_is_a_failure_not_an_exception()
+    {
+        WriteServer("""{"server_port":4460,"server_password":"\ud800"}""", WithoutBom);
+
+        AssertUnreadableAndHarmless();
+    }
+
     [Theory]
     [InlineData("[]")]
     [InlineData("")]

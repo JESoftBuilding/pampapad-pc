@@ -106,6 +106,7 @@ public sealed class ObsFilesProfileTests : IDisposable
             OBSBasic.A={"bindings":[{"key":"OBS_KEY_F1"
             OBSBasic.B=no es json
             OBSBasic.C={"bindings":"no es una lista"}
+            OBSBasic.E={"bindings":[{"key":"\ud800"}]}
             OBSBasic.D={"bindings":[{"control":true},{"key":7},{"key":"OBS_KEY_F4","control":true}]}
             """);
 

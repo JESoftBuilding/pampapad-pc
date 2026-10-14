@@ -36,6 +36,7 @@ public sealed class ObsFiles(string obsFolder)
     /// <summary>
     /// El puerto, la clave y los dos indicadores del servidor. Un puerto ausente o que no sirve (no es un entero entre
     /// 1 y 65535) da el de fábrica: con uno fuera de rango, armar la dirección tiraría una excepción en cada intento.
+    /// Una clave que no es texto válido (UTF-8 mal formado, un escape suelto) hace ilegible el archivo, no tira.
     /// </summary>
     public Result<ObsServerSettings> ReadServer()
     {
@@ -64,9 +65,13 @@ public sealed class ObsFiles(string obsFolder)
                 && value is >= 1 and <= 65535
                     ? value
                     : DefaultPort;
-            var password = root.TryGetProperty("server_password", out var text) && text.ValueKind == JsonValueKind.String
-                ? text.GetString()
-                : null;
+            string? password = null;
+            if (root.TryGetProperty("server_password", out var text) && text.ValueKind == JsonValueKind.String
+                && !TryGetText(text, out password))
+            {
+                return Unreadable<ObsServerSettings>(ServerFile);
+            }
+
             return Result<ObsServerSettings>.Success(new ObsServerSettings(port, password, On(root, "server_enabled"), On(root, "auth_required")));
         }
     }
@@ -151,12 +156,13 @@ public sealed class ObsFiles(string obsFolder)
                 {
                     if (binding.ValueKind != JsonValueKind.Object
                         || !binding.TryGetProperty("key", out var key)
-                        || key.ValueKind != JsonValueKind.String)
+                        || key.ValueKind != JsonValueKind.String
+                        || !TryGetText(key, out var keyName))
                     {
                         continue;
                     }
 
-                    found.Add(new ObsHotkey(name, key.GetString()!, On(binding, "control"), On(binding, "shift"), On(binding, "alt"), On(binding, "command")));
+                    found.Add(new ObsHotkey(name, keyName, On(binding, "control"), On(binding, "shift"), On(binding, "alt"), On(binding, "command")));
                 }
             }
         }
@@ -196,6 +202,22 @@ public sealed class ObsFiles(string obsFolder)
 
     private static bool On(JsonElement element, string name) =>
         element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.True;
+
+    // JsonDocument.Parse no valida el texto de las cadenas (UTF-8 mal formado, escapes sueltos): GetString tira recién
+    // acá. Un archivo editado a mano y guardado en ANSI llega hasta este punto.
+    private static bool TryGetText(JsonElement element, [NotNullWhen(true)] out string? text)
+    {
+        try
+        {
+            text = element.GetString();
+            return text is not null;
+        }
+        catch (InvalidOperationException)
+        {
+            text = null;
+            return false;
+        }
+    }
 
     private static bool TryParse(ReadOnlyMemory<byte> utf8, [NotNullWhen(true)] out JsonDocument? document)
     {
