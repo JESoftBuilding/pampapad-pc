@@ -39,6 +39,15 @@ public class RestartPolicyTests
         Assert.NotNull(RestartPolicy.Evaluate(With(Connected(recording))).Reason);
     }
 
+    // No está en el plan: el motivo se muestra al lado de "Instalar versión X", y en pausa no se "está grabando".
+    [Fact]
+    public void A_paused_take_gives_its_own_reason()
+    {
+        var verdict = RestartPolicy.Evaluate(With(Connected(RecordingState.Paused)));
+
+        Assert.Contains("pausa", verdict.Reason);
+    }
+
     [Fact]
     public void Streaming_blocks_the_restart()
     {

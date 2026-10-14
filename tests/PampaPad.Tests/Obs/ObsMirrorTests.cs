@@ -116,6 +116,20 @@ public class ObsMirrorTests
         Assert.False(stopped.Streaming);
     }
 
+    // No está en el plan: el caso anterior arrastra el true de STARTING y no distingue si RECONNECTING cuenta por sí solo.
+    [Theory]
+    [InlineData("OBS_WEBSOCKET_OUTPUT_STARTING")]
+    [InlineData("OBS_WEBSOCKET_OUTPUT_STARTED")]
+    [InlineData("OBS_WEBSOCKET_OUTPUT_RECONNECTING")]
+    [InlineData("OBS_WEBSOCKET_OUTPUT_RECONNECTED")]
+    [InlineData("OBS_WEBSOCKET_OUTPUT_STOPPING")]
+    public void Each_stream_state_before_stopped_counts_as_streaming_on_its_own(string outputState)
+    {
+        var obs = ObsMirror.Apply(Ready, StreamEvent(outputState, outputActive: false));
+
+        Assert.True(obs.Streaming);
+    }
+
     [Fact]
     public void An_event_the_mirror_does_not_use_leaves_the_state_as_it_was()
     {
@@ -144,6 +158,29 @@ public class ObsMirrorTests
         var before = Ready with { Recording = RecordingState.Recording, Recorded = TimeSpan.FromSeconds(12) };
 
         var obs = ObsMirror.ApplyInitial(before, [RecordStopped, StreamIdle, SceneList, SpecialInputs, InputList]);
+
+        Assert.Equal(RecordingState.Stopped, obs.Recording);
+        Assert.Equal(TimeSpan.Zero, obs.Recorded);
+    }
+
+    // No están en el plan. La spec 03 §5 dice que al conectar transmitir vale outputActive o outputReconnecting.
+    [Theory]
+    [InlineData("""{"outputActive":true,"outputReconnecting":false}""", true)]
+    [InlineData("""{"outputActive":false,"outputReconnecting":true}""", true)]
+    [InlineData("""{"outputActive":false,"outputReconnecting":false}""", false)]
+    public void The_initial_read_counts_a_reconnecting_stream_as_streaming(string streamStatus, bool streaming)
+    {
+        var obs = ObsMirror.ApplyInitial(Ready, [RecordStopped, Ok(streamStatus), SceneList, SpecialInputs, InputList]);
+
+        Assert.Equal(streaming, obs.Streaming);
+    }
+
+    [Fact]
+    public void The_initial_read_while_stopped_ignores_a_duration_that_comes_with_it()
+    {
+        var staleDuration = Ok("""{"outputActive":false,"outputBytes":4689435,"outputDuration":12000,"outputPaused":false}""");
+
+        var obs = ObsMirror.ApplyInitial(Ready, [staleDuration, StreamIdle, SceneList, SpecialInputs, InputList]);
 
         Assert.Equal(RecordingState.Stopped, obs.Recording);
         Assert.Equal(TimeSpan.Zero, obs.Recorded);
