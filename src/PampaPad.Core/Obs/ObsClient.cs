@@ -108,7 +108,8 @@ public sealed partial class ObsClient(
             }
             else if (obs.Link == ObsLinkState.Ready && clock.GetElapsedTime(lastPoll) >= PollEvery(obs))
             {
-                var status = await live.RequestAsync("GetRecordStatus", null, null, ct).ConfigureAwait(false);
+                var status = await live.RequestAsync(
+                    "GetRecordStatus", null, reply => Update(current => ObsMirror.ApplyRecordStatus(current, reply)), ct).ConfigureAwait(false);
                 if (status.Error is null)
                 {
                     lastPoll = clock.GetTimestamp();        // si venció, vuelve a preguntar en el próximo paso
@@ -122,16 +123,36 @@ public sealed partial class ObsClient(
     // Cada 1 s grabando o en pausa; cada 5 s detenido, como latido (spec 03 §5).
     private static TimeSpan PollEvery(ObsState obs) => obs.TakeInProgress ? PollRecording : PollIdle;
 
-    // Paso 4 del saludo (spec 03 §2): GetVersion dice si este OBS tiene los pedidos que se usan.
+    // La lectura inicial (spec 03 §2, pasos 4 y 5): GetVersion, el lote del estado y el silencio del micrófono.
+    // Cada respuesta se aplica en el hilo de recepción. Devuelve false si OBS todavía carga (207) o no contestó.
     private async Task<bool> ReadInitialAsync(ObsConnection live, CancellationToken ct)
     {
         var version = await live.RequestAsync(
-            "GetVersion",
-            null,
-            reply => Update(obs => obs with { SupportsMarkers = ObsMessages.Supports(reply, "CreateRecordChapter") }),
-            ct).ConfigureAwait(false);
-        return version.Ok;
+            "GetVersion", null, reply => Update(obs => ObsMirror.ApplyVersion(obs, reply)), ct).ConfigureAwait(false);
+        if (!version.Ok)
+        {
+            return false;
+        }
+
+        var batch = await live.BatchAsync(
+            ObsMirror.InitialBatch, replies => Update(obs => ObsMirror.ApplyInitial(obs, replies)), ct).ConfigureAwait(false);
+        if (batch.Any(NotYet))
+        {
+            return false;
+        }
+
+        var mic = state.Current.Obs.MicName;
+        if (mic is null)
+        {
+            return true;
+        }
+
+        var mute = await live.RequestAsync(
+            "GetInputMute", new { inputName = mic }, reply => Update(obs => ObsMirror.ApplyMicMute(obs, reply)), ct).ConfigureAwait(false);
+        return !NotYet(mute);
     }
+
+    private static bool NotYet(ObsResponse reply) => reply.Error is not null || reply.Code == ObsMessages.StatusNotReady;
 
     // Corre en el hilo de recepción, en el orden en que OBS mandó los eventos.
     private void OnEvent(ObsEvent e)
@@ -148,6 +169,14 @@ public sealed partial class ObsClient(
             case "CurrentSceneCollectionChanged":
                 SetLink(ObsLinkState.Loading, "OBS terminó de cambiar de colección: se relee todo");
                 break;
+        }
+
+        var before = state.Current.Obs.Recording;
+        Update(obs => ObsMirror.Apply(obs, e));
+        var after = state.Current.Obs.Recording;
+        if (after != before)
+        {
+            Info($"grabación: {after}");
         }
 
         try

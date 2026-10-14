@@ -49,8 +49,9 @@ public class ObsClientReconnectTests
         await using var fake = FakeObs.Start();
         await using var h = await ObsHarness.ReadyAsync(fake, obsRunning: true);
         fake.DoNotAnswer("GetSceneList");
+        var asked = fake.Times("GetSceneList");                       // la lectura inicial ya pidió una
         var pending = h.Client.RequestAsync("GetSceneList", null, CancellationToken.None);
-        await Eventually.UntilAsync(() => fake.Times("GetSceneList") == 1, "que el pedido llegue a OBS");
+        await Eventually.UntilAsync(() => fake.Times("GetSceneList") == asked + 1, "que el pedido llegue a OBS");
 
         fake.DropSessions();                                          // corte seco, sin ExitStarted
         var reply = await pending.WaitAsync(Limit);

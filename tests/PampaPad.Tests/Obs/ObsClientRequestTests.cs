@@ -26,9 +26,10 @@ public class ObsClientRequestTests
         await using var fake = FakeObs.Start();
         await using var h = await ObsHarness.ReadyAsync(fake);
         fake.DoNotAnswer("GetSceneList");
+        var asked = fake.Times("GetSceneList");                 // la lectura inicial ya pidió una
 
         var slow = h.Client.RequestAsync("GetSceneList", null, CancellationToken.None);
-        await Eventually.UntilAsync(() => fake.Times("GetSceneList") == 1, "que el pedido sin respuesta llegue a OBS");
+        await Eventually.UntilAsync(() => fake.Times("GetSceneList") == asked + 1, "que el pedido sin respuesta llegue a OBS");
         var status = await h.Client.RequestAsync("GetRecordStatus", null, CancellationToken.None).WaitAsync(Limit);
         var special = await h.Client.RequestAsync("GetSpecialInputs", null, CancellationToken.None).WaitAsync(Limit);
 
@@ -61,9 +62,10 @@ public class ObsClientRequestTests
         await using var fake = FakeObs.Start();
         await using var h = await ObsHarness.ReadyAsync(fake);
         fake.DoNotAnswer("GetSceneList");
+        var asked = fake.Times("GetSceneList");                 // la lectura inicial ya pidió una
 
         var asking = h.Client.RequestAsync("GetSceneList", null, CancellationToken.None);
-        await Eventually.UntilAsync(() => fake.Times("GetSceneList") == 1, "que el pedido llegue a OBS");
+        await Eventually.UntilAsync(() => fake.Times("GetSceneList") == asked + 1, "que el pedido llegue a OBS");
 
         h.Clock.Advance(TimeSpan.FromMilliseconds(1900));
         await Task.Delay(50);
@@ -83,10 +85,11 @@ public class ObsClientRequestTests
         await using var fake = FakeObs.Start();
         await using var h = await ObsHarness.ReadyAsync(fake);
         fake.DoNotAnswer("GetSceneList");
+        var asked = fake.Times("GetSceneList");                 // la lectura inicial ya pidió una
         using var cancel = new CancellationTokenSource();
 
         var asking = h.Client.RequestAsync("GetSceneList", null, cancel.Token);
-        await Eventually.UntilAsync(() => fake.Times("GetSceneList") == 1, "que el pedido llegue a OBS");
+        await Eventually.UntilAsync(() => fake.Times("GetSceneList") == asked + 1, "que el pedido llegue a OBS");
         await cancel.CancelAsync();
         var reply = await asking.WaitAsync(Limit);
 
