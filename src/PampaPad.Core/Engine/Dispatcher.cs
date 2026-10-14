@@ -131,7 +131,9 @@ public sealed class Dispatcher
             else if (Controls.TryKey(e.Control, out int position))
             {
                 // Siempre la acción del toque, nunca la de onHold: por teclado no existe "mantener" (02 §6).
-                actionId = config.FindPage(_state.Current.BasePage)?.Keys.Indexed().Select(key => key.Item).FirstOrDefault(key => key.Position == position)?.Action;
+                // Base vacía es "no hay página" (Refresh no la toma ni para una página con el id vacío): no hay tecla a la que llevar el toque.
+                string basePage = _state.Current.BasePage;
+                actionId = basePage.Length == 0 ? null : config.FindPage(basePage)?.Keys.Indexed().Select(key => key.Item).FirstOrDefault(key => key.Position == position)?.Action;
             }
 
             if (actionId is null)

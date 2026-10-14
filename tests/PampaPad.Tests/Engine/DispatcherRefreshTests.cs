@@ -123,6 +123,25 @@ public class DispatcherRefreshTests
     }
 
     [Fact]
+    public async Task An_event_with_no_base_page_does_not_fall_on_a_page_whose_id_is_empty()
+    {
+        const string emptyId = """
+            {
+              "version": 1,
+              "pages": [ { "id": "", "name": "Sin id", "keys": [ { "position": 1, "label": "Uno", "action": "marca-short" } ] } ],
+              "actions": [ { "id": "marca-short", "name": "Marca: short", "steps": [ { "type": "obs.marker", "marker": "short" } ] } ]
+            }
+            """;
+        await using var rig = new DispatcherRig(emptyId);
+        rig.Hold();
+
+        rig.Dispatcher.Receive(new InputEvent("console", "key.1", Gesture.Tap));
+
+        Assert.Empty(rig.State.Current.Running);
+        Assert.Empty(rig.Marker.Runs);
+    }
+
+    [Fact]
     public async Task A_step_without_type_is_reported_once_although_the_validator_and_the_executor_both_see_it()
     {
         const string withoutType = """
