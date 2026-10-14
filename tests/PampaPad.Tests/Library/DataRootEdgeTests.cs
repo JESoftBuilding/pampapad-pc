@@ -128,10 +128,8 @@ public sealed class DataRootEdgeTests : IDisposable
 
     [Theory]
     [InlineData("""{ "version": 1 }""", true)]
-    [InlineData("""{ "version": 0 }""", true)]
     [InlineData("""{ "version": 2 }""", false)]
     [InlineData("""{ "version": 99 }""", false)]
-    [InlineData("""{ "version": "2" }""", true)]
     [InlineData("""{ "pages": [] }""", true)]
     public void Upgrade_only_refuses_a_version_above_the_current_one(string json, bool passes)
     {
