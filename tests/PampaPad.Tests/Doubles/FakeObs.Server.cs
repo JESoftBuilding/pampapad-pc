@@ -83,9 +83,10 @@ public sealed partial class FakeObs
                 _ = ServeAsync(tcp, Interlocked.Increment(ref _accepted));
             }
         }
-        catch (Exception e) when (e is OperationCanceledException or SocketException or ObjectDisposedException)
+        catch (Exception e) when (e is OperationCanceledException or SocketException or ObjectDisposedException or InvalidOperationException)
         {
-            // el doble se detuvo: es el final normal de este bucle
+            // El doble se detuvo: es el final normal de este bucle. InvalidOperationException es "Not listening": le
+            // pasa a la vuelta que llama a AcceptTcpClientAsync después de que DisposeAsync ya hizo Stop().
         }
     }
 
