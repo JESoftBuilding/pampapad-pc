@@ -1,3 +1,4 @@
+using System.Media;
 using PampaPad.Core;
 
 namespace PampaPad.App;
@@ -6,6 +7,9 @@ namespace PampaPad.App;
 internal sealed class Tray : ApplicationContext
 {
     private const int MaxTooltip = 127;
+
+    // El recurso se llama como el espacio de nombres del proyecto más la ruta: PampaPad.App.Resources.failed.wav.
+    private static readonly SoundPlayer? Failed = LoadSound("PampaPad.App.Resources.failed.wav");
 
     private readonly ContextMenuStrip _menu = new();
     private readonly NotifyIcon _icon;
@@ -37,6 +41,7 @@ internal sealed class Tray : ApplicationContext
         // Arriba de todo, y sólo visible en auth_failed y kicked (05 §3).
         _reconnect.Click += (_, _) => ReconnectRequested?.Invoke(this, EventArgs.Empty);
         _menu.Items.Insert(0, _reconnect);
+        _menu.Opening += (_, _) => MenuOpened?.Invoke();
 
         _icon = new NotifyIcon
         {
@@ -52,6 +57,16 @@ internal sealed class Tray : ApplicationContext
     public event System.Action? ReloadRequested;
 
     public event System.Action? ChooseFolderRequested;
+
+    /// <summary>Se abrió el menú: es una de las dos cosas que sacan el ícono de "falló una acción" (05 §3).</summary>
+    public event System.Action? MenuOpened;
+
+    /// <summary>El sonido "falló". Sólo desde el hilo de la interfaz. Si suena o no lo decidió el Notifier.</summary>
+    public void PlayFailed() => Failed?.Play();
+
+    /// <summary>El cartel de Windows. Sólo desde el hilo de la interfaz, y sólo con OBS detenido: lo decidió el Notifier.</summary>
+    public void ShowBalloon(string title, string text) =>
+        _icon.ShowBalloonTip(5000, Shorten(title, 63), Shorten(text.Length == 0 ? title : text, 255), ToolTipIcon.Warning);
 
     /// <summary>Pinta lo que calculó TraySummary. Sólo desde el hilo de la interfaz. Lo ya pintado se saltea.</summary>
     public void Paint(TraySummary summary)
@@ -97,5 +112,13 @@ internal sealed class Tray : ApplicationContext
         base.Dispose(disposing);
     }
 
-    private static string Clip(string text) => text.Length <= MaxTooltip ? text : text[..(MaxTooltip - 1)] + "…";
+    private static string Clip(string text) => Shorten(text, MaxTooltip);
+
+    private static string Shorten(string text, int limit) => text.Length <= limit ? text : text[..(limit - 1)] + "…";
+
+    private static SoundPlayer? LoadSound(string resource)
+    {
+        Stream? stream = typeof(Tray).Assembly.GetManifestResourceStream(resource);
+        return stream is null ? null : new SoundPlayer(stream);
+    }
 }

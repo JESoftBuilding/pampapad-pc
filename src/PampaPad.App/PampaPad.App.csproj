@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <Content Include="..\..\examples\library\**" Link="examples\library\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <EmbeddedResource Include="Resources\failed.wav" />
   </ItemGroup>
 
 </Project>

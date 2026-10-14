@@ -86,6 +86,16 @@ internal static class TrayIcons
                     }
 
                     break;
+                case TrayIcon.ActionFailed:     // triángulo con signo de admiración, rojo
+                    using (var brush = new SolidBrush(Red))
+                    using (var mark = new SolidBrush(Color.White))
+                    {
+                        g.FillPolygon(brush, [new Point(16, 2), new Point(30, 28), new Point(2, 28)]);
+                        g.FillRectangle(mark, 14, 10, 4, 10);
+                        g.FillEllipse(mark, 14, 22, 4, 4);
+                    }
+
+                    break;
                 default:                        // contorno de círculo, gris: detenido, sin novedades
                     using (var pen = new Pen(Gray, 3))
                     {
@@ -96,7 +106,7 @@ internal static class TrayIcons
             }
         }
 
-        // La manija del ícono no se libera: son siete y viven lo que vive el proceso.
+        // La manija del ícono no se libera: son ocho y viven lo que vive el proceso.
         return Icon.FromHandle(bitmap.GetHicon());
     }
 }

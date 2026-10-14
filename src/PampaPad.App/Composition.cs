@@ -92,6 +92,15 @@ internal sealed class Composition : IAsyncDisposable
         var composition = new Composition(log, state, obs, updater);
         composition.Library = library;
         composition._dispatcher = dispatcher;
+
+        // Va acá y no en su lugar exacto de 01 §4.3, entre las fuentes de entrada y el Updater: sus dos canales necesitan la bandeja, que cuelga de composition.
+        var notifier = new Notifier(
+            state,
+            library,
+            log,
+            playSound: notice => ui.Post(_ => composition.Tray?.PlayFailed(), null),
+            showBalloon: notice => ui.Post(_ => composition.Tray?.ShowBalloon(notice.Title, notice.Text), null));
+        dispatcher.Finished += notifier.OnFinished;
         if (!headless && (settings.Current.HotkeysEnabled ?? !AppIdentity.Dev))
         {
             // Los atajos son globales. La copia de desarrollo no los toma, para no sacárselos a la instalada (05 §10);
@@ -118,6 +127,7 @@ internal sealed class Composition : IAsyncDisposable
 
             var tray = new Tray($"{AppIdentity.Title} {AppIdentity.Version}", onCheck, onInstall);
             composition.Tray = tray;
+            tray.MenuOpened += notifier.Dismiss;
             tray.ReconnectRequested += (_, _) => obs.Reconnect();
 
             // Leer el archivo puede tardar (un disco de red, un antivirus): fuera del hilo de la interfaz, y sin dejar escapar una excepción.
