@@ -14,6 +14,7 @@ internal sealed class Tray : ApplicationContext
     private readonly ContextMenuStrip _menu = new();
     private readonly NotifyIcon _icon;
     private readonly ToolStripMenuItem _reconnect = new("Reconectar con OBS") { Visible = false };
+    private readonly ToolStripMenuItem _console = new() { Visible = false };
     private readonly ToolStripMenuItem? _check;
     private readonly ToolStripMenuItem? _install;
     private TraySummary? _painted;
@@ -25,6 +26,10 @@ internal sealed class Tray : ApplicationContext
         // más abajo en el lugar 0 y queda arriba de todo (05 §3).
         _menu.Items.Add("Recargar biblioteca", null, (_, _) => ReloadRequested?.Invoke());
         _menu.Items.Add("Elegir carpeta de datos", null, (_, _) => ChooseFolderRequested?.Invoke());
+
+        // Sólo aparece con un puerto en local.json: Paint lo muestra y le pone el texto (05 §3).
+        _console.Click += (_, _) => ConsoleToggleRequested?.Invoke();
+        _menu.Items.Add(_console);
         _menu.Items.Add(new ToolStripSeparator());
 
         if (onCheckUpdate is not null && onInstallUpdate is not null)
@@ -58,6 +63,9 @@ internal sealed class Tray : ApplicationContext
 
     public event System.Action? ChooseFolderRequested;
 
+    /// <summary>Se eligió "Soltar la consola" o "Tomar la consola": quien compone decide cuál de las dos según el enlace.</summary>
+    public event System.Action? ConsoleToggleRequested;
+
     /// <summary>Se abrió el menú: es una de las dos cosas que sacan el ícono de "falló una acción" (05 §3).</summary>
     public event System.Action? MenuOpened;
 
@@ -80,6 +88,8 @@ internal sealed class Tray : ApplicationContext
         _icon.Icon = TrayIcons.For(summary.Icon);
         _icon.Text = Clip(summary.Tooltip);
         _reconnect.Visible = summary.CanReconnect;
+        _console.Visible = summary.ConsoleItem is not null;
+        _console.Text = summary.ConsoleItem ?? string.Empty;
     }
 
     /// <summary>

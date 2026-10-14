@@ -37,6 +37,7 @@ internal sealed class Composition : IAsyncDisposable
     private Dispatcher? _dispatcher;
     private HotkeySource? _hotkeys;
     private SystemHotkeys? _systemHotkeys;
+    private SerialConsole? _console;
 
     private Composition(Log log, StateStore state, ObsClient obs, Updater updater)
     {
@@ -112,6 +113,15 @@ internal sealed class Composition : IAsyncDisposable
             composition._hotkeys = hotkeys;
         }
 
+        // Las fuentes de entrada van después del Dispatcher (01 §4.3). Sin puerto en local.json no hay consola, que es como
+        // arranca la copia de desarrollo (05 §10). La prueba de humo no abre puertos.
+        var consolePort = settings.Current.ConsolePort;
+        if (!headless && !string.IsNullOrWhiteSpace(consolePort))
+        {
+            state.Update(s => s with { Console = new ConsoleLink(ConsoleLinkState.Waiting, consolePort) });
+            composition._console = new SerialConsole(SerialPorts.Opener(consolePort), state, log, clock);
+        }
+
         if (!headless)
         {
             Application.ThreadException += (_, e) =>
@@ -129,6 +139,8 @@ internal sealed class Composition : IAsyncDisposable
             composition.Tray = tray;
             tray.MenuOpened += notifier.Dismiss;
             tray.ReconnectRequested += (_, _) => obs.Reconnect();
+            tray.ConsoleToggleRequested += () =>
+                composition._console?.Release(state.Current.Console.State != ConsoleLinkState.Released);
 
             // Leer el archivo puede tardar (un disco de red, un antivirus): fuera del hilo de la interfaz, y sin dejar escapar una excepción.
             tray.ReloadRequested += () => _ = Task.Run(() =>
@@ -176,6 +188,12 @@ internal sealed class Composition : IAsyncDisposable
             _loops.Add(_hotkeys.StartAsync(_life.Token));
         }
 
+        if (_console is not null)
+        {
+            // Vuelve en el acto: el bucle de lectura es de la consola y se cierra con su DisposeAsync.
+            _loops.Add(_console.StartAsync(_life.Token));
+        }
+
         if (Tray is not null)
         {
             SystemEvents.PowerModeChanged += OnPowerModeChanged;
@@ -214,6 +232,11 @@ internal sealed class Composition : IAsyncDisposable
         }
 
         _systemHotkeys?.Dispose();
+        if (_console is not null)
+        {
+            await _console.DisposeAsync().ConfigureAwait(false);
+        }
+
         await _obs.DisposeAsync().ConfigureAwait(false);
         await _state.DisposeAsync().ConfigureAwait(false);
         Log.Info("app", "Salida ordenada");

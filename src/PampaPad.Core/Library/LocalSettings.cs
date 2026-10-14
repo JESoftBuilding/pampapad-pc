@@ -14,6 +14,9 @@ public sealed record LocalData
     /// <summary>La versión del programa que Emmanuel eligió no instalar (05 §8).</summary>
     public string? SkippedVersion { get; init; }
 
+    /// <summary>El puerto serie de la consola, por ejemplo "COM7". Sin él no hay consola (Propuesto: pregunta abierta 16).</summary>
+    public string? ConsolePort { get; init; }
+
     /// <summary>Si esta copia toma los atajos globales. Sin valor, la instalada sí y la de desarrollo no (05 §10).</summary>
     public bool? HotkeysEnabled { get; init; }
 
