@@ -46,6 +46,41 @@ public class DispatcherReloadTests
     }
 
     [Fact]
+    public async Task Two_refreshes_never_apply_to_a_source_at_the_same_time()
+    {
+        await using var rig = new DispatcherRig(DispatcherRig.Example);
+        var console = new FakeInputSource("console");
+        rig.Dispatcher.Attach(console);
+        using var entered = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        int inside = 0;
+        int most = 0;
+        console.OnApply = () =>
+        {
+            int now = Interlocked.Increment(ref inside);
+            int seen;
+            while (now > (seen = Volatile.Read(ref most)) && Interlocked.CompareExchange(ref most, now, seen) != seen)
+            {
+            }
+
+            entered.Set();
+            release.Wait(TimeSpan.FromSeconds(5));
+            Interlocked.Decrement(ref inside);
+        };
+
+        Task first = Task.Run(rig.Library.Load);
+        Assert.True(entered.Wait(TimeSpan.FromSeconds(5)));
+        Task second = Task.Run(rig.Dispatcher.Refresh);
+        await Task.Delay(200);
+        int whileTheFirstIsInside = Volatile.Read(ref most);
+        release.Set();
+        await Task.WhenAll(first, second).WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal(1, whileTheFirstIsInside);
+        Assert.Equal(1, Volatile.Read(ref most));
+    }
+
+    [Fact]
     public async Task A_broken_file_and_then_a_good_one_give_the_hotkeys_back()
     {
         await using var rig = new DispatcherRig(DispatcherRig.Example);

@@ -19,10 +19,14 @@ public sealed class FakeInputSource(string id) : IInputSource
 
     public bool ThrowOnApply { get; set; }
 
+    /// <summary>Se llama al entrar a Apply, antes de anotar nada: deja a una prueba frenar a quien llama o contar cuántos hay adentro a la vez.</summary>
+    public System.Action? OnApply { get; set; }
+
     public Task StartAsync(CancellationToken ct) => Task.CompletedTask;
 
     public IReadOnlyList<Problem> Apply(Page page, IReadOnlyList<HotkeyBinding> hotkeys)
     {
+        OnApply?.Invoke();
         if (ThrowOnApply)
         {
             throw new InvalidOperationException("Apply roto a propósito");
