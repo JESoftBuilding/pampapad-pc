@@ -56,6 +56,12 @@ internal sealed class DispatcherRig : IAsyncDisposable
 
     public ConcurrentQueue<ActionResult> Finished { get; } = new();
 
+    /// <summary>
+    /// Las líneas de error del despachador y de lo que arma. No cuenta el aviso del propio registro de que no pudo escribir en el disco
+    /// (módulo "log"): un antivirus que toma el archivo en un mal momento no es una falla del despachador.
+    /// </summary>
+    public IReadOnlyList<LogEntry> Errors => [.. Log.Recent().Where(entry => entry.Level == LogLevel.Error && entry.Module != "log")];
+
     public void Write(string config) => File.WriteAllText(_temp.Combine("biblioteca", "config.json"), config);
 
     /// <summary>Un paso que se queda esperando hasta que se llame a lo que devuelve.</summary>

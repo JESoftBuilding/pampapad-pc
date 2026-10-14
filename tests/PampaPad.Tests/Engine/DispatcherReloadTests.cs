@@ -42,7 +42,7 @@ public class DispatcherReloadTests
         Assert.Empty(rig.State.Current.Problems);
         Assert.Equal(new HotkeysState(5, 0), rig.State.Current.Hotkeys);
         Assert.Equal(LibraryStatus.Loaded, rig.State.Current.Library.Status);
-        Assert.DoesNotContain(rig.Log.Recent(), entry => entry.Level == LogLevel.Error);
+        Assert.Empty(rig.Errors);
     }
 
     [Fact]

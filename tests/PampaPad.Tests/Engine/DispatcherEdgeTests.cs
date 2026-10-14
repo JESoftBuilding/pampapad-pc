@@ -77,7 +77,7 @@ public class DispatcherEdgeTests
 
         Assert.Empty(rig.Marker.Runs);
         Assert.Empty(rig.Finished);
-        Assert.DoesNotContain(rig.Log.Recent(), entry => entry.Level == LogLevel.Error);
+        Assert.Empty(rig.Errors);
     }
 
     [Theory]
@@ -95,7 +95,7 @@ public class DispatcherEdgeTests
 
         Assert.Empty(rig.Marker.Runs);
         Assert.Empty(rig.Finished);
-        Assert.DoesNotContain(rig.Log.Recent(), entry => entry.Level == LogLevel.Error);
+        Assert.Empty(rig.Errors);
     }
 
     [Theory]
@@ -120,7 +120,7 @@ public class DispatcherEdgeTests
         rig.Dispatcher.Receive(new InputEvent("console", "key.1", Gesture.Tap));
 
         Assert.Empty(rig.Finished);
-        Assert.DoesNotContain(rig.Log.Recent(), entry => entry.Level == LogLevel.Error);
+        Assert.Empty(rig.Errors);
     }
 
     [Fact]
