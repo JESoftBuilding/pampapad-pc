@@ -74,15 +74,19 @@ public sealed record TraySummary(TrayIcon Icon, string Tooltip, bool CanReconnec
         }
     }
 
-    /// <summary>Lo que el texto de ayuda dice de la actualización; null si no hay ninguna ofrecida. E1-4 lo tenía en Tray.</summary>
+    /// <summary>
+    /// Lo que el texto de ayuda dice de la actualización; null si no hay ninguna ofrecida. E1-4 lo tenía en Tray.
+    /// Buscar de nuevo con una oferta a la vista (Checking) no la retira: UpdateCycle conserva la versión hasta que la
+    /// búsqueda termina, y el ítem "Instalar" del menú sigue visible; la flecha no puede apagarse y prenderse.
+    /// </summary>
     public static string? UpdateText(UpdateState update)
     {
         ArgumentNullException.ThrowIfNull(update);
 
         return update.Version is null ? null : update.Phase switch
         {
-            UpdatePhase.Available when update.Detail is null => $"Versión {update.Version} lista para instalar",
-            UpdatePhase.Available => $"Versión {update.Version} lista para instalar. {update.Detail}",
+            UpdatePhase.Available or UpdatePhase.Checking when update.Detail is null => $"Versión {update.Version} lista para instalar",
+            UpdatePhase.Available or UpdatePhase.Checking => $"Versión {update.Version} lista para instalar. {update.Detail}",
             UpdatePhase.Downloading => $"Bajando la versión {update.Version}",
             UpdatePhase.Applying => $"Instalando la versión {update.Version}",
             _ => null,

@@ -134,4 +134,92 @@ public class TraySummaryTests
         Assert.Equal(TrayIcon.Recording, TraySummary.From(recording).Icon);
         Assert.Equal("Grabando 0:00:05 · Versión 0.1.1 lista para instalar", TraySummary.From(recording).Tooltip);
     }
+
+    // Lo que sigue cierra huecos que el plan no probaba (cada caso hace fallar una mutación a mano; ver el informe de E2-6).
+
+    [Fact]
+    public void Reconnect_is_offered_in_exactly_two_of_the_nine_link_states()
+    {
+        var offered = Enum.GetValues<ObsLinkState>().Where(link => For(ObsState.Initial with { Link = link }).CanReconnect);
+
+        Assert.Equal([ObsLinkState.AuthFailed, ObsLinkState.Kicked], offered.Order());
+    }
+
+    [Fact]
+    public void Paused_wins_over_streaming_and_the_tooltip_names_both()
+    {
+        var summary = For(Connected with { Recording = RecordingState.Paused, Streaming = true });
+
+        Assert.Equal(TrayIcon.Paused, summary.Icon);
+        Assert.Equal("En pausa: las marcas no entran · Transmitiendo", summary.Tooltip);
+    }
+
+    [Fact]
+    public void The_recorded_time_is_cut_not_rounded_and_the_hours_go_past_a_day()
+    {
+        var cut = For(Connected with { Recording = RecordingState.Recording, Recorded = new TimeSpan(0, 0, 34, 12, 999) });
+        var days = For(Connected with { Recording = RecordingState.Recording, Recorded = new TimeSpan(1, 6, 5, 7) });
+
+        Assert.Equal("Grabando 0:34:12", cut.Tooltip);
+        Assert.Equal("Grabando 30:05:07", days.Tooltip);
+    }
+
+    [Fact]
+    public void No_obs_goes_above_an_offered_update_and_the_tooltip_names_both()
+    {
+        var closed = AppState.Initial with { Update = new UpdateState(UpdatePhase.Available, "0.1.1") };
+        var authFailed = closed with { Obs = ObsState.Initial with { Link = ObsLinkState.AuthFailed } };
+
+        Assert.Equal(TrayIcon.NoObs, TraySummary.From(closed).Icon);
+        Assert.Equal("Sin OBS: no está abierto · Versión 0.1.1 lista para instalar", TraySummary.From(closed).Tooltip);
+        Assert.Equal("Sin OBS: clave rechazada · Versión 0.1.1 lista para instalar", TraySummary.From(authFailed).Tooltip);
+        Assert.True(TraySummary.From(authFailed).CanReconnect);
+    }
+
+    [Fact]
+    public void An_offered_update_goes_after_a_paused_or_streaming_state_and_before_the_muted_mic()
+    {
+        var update = new UpdateState(UpdatePhase.Available, "0.1.1");
+        var paused = AppState.Initial with { Obs = Connected with { Recording = RecordingState.Paused }, Update = update };
+        var streaming = AppState.Initial with { Obs = Connected with { Streaming = true, MicMuted = true }, Update = update };
+        var idle = AppState.Initial with { Obs = Connected with { MicMuted = true }, Update = update };
+
+        Assert.Equal(TrayIcon.Paused, TraySummary.From(paused).Icon);
+        Assert.Equal("En pausa: las marcas no entran · Versión 0.1.1 lista para instalar", TraySummary.From(paused).Tooltip);
+        Assert.Equal(TrayIcon.Streaming, TraySummary.From(streaming).Icon);
+        Assert.Equal("Transmitiendo · Versión 0.1.1 lista para instalar · micrófono silenciado", TraySummary.From(streaming).Tooltip);
+        Assert.Equal(TrayIcon.UpdateReady, TraySummary.From(idle).Icon);
+        Assert.Equal("Versión 0.1.1 lista para instalar · micrófono silenciado", TraySummary.From(idle).Tooltip);
+    }
+
+    [Theory]
+    [InlineData(UpdatePhase.Available, "0.1.1", null, "Versión 0.1.1 lista para instalar")]
+    [InlineData(UpdatePhase.Available, "0.1.1", "Se está grabando", "Versión 0.1.1 lista para instalar. Se está grabando")]
+    [InlineData(UpdatePhase.Downloading, "0.1.1", null, "Bajando la versión 0.1.1")]
+    [InlineData(UpdatePhase.Applying, "0.1.1", null, "Instalando la versión 0.1.1")]
+    [InlineData(UpdatePhase.Idle, "0.1.1", null, null)]
+    [InlineData(UpdatePhase.Idle, null, null, null)]
+    [InlineData(UpdatePhase.Available, null, null, null)]
+    [InlineData(UpdatePhase.Downloading, null, null, null)]
+    [InlineData(UpdatePhase.Applying, null, null, null)]
+    public void The_update_text_follows_the_phase(UpdatePhase phase, string? version, string? detail, string? expected)
+    {
+        Assert.Equal(expected, TraySummary.UpdateText(new UpdateState(phase, version, detail)));
+    }
+
+    [Fact]
+    public void Looking_again_while_an_update_is_offered_keeps_the_offer_in_the_tray()
+    {
+        // UpdateCycle.CheckAsync publica "before with { Phase = Checking }": la versión y el motivo siguen ahí hasta que
+        // la búsqueda termine, y el ítem "Instalar" del menú sigue visible. La flecha no puede apagarse y prenderse.
+        var checking = AppState.Initial with { Obs = Connected, Update = new UpdateState(UpdatePhase.Checking, "0.1.1") };
+        var withReason = checking with { Update = new UpdateState(UpdatePhase.Checking, "0.1.1", "Se está grabando") };
+        var first = AppState.Initial with { Obs = Connected, Update = new UpdateState(UpdatePhase.Checking) };
+
+        Assert.Equal(TrayIcon.UpdateReady, TraySummary.From(checking).Icon);
+        Assert.Equal("Versión 0.1.1 lista para instalar", TraySummary.From(checking).Tooltip);
+        Assert.Equal("Versión 0.1.1 lista para instalar. Se está grabando", TraySummary.From(withReason).Tooltip);
+        Assert.Equal(TrayIcon.Idle, TraySummary.From(first).Icon);
+        Assert.Equal("PampaPad · OBS conectado", TraySummary.From(first).Tooltip);
+    }
 }
