@@ -94,7 +94,7 @@ public class GesturesTests
     public void A_key_that_went_stale_before_the_threshold_never_holds()
     {
         _gestures.Feed(Press(12));
-        KeepDown(12, 900);
+        KeepDown(12, 800);
         Advance(150);
 
         AssertEvents(_gestures.Tick(), Release(12));
