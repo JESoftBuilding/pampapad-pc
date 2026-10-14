@@ -206,6 +206,23 @@ public class DispatcherRefreshTests
     }
 
     [Fact]
+    public async Task Only_the_same_problem_in_the_same_place_is_collapsed()
+    {
+        await using var rig = new DispatcherRig(TwoPages);
+        var console = new FakeInputSource("console");
+        console.Rejects.Add(new Problem("hotkeys[0].hotkey", ErrorCodes.HotkeyTaken, "uno", Severity.Warning));
+        console.Rejects.Add(new Problem("hotkeys[0].hotkey", ErrorCodes.HotkeyTaken, "uno repetido", Severity.Warning));
+        console.Rejects.Add(new Problem("hotkeys[0].hotkey", ErrorCodes.InternalError, "otro código, mismo lugar", Severity.Error));
+        console.Rejects.Add(new Problem("hotkeys[1].hotkey", ErrorCodes.HotkeyTaken, "mismo código, otro lugar", Severity.Warning));
+
+        rig.Dispatcher.Attach(console);
+
+        Assert.Equal(
+            new[] { ("hotkeys[0].hotkey", ErrorCodes.HotkeyTaken), ("hotkeys[0].hotkey", ErrorCodes.InternalError), ("hotkeys[1].hotkey", ErrorCodes.HotkeyTaken) },
+            rig.State.Current.Problems.Select(problem => (problem.Where, problem.Code)));
+    }
+
+    [Fact]
     public async Task An_event_from_an_attached_source_runs_the_action_of_the_key_on_the_base_page()
     {
         await using var rig = new DispatcherRig(TwoPages);
