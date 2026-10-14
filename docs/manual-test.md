@@ -53,7 +53,7 @@ Cada marca es un capítulo, y su tipo es `tags.title`. El capítulo "Iniciar", e
 | 3 | En OBS, iniciar una grabación. Apretar Ctrl+Shift+Alt con F5, F6, F7, F8 y F9, con unos segundos entre una y otra. Detener | El ícono no cambia de "Grabando". El archivo tiene cinco capítulos: `largo`, `inicio`, `fin`, `sacar` y `short`, en ese orden |
 | 4 | Grabando, mantener Ctrl+Shift+Alt+F6 apretada tres segundos | Un solo capítulo `inicio` |
 | 5 | Grabando, apretar Ctrl+Shift+Alt+F9 dos veces seguidas | Dos capítulos `short` |
-| 6 | Grabando, con SolidWorks al frente y después con OBS al frente, apretar Ctrl+Shift+Alt+F8 | Un capítulo `sacar` cada vez, y ninguno de los dos programas reacciona a la combinación |
+| 6 | Grabando, con SolidWorks al frente, apretar Ctrl+Shift+Alt con F5, F6, F7, F8 y F9, con unos segundos entre una y otra. Después, lo mismo con OBS al frente | Cada vez, cinco capítulos: `largo`, `inicio`, `fin`, `sacar` y `short`, en ese orden. Ninguno de los dos programas reacciona a las combinaciones (salvo el "Sin nombre N" que OBS suma con F9 mientras la tenga: ver Notas) |
 | 7 | Grabando, pausar con Ctrl+Shift+Alt+F10 (el atajo de OBS) y apretar Ctrl+Shift+Alt+F7 | Triángulo rojo. El texto de ayuda empieza con "Falló Marca: fin: paso 1 (obs.marker). Estás en pausa: la marca no entró.". No hay cartel ni sonido. Al abrir el menú vuelven las dos barras ámbar. El archivo no tiene ese capítulo |
 | 8 | Con OBS abierto y sin grabar, apretar Ctrl+Shift+Alt+F9 | Suena, sale el cartel "No estás grabando: la marca no entró." y queda el triángulo rojo |
 | 9 | Con OBS cerrado, apretar Ctrl+Shift+Alt+F9 | El cartel dice "Sin OBS: la marca no entró." |
@@ -64,7 +64,8 @@ Cada marca es un capítulo, y su tipo es `tags.title`. El capítulo "Iniciar", e
 
 ## Notas de la etapa 3
 
-- **Fila 3, antes de quitar F9 de OBS.** OBS tiene todavía la combinación Ctrl+Shift+Alt+F9 en "Añadir marcador de capítulo": cada F9 deja dos capítulos en el mismo punto, `short` y "Sin nombre N" (el segundo lo pone OBS). Se corrige sacando ese atajo de OBS (paso 8 de E3-9), y después de eso queda un solo `short`.
+- **Filas 3, 5 y 6, antes de quitar F9 de OBS.** OBS tiene todavía la combinación Ctrl+Shift+Alt+F9 en "Añadir marcador de capítulo": cada F9 deja dos capítulos en el mismo punto, `short` y "Sin nombre N" (el segundo lo pone OBS). Se corrige sacando ese atajo de OBS (paso 8 de E3-9), y después de eso queda un solo `short`.
+- **Fila 6.** Es la que cubre lo que la etapa 0 dejó sin medir (E0-2): con el teclado real llegaron F5 a F8 con SolidWorks al frente y sólo F6 con OBS, y la prueba con teclas inyectadas, que cubría el resto, no se corrió. F9, la de `short` y la del botón del mouse, no la vio llegar nadie con ninguno de los dos al frente. Si alguna no llega, o SolidWorks u OBS hacen algo con ella, no se sigue con el paso 8 de E3-9: cambian los atajos de la biblioteca y lo que se le quita a OBS.
 - **Fila 8, el sonido.** Suena `failed.wav` (220 ms, dos tonos que bajan). Apretar F9 dos veces: tiene que sonar las dos. Si el cartel no aparece pero el sonido y el ícono sí, mirar el modo "No molestar" de Windows 11.
 - **Fila 12.** La copia de desarrollo no toma los atajos por defecto (en Debug, `hotkeysEnabled` vale falso). Se enciende en `%APPDATA%\PampaPad-dev\local.json`; si ya tiene otras claves, se agrega `hotkeysEnabled` a mano y no se pisa el archivo. Al terminar, se vuelve a apagar:
 
