@@ -56,6 +56,16 @@ public class ObsMessagesTests
     }
 
     [Fact]
+    public void Request_keeps_accents_and_symbols_of_a_marker_title()
+    {
+        const string title = "inicio cámara ñandú 🎬 \"con comillas\"";
+
+        using var json = JsonDocument.Parse(ObsMessages.Request("9", "CreateRecordChapter", new { chapterName = title }));
+
+        Assert.Equal(title, json.RootElement.GetProperty("d").GetProperty("requestData").GetProperty("chapterName").GetString());
+    }
+
+    [Fact]
     public void Request_without_data_sends_no_request_data()
     {
         using var json = JsonDocument.Parse(ObsMessages.Request("8", "StartRecord", null));
