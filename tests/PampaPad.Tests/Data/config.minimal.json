@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "mainPage": "grabacion",
+  "pages": [
+    {
+      "id": "grabacion",
+      "name": "Grabación",
+      "type": "keys",
+      "keys": [
+        {
+          "position": 5,
+          "label": "Short",
+          "shortLabel": [
+            "SHORT"
+          ],
+          "action": "marca-short",
+          "hotkey": "Ctrl+Shift+Alt+F9",
+          "onHold": {
+            "action": "marca-largo",
+            "inventado": "en onHold"
+          },
+          "inventado": "en la tecla"
+        }
+      ],
+      "show": true,
+      "inventado": "en la página"
+    }
+  ],
+  "actions": [
+    {
+      "id": "marca-short",
+      "name": "Marca: short",
+      "steps": [
+        {
+          "type": "obs.marker",
+          "marker": "short",
+          "inventado": "en el paso",
+          "onlyIf": {
+            "type": "recording.is",
+            "state": "recording",
+            "inventado": "en la condición",
+            "negate": true
+          }
+        }
+      ],
+      "inventado": "en la acción"
+    },
+    {
+      "id": "marca-largo",
+      "name": "Marca: largo",
+      "steps": [
+        {
+          "type": "obs.marker",
+          "marker": "largo"
+        }
+      ]
+    }
+  ],
+  "hotkeys": [
+    {
+      "hotkey": "Ctrl+Shift+Alt+F5",
+      "action": "marca-largo",
+      "inventado": "en el atajo"
+    }
+  ],
+  "preflight": [
+    {
+      "condition": {
+        "type": "obs.profileIs",
+        "profile": "Sin Título"
+      },
+      "message": "OBS está en otro perfil",
+      "inventado": "en la comprobación"
+    }
+  ],
+  "moduleKey": {
+    "layer": "grabacion",
+    "inventado": "en moduleKey"
+  },
+  "console": {
+    "screen": {
+      "brightness": 80,
+      "inventado": "en screen"
+    },
+    "holdMs": 1000,
+    "alerts": {
+      "marker_failed": {
+        "light": true,
+        "sound": false,
+        "inventado": "en el aviso"
+      }
+    },
+    "muteSoundWhileRecording": true,
+    "inventado": "en console"
+  },
+  "inventado": "en la raíz"
+}
