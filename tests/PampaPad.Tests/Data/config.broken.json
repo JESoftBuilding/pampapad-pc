@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "mainPage": "grabacion",
+  "pages": [
+    {
+      "id": "grabacion",
+      "name": "Grabación",
+      "keys": [
+        {
+          "position": 5,
+          "label": "Short",
+          "action": "marca-short",
+          "hotkey": "Ctrl+Shift+Alt+F9"
+        },
+        {
+          "position": 6,
+          "label": "Inicio",
+          "action": "marca-inicoi",
+          "hotkey": "Ctrl+Shift+Alt+F6"
+        },
+        {
+          "position": 7,
+          "label": "Fin",
+          "action": "marca-fin",
+          "hotkey": "Ctrl+Shift+Alt+F7"
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "id": "marca-short",
+      "name": "Marca: short",
+      "steps": [
+        {
+          "type": "obs.marker",
+          "marker": "short"
+        }
+      ]
+    },
+    {
+      "id": "marca-inicio",
+      "name": "Marca: inicio",
+      "steps": [
+        {
+          "type": "obs.marker",
+          "marker": "inicio"
+        }
+      ]
+    },
+    {
+      "id": "marca-fin",
+      "name": "Marca: fin",
+      "steps": [
+        {
+          "type": "obs.marker",
+          "marker": "fin"
+        }
+      ]
+    }
+  ]
+}
