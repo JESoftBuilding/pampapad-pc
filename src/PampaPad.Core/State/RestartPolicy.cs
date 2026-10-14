@@ -5,7 +5,7 @@ public readonly record struct RestartVerdict(bool Allowed, string? Reason = null
 
 /// <summary>
 /// Función pura sobre el estado (05 §8): nunca se reinicia grabando, en pausa, transmitiendo ni con una cadena en curso.
-/// Hoy mira la grabación y la transmisión de OBS (E2-5); E3-7 suma las cadenas.
+/// Mira la grabación y la transmisión de OBS (E2-5) y las acciones en curso (E3-7).
 /// </summary>
 public static class RestartPolicy
 {
@@ -15,6 +15,11 @@ public static class RestartPolicy
     public static RestartVerdict Evaluate(AppState state)
     {
         ArgumentNullException.ThrowIfNull(state);
+
+        if (state.Running.Count > 0)
+        {
+            return new RestartVerdict(false, "Hay una acción en curso");
+        }
 
         // "Se graba, se está en pausa o se transmite" (03 §5). Con el enlace cortado vale lo último que se supo.
         if (state.Obs.Recording == RecordingState.Paused)

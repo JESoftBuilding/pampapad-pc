@@ -41,6 +41,17 @@ public sealed record AppState
 
     /// <summary>Cuántos atajos tomó el programa y cuántos rechazó Windows.</summary>
     public HotkeysState Hotkeys { get; init; } = new(0, 0);
+
+    /// <summary>La página base, de la que salen los atajos de tecla. Vacía si no hay páginas.</summary>
+    public string BasePage { get; init; } = "";
+
+    /// <summary>La página que rige: la base o, con la consola, la capa de la tecla del módulo mientras se la mantiene.</summary>
+    public string ActivePage { get; init; } = "";
+
+    /// <summary>Las acciones en curso (01 §4.5).</summary>
+    public IReadOnlyList<RunningAction> Running { get; init; } = [];
 }
 
 public sealed record HotkeysState(int Registered, int Rejected);
+
+public sealed record RunningAction(Guid RunId, string ActionId, Trigger RequestedBy);

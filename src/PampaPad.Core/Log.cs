@@ -12,8 +12,8 @@ public enum LogLevel
     Error,
 }
 
-/// <summary>Una línea del registro. En la etapa 3 suma quién disparó la ejecución y su id (05 §9).</summary>
-public sealed record LogEntry(DateTimeOffset At, LogLevel Level, string Module, string Message, string? Code = null);
+/// <summary>Una línea del registro. RequestedBy y RunId juntan las líneas de una misma ejecución y dicen quién la disparó (05 §9).</summary>
+public sealed record LogEntry(DateTimeOffset At, LogLevel Level, string Module, string Message, string? Code = null, Trigger? RequestedBy = null, Guid? RunId = null);
 
 /// <summary>Lo último que pasó: las últimas 500 entradas en memoria y un archivo por día, una línea JSON por entrada, 14 días (05 §9).</summary>
 public sealed class Log : IAsyncDisposable
@@ -41,9 +41,9 @@ public sealed class Log : IAsyncDisposable
 
     public static string FileName(DateOnly day) => day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) + ".jsonl";
 
-    public void Write(LogLevel level, string module, string message, string? code = null)
+    public void Write(LogLevel level, string module, string message, string? code = null, Trigger? requestedBy = null, Guid? runId = null)
     {
-        var entry = new LogEntry(_clock.GetLocalNow(), level, module, message, code);
+        var entry = new LogEntry(_clock.GetLocalNow(), level, module, message, code, requestedBy, runId);
         Remember(entry);
         _pending.Writer.TryWrite(new Item(entry, null));
     }
