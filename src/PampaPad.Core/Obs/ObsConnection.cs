@@ -103,7 +103,10 @@ internal sealed class ObsConnection : IAsyncDisposable
         }
         catch (Exception e) when (e is WebSocketException or OperationCanceledException or IOException or InvalidOperationException)
         {
-            _note($"la conexión con OBS se cortó sin cierre ({e.GetType().Name})");
+            if (!ct.IsCancellationRequested)
+            {
+                _note($"la conexión con OBS se cortó sin cierre ({e.GetType().Name})");     // apagar el programa no es un corte
+            }
         }
         finally
         {

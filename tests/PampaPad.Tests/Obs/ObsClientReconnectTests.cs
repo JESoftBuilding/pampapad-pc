@@ -157,5 +157,6 @@ public class ObsClientReconnectTests
         await h.StopAsync();
 
         Assert.True(h.Loop.IsCompletedSuccessfully);
+        Assert.DoesNotContain("se cortó sin cierre", TestLogs.Text(h.Log));     // apagar el programa no es un corte del enlace
     }
 }

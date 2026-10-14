@@ -61,12 +61,13 @@ public sealed partial class ObsClient(
     private async Task<int?> RunSessionAsync(ObsConnection live, CancellationToken ct)
     {
         using var session = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        var watching = Task.CompletedTask;
         try
         {
             _exitAnnounced = false;
             Volatile.Write(ref _connection, live);
             SetLink(ObsLinkState.Loading, $"OBS {live.Hello.ObsVersion}, obs-websocket {live.Hello.WebSocketVersion}");
-            var watching = WatchAsync(live, session.Token);
+            watching = WatchAsync(live, session.Token);
             await live.RunAsync(OnEvent, ct).ConfigureAwait(false);         // vuelve cuando el socket se cierra
             await session.CancelAsync().ConfigureAwait(false);
             await watching.ConfigureAwait(false);
@@ -75,6 +76,9 @@ public sealed partial class ObsClient(
         }
         finally
         {
+            // Si la recepción tiró una excepción inesperada, la vigilancia no puede seguir sola sobre una conexión muerta.
+            await session.CancelAsync().ConfigureAwait(false);
+            await watching.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
             Volatile.Write(ref _connection, null);
             await live.DisposeAsync().ConfigureAwait(false);
         }
