@@ -36,6 +36,8 @@ public sealed class Executor(IReadOnlyList<IStepType> catalog, TimeProvider cloc
     /// <summary>Tope global por acción (01 §4.5). Propuesto, sin medir.</summary>
     public static readonly TimeSpan ActionTimeout = TimeSpan.FromSeconds(60);
 
+    private static readonly string TimeoutText = $"Pasó el tope de {ActionTimeout.TotalSeconds:0} s de la acción.";
+
     /// <summary>Los problemas de una acción que dependen del catálogo. Where es relativo a la acción: steps[0].marker.</summary>
     public IReadOnlyList<Problem> Check(Action action)
     {
@@ -104,12 +106,19 @@ public sealed class Executor(IReadOnlyList<IStepType> catalog, TimeProvider cloc
             }
             catch (OperationCanceledException)
             {
-                result = new StepResult(new Failure(ErrorCodes.Cancelled, timeout.IsCancellationRequested ? "Pasó el tope de 60 s de la acción." : "Se canceló."));
+                result = new StepResult(new Failure(ErrorCodes.Cancelled, timeout.IsCancellationRequested ? TimeoutText : "Se canceló."));
             }
             catch (Exception e)
             {
                 // No es una falla esperada: vuelve como internal_error y el Dispatcher la deja en el registro.
                 result = new StepResult(new Failure(ErrorCodes.InternalError, $"El paso reventó: {e.Message}"));
+            }
+
+            // Un paso que devuelve cancelled por su cuenta (ObsClient devuelve el corte en vez de tirarlo) no sabe quién cortó:
+            // el motivo lo conoce el ejecutor. Se antepone y se conserva lo que el paso dijo de lo suyo.
+            if (result.Failure is { Code: ErrorCodes.Cancelled } cut && timeout.IsCancellationRequested && cut.Message != TimeoutText)
+            {
+                result = result with { Failure = cut with { Message = $"{TimeoutText} {cut.Message}" } };
             }
 
             if (result.Failure is { } failure)
