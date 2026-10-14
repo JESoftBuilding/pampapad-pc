@@ -17,4 +17,8 @@
     <ProjectReference Include="..\PampaPad.Core\PampaPad.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="..\..\examples\library\**" Link="examples\library\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

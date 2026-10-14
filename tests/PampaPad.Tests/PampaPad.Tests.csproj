@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <None Include="Data\**" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\examples\library\config.json" Link="Data\example-library\config.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

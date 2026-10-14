@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "mainPage": "grabacion",
+  "pages": [
+    {
+      "id": "grabacion",
+      "name": "Grabación",
+      "keys": [
+        {
+          "position": 5,
+          "label": "Short",
+          "action": "marca-short",
+          "hotkey": "Ctrl+Shift+Alt+F9"
+        },
+        {
+          "position": 6,
+          "label": "Inicio",
+          "action": "marca-inicio",
+          "hotkey": "Ctrl+Shift+Alt+F6"
+        },
+        {
+          "position": 7,
+          "label": "Fin",
+          "action": "marca-fin",
+          "hotkey": "Ctrl+Shift+Alt+F7"
+        },
+        {
+          "position": 8,
+          "label": "Sacar",
+          "action": "marca-sacar",
+          "hotkey": "Ctrl+Shift+Alt+F8"
+        },
+        {
+          "position": 9,
+          "label": "Largo",
+          "action": "marca-largo",
+          "hotkey": "Ctrl+Shift+Alt+F5"
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "id": "marca-short",
+      "name": "Marca: short",
+      "steps": [
+        {
+          "type": "obs.marker",
+          "marker": "short"
+        }
+      ]
+    },
+    {
+      "id": "marca-inicio",
+      "name": "Marca: inicio",
+      "steps": [
+        {
+          "type": "obs.marker",
+          "marker": "inicio"
+        }
+      ]
+    },
+    {
+      "id": "marca-fin",
+      "name": "Marca: fin",
+      "steps": [
+        {
+          "type": "obs.marker",
+          "marker": "fin"
+        }
+      ]
+    },
+    {
+      "id": "marca-sacar",
+      "name": "Marca: sacar",
+      "steps": [
+        {
+          "type": "obs.marker",
+          "marker": "sacar"
+        }
+      ]
+    },
+    {
+      "id": "marca-largo",
+      "name": "Marca: largo",
+      "steps": [
+        {
+          "type": "obs.marker",
+          "marker": "largo"
+        }
+      ]
+    }
+  ]
+}
