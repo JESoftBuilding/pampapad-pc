@@ -17,6 +17,12 @@ internal sealed class Tray : ApplicationContext
     /// <summary>Sin los dos manejadores, la bandeja no ofrece nada de actualización: es la copia sin instalar.</summary>
     public Tray(string title, System.Action? onCheckUpdate, System.Action? onInstallUpdate)
     {
+        // Fuera del if de las actualizaciones: la copia de desarrollo también los necesita. "Reconectar con OBS" se inserta
+        // más abajo en el lugar 0 y queda arriba de todo (05 §3).
+        _menu.Items.Add("Recargar biblioteca", null, (_, _) => ReloadRequested?.Invoke());
+        _menu.Items.Add("Elegir carpeta de datos", null, (_, _) => ChooseFolderRequested?.Invoke());
+        _menu.Items.Add(new ToolStripSeparator());
+
         if (onCheckUpdate is not null && onInstallUpdate is not null)
         {
             _check = new ToolStripMenuItem("Buscar actualización", null, (_, _) => onCheckUpdate());
@@ -42,6 +48,10 @@ internal sealed class Tray : ApplicationContext
     }
 
     public event EventHandler? ReconnectRequested;
+
+    public event System.Action? ReloadRequested;
+
+    public event System.Action? ChooseFolderRequested;
 
     /// <summary>Pinta lo que calculó TraySummary. Sólo desde el hilo de la interfaz. Lo ya pintado se saltea.</summary>
     public void Paint(TraySummary summary)

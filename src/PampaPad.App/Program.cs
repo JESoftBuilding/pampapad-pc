@@ -1,3 +1,4 @@
+using PampaPad.Core;
 using Velopack;
 
 namespace PampaPad.App;
@@ -35,7 +36,14 @@ internal static class Program
             return 0;
         }
 
-        composition = Composition.Build(null, ui);
+        // Un proceso lanzado desde una terminal abierta antes de elegir la carpeta no ve la variable nueva: se lee también la del usuario.
+        string? root = DataRoot.Read(name =>
+            Environment.GetEnvironmentVariable(name) ?? Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.User));
+#if !DEBUG
+        root ??= FirstRun.AskRoot();
+        FirstRun.OfferToCreate(root, DataRoot.LibraryFolder(root, AppIdentity.Dev, Environment.GetEnvironmentVariable, AppContext.BaseDirectory));
+#endif
+        composition = Composition.Build(root, ui);
         _ = composition.StartAsync();
         Application.Run(composition.Tray!);
         composition.DisposeAsync().AsTask().GetAwaiter().GetResult();

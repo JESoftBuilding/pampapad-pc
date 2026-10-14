@@ -78,6 +78,14 @@ internal static class TrayIcons
                     }
 
                     break;
+                case TrayIcon.ConfigProblem:    // signo de admiración solo, ámbar
+                    using (var brush = new SolidBrush(Amber))
+                    {
+                        g.FillRectangle(brush, 13, 3, 6, 17);
+                        g.FillEllipse(brush, 12, 23, 8, 8);
+                    }
+
+                    break;
                 default:                        // contorno de círculo, gris: detenido, sin novedades
                     using (var pen = new Pen(Gray, 3))
                     {
@@ -88,7 +96,7 @@ internal static class TrayIcons
             }
         }
 
-        // La manija del ícono no se libera: son seis y viven lo que vive el proceso.
+        // La manija del ícono no se libera: son siete y viven lo que vive el proceso.
         return Icon.FromHandle(bitmap.GetHicon());
     }
 }

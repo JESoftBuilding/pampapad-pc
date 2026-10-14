@@ -10,9 +10,11 @@ internal static class AppIdentity
 #if DEBUG
     public const string Name = "PampaPad-dev";
     public const string Title = "PampaPad (dev)";
+    public const bool Dev = true;
 #else
     public const string Name = "PampaPad";
     public const string Title = "PampaPad";
+    public const bool Dev = false;
 #endif
 
     public static string Version { get; } = typeof(AppIdentity).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
@@ -45,23 +47,48 @@ internal sealed class Composition : IAsyncDisposable
 
     public Tray? Tray { get; private set; }
 
-    public static Composition Build(string? root, SynchronizationContext ui) =>
-        Build(root, ui, AppIdentity.LocalFolder, headless: false);
+    public Library Library { get; private set; } = null!;
 
-    /// <summary>La forma sin bandeja es la de la prueba de humo, que además usa una carpeta local propia.</summary>
-    internal static Composition Build(string? root, SynchronizationContext ui, string localFolder, bool headless)
+    public static Composition Build(string? root, SynchronizationContext ui) =>
+        Build(
+            DataRoot.LibraryFolder(root, AppIdentity.Dev, Environment.GetEnvironmentVariable, AppContext.BaseDirectory),
+            ui,
+            AppIdentity.LocalFolder,
+            headless: false);
+
+    /// <summary>
+    /// La forma sin bandeja es la de la prueba de humo, que además usa una carpeta local propia y le pasa la biblioteca
+    /// de ejemplo. Recibe la carpeta de la biblioteca ya resuelta; <c>null</c> es "sin biblioteca".
+    /// </summary>
+    internal static Composition Build(string? libraryFolder, SynchronizationContext ui, string localFolder, bool headless)
     {
         var clock = TimeProvider.System;
         var log = new Log(Path.Combine(localFolder, "log"), clock);
         var settings = new LocalSettings(Path.Combine(localFolder, "local.json"), log);
         settings.Load();    // si falla ya quedó en el registro, y sigue con los valores por defecto
+
+        // Después de settings.Load(): es el lugar de "raíz de datos" y "Library.Load" de 01 §4.3. Sin carpeta compone igual y queda "sin biblioteca".
+        var library = new Library(libraryFolder ?? "", Path.Combine(localFolder, "backup"));
+        library.Load();
+        log.Info("app", $"Biblioteca: {(library.Folder.Length == 0 ? "sin carpeta elegida" : library.Folder)}; estado {library.Status}; problemas {library.Problems.Count}");
+
         var state = new StateStore(log);
+
+        // Provisorio: en E3-7 lo reemplaza el Dispatcher, que además junta los problemas de los pasos y de los atajos.
+        void PublishLibrary() => state.Update(s => s with
+        {
+            Library = new LibraryState(library.Status, library.Folder),
+            Problems = library.Problems,
+        });
+        library.Changed += _ => PublishLibrary();
+        PublishLibrary();
 
         // OBS: la dirección y la clave salen del archivo del propio OBS en cada intento (03 §2). El programa no guarda la clave.
         var obsFiles = new ObsFiles(ObsFiles.DefaultFolder);
         var obs = new ObsClient(obsFiles.Address, obsFiles.Password, state, log, clock, ObsIsRunning);
         var updater = new Updater(state, settings, log, clock);
         var composition = new Composition(log, state, obs, updater);
+        composition.Library = library;
         if (!headless)
         {
             Application.ThreadException += (_, e) =>
@@ -78,6 +105,27 @@ internal sealed class Composition : IAsyncDisposable
             var tray = new Tray($"{AppIdentity.Title} {AppIdentity.Version}", onCheck, onInstall);
             composition.Tray = tray;
             tray.ReconnectRequested += (_, _) => obs.Reconnect();
+
+            // Leer el archivo puede tardar (un disco de red, un antivirus): fuera del hilo de la interfaz, y sin dejar escapar una excepción.
+            tray.ReloadRequested += () => _ = Task.Run(() =>
+            {
+                try
+                {
+                    var problems = library.Load();
+                    log.Info("app", $"Biblioteca recargada: estado {library.Status}; problemas {problems.Count}");
+                }
+                catch (Exception ex)
+                {
+                    log.Error("app", "Falló recargar la biblioteca: " + ex.Message, ErrorCodes.InternalError);
+                }
+            });
+            tray.ChooseFolderRequested += () =>
+            {
+                if (FirstRun.AskRoot() is not null)
+                {
+                    MessageBox.Show("Listo. Salí de PampaPad y volvé a abrirlo para usar la carpeta nueva.", AppIdentity.Title);
+                }
+            };
 
             // Un solo pintor. Si llegan varios avisos antes de pintar, todos leen state.Current: se pinta el último.
             void Repaint()
