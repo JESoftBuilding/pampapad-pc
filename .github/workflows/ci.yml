@@ -1,0 +1,27 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      # Las ramas de las etapas se verifican al empujarlas: los PR se abren sólo con el sí de Emmanuel.
+      - 'etapa-*'
+
+# El CI sólo lee el repo: no necesita permisos de escritura.
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    env:
+      DOTNET_NOLOGO: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Verificar
+        shell: powershell
+        run: ./build/verify.ps1
