@@ -9,7 +9,7 @@ internal sealed class SerialConsoleRig : IAsyncDisposable
 {
     private readonly TempFolder _temp = new();
     private readonly Channel<InputEvent> _events = Channel.CreateUnbounded<InputEvent>();
-    private readonly Queue<Func<Stream>> _opens = new();
+    private readonly Queue<Func<Task<Stream>>> _opens = new();
     private int _openCalls;
     private int _eventCount;
 
@@ -45,10 +45,31 @@ internal sealed class SerialConsoleRig : IAsyncDisposable
         var pipe = new MemoryPipe();
         lock (_opens)
         {
-            _opens.Enqueue(() => pipe);
+            _opens.Enqueue(() => Task.FromResult<Stream>(pipe));
         }
 
         return pipe;
+    }
+
+    /// <summary>El próximo intento de abrir el puerto devuelve este flujo, que no es un MemoryPipe.</summary>
+    public void NextOpensStream(Stream stream)
+    {
+        lock (_opens)
+        {
+            _opens.Enqueue(() => Task.FromResult(stream));
+        }
+    }
+
+    /// <summary>El próximo intento de abrir el puerto queda esperando hasta que la prueba lo complete, como un puerto lento.</summary>
+    public TaskCompletionSource<Stream> NextOpensLater()
+    {
+        var gate = new TaskCompletionSource<Stream>(TaskCreationOptions.RunContinuationsAsynchronously);
+        lock (_opens)
+        {
+            _opens.Enqueue(() => gate.Task);
+        }
+
+        return gate;
     }
 
     /// <summary>El próximo intento de abrir el puerto falla, como cuando lo tiene tomado otro programa.</summary>
@@ -90,12 +111,12 @@ internal sealed class SerialConsoleRig : IAsyncDisposable
     private Task<Stream> Open(CancellationToken ct)
     {
         Interlocked.Increment(ref _openCalls);
-        Func<Stream> next;
+        Func<Task<Stream>> next;
         lock (_opens)
         {
             next = _opens.Count > 0 ? _opens.Dequeue() : () => throw new IOException("El puerto no existe.");
         }
 
-        return Task.FromResult(next());
+        return next();
     }
 }
