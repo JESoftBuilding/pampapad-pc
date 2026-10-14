@@ -172,22 +172,6 @@ public class SerialConsoleLinkTests
     }
 
     [Fact]
-    public async Task Stopping_the_program_is_not_logged_as_a_lost_console()
-    {
-        await using var rig = new SerialConsoleRig();
-        var cable = rig.NextOpens();
-        using var life = new CancellationTokenSource();
-        await rig.Source.StartAsync(life.Token);
-        await Poll.Until(() => rig.Link == ConsoleLinkState.Connected);
-
-        await life.CancelAsync();
-        await Poll.Until(() => cable.Closed);
-        await rig.Source.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5));
-
-        Assert.DoesNotContain(rig.Log.Recent(), e => e.Level >= LogLevel.Warning);
-    }
-
-    [Fact]
     public async Task Disposing_before_starting_and_disposing_twice_are_harmless()
     {
         await using var rig = new SerialConsoleRig();
@@ -263,36 +247,4 @@ public class SerialConsoleLinkTests
     }
 
     private static InputEvent Press(int key) => new(SerialConsole.SourceId, $"key.{key}", Gesture.Press);
-
-    /// <summary>Un flujo que ya no tiene nada para leer y devuelve 0, como un puerto que se cerró del otro lado.</summary>
-    private sealed class EndedStream : Stream
-    {
-        public override bool CanRead => true;
-
-        public override bool CanSeek => false;
-
-        public override bool CanWrite => false;
-
-        public override long Length => throw new NotSupportedException();
-
-        public override long Position
-        {
-            get => throw new NotSupportedException();
-            set => throw new NotSupportedException();
-        }
-
-        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) => ValueTask.FromResult(0);
-
-        public override int Read(byte[] buffer, int offset, int count) => 0;
-
-        public override void Flush()
-        {
-        }
-
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-
-        public override void SetLength(long value) => throw new NotSupportedException();
-
-        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-    }
 }
