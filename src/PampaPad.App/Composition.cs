@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using Microsoft.Win32;
 using PampaPad.Core;
 
 namespace PampaPad.App;
@@ -27,13 +29,15 @@ internal sealed class Composition : IAsyncDisposable
     private readonly CancellationTokenSource _life = new();
     private readonly List<Task> _loops = [];
     private readonly StateStore _state;
+    private readonly ObsClient _obs;
     private readonly Updater _updater;
     private IDisposable? _painter;
 
-    private Composition(Log log, StateStore state, Updater updater)
+    private Composition(Log log, StateStore state, ObsClient obs, Updater updater)
     {
         Log = log;
         _state = state;
+        _obs = obs;
         _updater = updater;
     }
 
@@ -52,8 +56,12 @@ internal sealed class Composition : IAsyncDisposable
         var settings = new LocalSettings(Path.Combine(localFolder, "local.json"), log);
         settings.Load();    // si falla ya quedó en el registro, y sigue con los valores por defecto
         var state = new StateStore(log);
+
+        // OBS: la dirección y la clave salen del archivo del propio OBS en cada intento (03 §2). El programa no guarda la clave.
+        var obsFiles = new ObsFiles(ObsFiles.DefaultFolder);
+        var obs = new ObsClient(obsFiles.Address, obsFiles.Password, state, log, clock, ObsIsRunning);
         var updater = new Updater(state, settings, log, clock);
-        var composition = new Composition(log, state, updater);
+        var composition = new Composition(log, state, obs, updater);
         if (!headless)
         {
             Application.ThreadException += (_, e) =>
@@ -69,7 +77,18 @@ internal sealed class Composition : IAsyncDisposable
 
             var tray = new Tray($"{AppIdentity.Title} {AppIdentity.Version}", onCheck, onInstall);
             composition.Tray = tray;
-            composition._painter = state.Subscribe((_, _) => ui.Post(_ => tray.Paint(state.Current), null));
+            tray.ReconnectRequested += (_, _) => obs.Reconnect();
+
+            // Un solo pintor. Si llegan varios avisos antes de pintar, todos leen state.Current: se pinta el último.
+            void Repaint()
+            {
+                var now = state.Current;
+                tray.Paint(TraySummary.From(now));
+                tray.PaintUpdate(now.Update);
+            }
+
+            Repaint();
+            composition._painter = state.Subscribe((_, _) => ui.Post(_ => Repaint(), null));
         }
 
         log.Info("app", $"{AppIdentity.Title} {AppIdentity.Version}: compuesto, con datos en {localFolder}");
@@ -78,7 +97,13 @@ internal sealed class Composition : IAsyncDisposable
 
     public Task StartAsync()
     {
+        _loops.Add(_obs.KeepConnectedAsync(_life.Token));
         _loops.Add(_updater.KeepCheckingAsync(_life.Token));
+        if (Tray is not null)
+        {
+            SystemEvents.PowerModeChanged += OnPowerModeChanged;
+        }
+
         return Task.CompletedTask;
     }
 
@@ -87,6 +112,7 @@ internal sealed class Composition : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         // Lo que es de la interfaz se suelta primero y en su hilo, antes del primer await.
+        SystemEvents.PowerModeChanged -= OnPowerModeChanged;
         _painter?.Dispose();
         Tray?.Dispose();
         _life.Cancel();
@@ -103,10 +129,35 @@ internal sealed class Composition : IAsyncDisposable
             Log.Error("app", "Un bucle terminó con error: " + ex.Message, ErrorCodes.InternalError);
         }
 
+        await _obs.DisposeAsync().ConfigureAwait(false);
         await _state.DisposeAsync().ConfigureAwait(false);
         Log.Info("app", "Salida ordenada");
         await Log.DisposeAsync().ConfigureAwait(false);
         _life.Dispose();
+    }
+
+    // Al volver de una suspensión el socket con OBS puede quedar abierto de un solo lado (01 §9): se fuerza el reintento.
+    private void OnPowerModeChanged(object sender, PowerModeChangedEventArgs e)
+    {
+        if (e.Mode != PowerModes.Resume)
+        {
+            return;
+        }
+
+        Log.Info("app", "la PC volvió de la suspensión: se rearma la conexión con OBS");
+        _obs.Reconnect();
+    }
+
+    // "¿Hay proceso obs64?" separa closed, no_websocket, lost y exiting (03 §2). Cuando exista IWindows.IsProcessRunning, se usa esa.
+    private static bool ObsIsRunning()
+    {
+        var found = Process.GetProcessesByName("obs64");
+        foreach (var process in found)
+        {
+            process.Dispose();
+        }
+
+        return found.Length > 0;
     }
 
     private void CheckUpdate() => _ = RunAsync("buscar una actualización", () => _updater.CheckAsync(_life.Token));
