@@ -14,6 +14,9 @@ public sealed record LocalData
     /// <summary>La versión del programa que Emmanuel eligió no instalar (05 §8).</summary>
     public string? SkippedVersion { get; init; }
 
+    /// <summary>Si esta copia toma los atajos globales. Sin valor, la instalada sí y la de desarrollo no (05 §10).</summary>
+    public bool? HotkeysEnabled { get; init; }
+
     [JsonExtensionData]
     public Dictionary<string, JsonElement> Unknown { get; init; } = [];
 }

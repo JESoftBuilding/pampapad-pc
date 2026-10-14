@@ -38,4 +38,9 @@ public sealed record AppState
 
     /// <summary>Todos los problemas vigentes: los de la carga, los de los pasos y los atajos que Windows rechazó.</summary>
     public IReadOnlyList<Problem> Problems { get; init; } = [];
+
+    /// <summary>Cuántos atajos tomó el programa y cuántos rechazó Windows.</summary>
+    public HotkeysState Hotkeys { get; init; } = new(0, 0);
 }
+
+public sealed record HotkeysState(int Registered, int Rejected);
