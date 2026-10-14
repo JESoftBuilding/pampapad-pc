@@ -169,6 +169,23 @@ public class ObsMarkerEdgeTests
         Assert.Equal(ErrorCodes.Cancelled, result.Failure?.Code);
     }
 
+    [Fact]
+    public async Task A_step_that_starts_already_cancelled_sends_nothing()
+    {
+        // El cliente de OBS manda el pedido y recién después mira el token: sin esta guarda el capítulo entraba y el paso decía cancelled.
+        await using ObsSession session = await ObsSession.StartAsync(RecordingState.Recording);
+        var marker = new ObsMarker(session.Client, session.State);
+        using var cancel = new CancellationTokenSource();
+        await cancel.CancelAsync();
+
+        StepResult result = await Run(marker, """{ "type": "obs.marker", "marker": "short" }""", cancel.Token);
+
+        Assert.Equal(ErrorCodes.Cancelled, result.Failure?.Code);
+        Assert.Equal("Se canceló antes de mandar la marca: no entró.", result.Failure?.Message);
+        Assert.Equal(0, session.Obs.Times(Markers.RequestType));
+        Assert.Empty(session.Obs.Chapters);
+    }
+
     [Theory]
     [InlineData("""{ "type": "obs.marker", "marker": "short" }""")]
     [InlineData("""{ "type": "obs.marker", "marker": "fin", "label": null }""")]

@@ -48,6 +48,12 @@ public sealed class ObsMarker(ObsClient obs, StateStore state) : StepType<Marker
             return new StepResult(new Failure(ErrorCodes.MarkerUnsupported, Markers.Unsupported));
         }
 
+        // ObsClient manda el pedido y recién después mira el token: con uno ya cancelado la marca saldría igual.
+        if (ct.IsCancellationRequested)
+        {
+            return new StepResult(new Failure(ErrorCodes.Cancelled, "Se canceló antes de mandar la marca: no entró."));
+        }
+
         ObsResponse response = await obs.RequestAsync(Markers.RequestType, new { chapterName = Markers.Title(type, p.Label) }, ct).ConfigureAwait(false);
         return new StepResult(Markers.Interpret(response, known.Recording));
     }
