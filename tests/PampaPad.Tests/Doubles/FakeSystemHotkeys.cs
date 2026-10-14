@@ -41,4 +41,10 @@ public sealed class FakeSystemHotkeys : ISystemHotkeys
     }
 
     public bool Press(string text) => Press(Hotkey.Parse(text) ?? throw new ArgumentException($"\"{text}\" no es un atajo.", nameof(text)));
+
+    /// <summary>Un aviso con un id cualquiera, como el que quedó en la cola de Windows de una combinación que ya se soltó.</summary>
+    public void PressId(int id) => Pressed?.Invoke(id);
+
+    /// <summary>Cuántos oyentes tiene Pressed ahora: para comprobar que la fuente se engancha una vez y se suelta al cerrar.</summary>
+    public int Listeners => Pressed?.GetInvocationList().Length ?? 0;
 }

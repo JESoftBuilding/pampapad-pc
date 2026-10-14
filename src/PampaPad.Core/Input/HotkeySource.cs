@@ -16,6 +16,7 @@ public sealed class HotkeySource(ISystemHotkeys system, StateStore state, Log lo
     private volatile IReadOnlyDictionary<int, InputEvent> _registered = Nothing;
     private int _nextId = 1;
     private bool _listening;
+    private bool _disposed;
 
     public event Action<InputEvent>? Input;
 
@@ -25,7 +26,7 @@ public sealed class HotkeySource(ISystemHotkeys system, StateStore state, Log lo
     {
         lock (_applying)
         {
-            if (!_listening)
+            if (!_listening && !_disposed)
             {
                 system.Pressed += OnPressed;
                 _listening = true;
@@ -41,12 +42,21 @@ public sealed class HotkeySource(ISystemHotkeys system, StateStore state, Log lo
         int registered;
         lock (_applying)
         {
+            if (_disposed)
+            {
+                // Cerrado el programa, un aviso tardío de la biblioteca no vuelve a tomar combinaciones.
+                return [];
+            }
+
             Release();
             var next = new Dictionary<int, InputEvent>();
             var seen = new HashSet<Hotkey>();
+            var positions = new HashSet<int>();
             foreach ((int index, Key key) in page.Keys.Indexed())
             {
-                if (key.Position is { } position)
+                // Una tecla rota (posición fuera de 1 a 12 o repetida en la página, 02 §10) no toma su atajo: no hay tecla a la que llevar
+                // el toque y, si la posición se repite, caería en la primera tecla que la tiene. El validador ya la informó.
+                if (key.Position is { } position && position is >= 1 and <= Validator.KeyCount && positions.Add(position))
                 {
                     Register(key.Hotkey, $"keys[{index}].hotkey", new InputEvent(SourceId, Controls.Key(position), Gesture.Tap), next, seen, rejected);
                 }
@@ -70,6 +80,7 @@ public sealed class HotkeySource(ISystemHotkeys system, StateStore state, Log lo
     {
         lock (_applying)
         {
+            _disposed = true;
             if (_listening)
             {
                 system.Pressed -= OnPressed;
@@ -116,9 +127,19 @@ public sealed class HotkeySource(ISystemHotkeys system, StateStore state, Log lo
     // Llega en el hilo del adaptador y no toma _applying: Apply puede estar esperando a ese mismo hilo.
     private void OnPressed(int id)
     {
-        if (_registered.TryGetValue(id, out InputEvent? input))
+        if (!_registered.TryGetValue(id, out InputEvent? input))
+        {
+            return;
+        }
+
+        try
         {
             Input?.Invoke(input);
+        }
+        catch (Exception error)
+        {
+            // Una excepción que sale de acá termina el hilo de los atajos y, con él, el programa: ninguna combinación volvería a andar.
+            log.Error("hotkeys", $"Quien atiende {input.Control} tiró una excepción: {error.Message}", ErrorCodes.InternalError);
         }
     }
 }
