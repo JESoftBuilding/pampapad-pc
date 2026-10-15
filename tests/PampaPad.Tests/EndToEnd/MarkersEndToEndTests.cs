@@ -89,7 +89,7 @@ public class MarkersEndToEndTests
         {
             var library = new CoreLibrary(ExampleLibrary, Path.Combine(Path.GetTempPath(), "pampapad-e2e-backup"));
             library.Load();
-            var executor = new Executor(Catalog.Build(session.Client, session.State), TimeProvider.System);
+            var executor = new Executor(Catalog.Build(session.Client, session.State, session.Log, TimeProvider.System), TimeProvider.System);
             var dispatcher = new Dispatcher(library, session.State, executor, new Gestures(TimeProvider.System, Gestures.HoldFrom(null), Gestures.DefaultFreshness), session.Log);
             var notifier = new Notifier(session.State, library, session.Log, Sounds.Enqueue, Balloons.Enqueue);
             dispatcher.Finished += notifier.OnFinished;

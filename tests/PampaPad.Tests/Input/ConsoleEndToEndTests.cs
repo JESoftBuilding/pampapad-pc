@@ -56,7 +56,7 @@ public class ConsoleEndToEndTests
         await using var session = await ObsSession.StartAsync(RecordingState.Recording);
         using var temp = new TempFolder();
         var clock = TimeProvider.System;
-        var executor = new Executor(Catalog.Build(session.Client, session.State), clock);
+        var executor = new Executor(Catalog.Build(session.Client, session.State, session.Log, clock), clock);
         var gestures = new Gestures(clock, Gestures.HoldFrom(null), Gestures.DefaultFreshness);
         var dispatcher = new Dispatcher(KeysRig.LoadLibrary(temp), session.State, executor, gestures, session.Log);
         var finished = new TaskCompletionSource<ActionResult>(TaskCreationOptions.RunContinuationsAsynchronously);

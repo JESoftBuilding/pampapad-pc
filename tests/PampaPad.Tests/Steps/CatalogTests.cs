@@ -26,15 +26,15 @@ public sealed class CatalogTests : IAsyncLifetime
     }
 
     [Fact]
-    public void In_this_stage_the_only_step_type_is_the_marker()
+    public void The_catalog_has_the_marker_first_and_then_the_steps_of_stage_4()
     {
-        Assert.Equal(new[] { "obs.marker" }, Catalog.Build(_obs, _state).Select(type => type.Id));
+        Assert.Equal(new[] { "obs.marker" }, Catalog.Build(_obs, _state, _log, TimeProvider.System).Select(type => type.Id));
     }
 
     [Fact]
     public void Ids_are_not_repeated()
     {
-        IReadOnlyList<IStepType> catalog = Catalog.Build(_obs, _state);
+        IReadOnlyList<IStepType> catalog = Catalog.Build(_obs, _state, _log, TimeProvider.System);
 
         Assert.Equal(catalog.Count, catalog.Select(type => type.Id).Distinct().Count());
     }
@@ -42,7 +42,7 @@ public sealed class CatalogTests : IAsyncLifetime
     [Fact]
     public void Every_field_is_a_property_of_the_parameters_of_its_type()
     {
-        foreach (IStepType type in Catalog.Build(_obs, _state))
+        foreach (IStepType type in Catalog.Build(_obs, _state, _log, TimeProvider.System))
         {
             Type parameters = type.GetType().BaseType!.GetGenericArguments()[0];
             HashSet<string> names = [.. parameters.GetProperties().Select(property => JsonNamingPolicy.CamelCase.ConvertName(property.Name))];
