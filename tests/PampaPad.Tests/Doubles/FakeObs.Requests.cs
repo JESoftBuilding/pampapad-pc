@@ -111,17 +111,7 @@ public sealed partial class FakeObs
             ["outputReconnecting"] = false,
             ["outputTimecode"] = "00:00:00.000",
         }),
-        "GetSceneList" => Reply.Ok(new JsonObject
-        {
-            ["currentPreviewSceneName"] = null,
-            ["currentPreviewSceneUuid"] = null,
-            ["currentProgramSceneName"] = SceneName,
-            ["currentProgramSceneUuid"] = SceneUuid,
-            ["scenes"] = new JsonArray(
-                Scene(0, "Banco", "900ebc25-03ef-443e-80cc-2ad8991268ff"),
-                Scene(1, "Cámara", "3da67a13-6704-4c87-9e09-c8be28efdf20"),
-                Scene(2, "Pantalla", "f3637453-bc14-4e54-b4c5-1b76f4fb4a21")),
-        }),
+        "GetSceneList" => Reply.Ok(SceneList()),
         "GetSpecialInputs" => Reply.Ok(new JsonObject
         {
             ["desktop1"] = "Audio del escritorio",
@@ -129,14 +119,11 @@ public sealed partial class FakeObs
             ["mic1"] = HasMic ? MicName : null,
             ["mic2"] = null,
         }),
-        "GetInputList" => Reply.Ok(new JsonObject
-        {
-            ["inputs"] = new JsonArray(
-                Input("Audio del escritorio", "364259ab-1ec2-4e92-9a4e-5faca2f47d6f", "wasapi_output_capture"),
-                Input(MicName, MicUuid, "wasapi_input_capture"),
-                Input("Captura de pantalla", "2f658171-ce61-4501-aacd-8d405ede9f53", "monitor_capture")),
-        }),
+        "GetInputList" => Reply.Ok(InputList()),
         "GetInputMute" => InputMute(data),
+        "SetInputMute" => SetInputMute(data),
+        "SetCurrentProgramScene" => SetProgramScene(data),
+        "GetStreamServiceSettings" => Reply.Ok(StreamServiceSettings()),
         "StartRecord" => StartRecord(),
         "StopRecord" => StopRecord(),
         "PauseRecord" => PauseRecord(),
@@ -144,18 +131,6 @@ public sealed partial class FakeObs
         "CreateRecordChapter" => Chapter(data),
         _ => Reply.Fail(204, "Your request type is not valid."),
     };
-
-    private Reply InputMute(JsonObject? data)
-    {
-        var name = (string?)data?["inputName"];
-        var uuid = (string?)data?["inputUuid"];
-        if (HasMic && (name == MicName || uuid == MicUuid))
-        {
-            return Reply.Ok(new JsonObject { ["inputMuted"] = MicMuted });
-        }
-
-        return Reply.Fail(600, $"No source was found by the name of `{name}`.");
-    }
 
     private Reply StartRecord()
     {
