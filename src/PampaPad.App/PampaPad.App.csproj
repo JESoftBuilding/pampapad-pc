@@ -7,6 +7,7 @@
     <AssemblyName>PampaPad</AssemblyName>
     <RootNamespace>PampaPad.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Resources\pampapad.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
