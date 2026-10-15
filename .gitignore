@@ -5,3 +5,7 @@ TestResults/
 .vs/
 *.user
 .grepai/
+node_modules/
+ui/dist/
+playwright-report/
+test-results/
