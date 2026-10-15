@@ -94,7 +94,7 @@ public sealed partial class SerialConsole : IInputSource
         }
 
         // Una lectura pendiente no respeta el token: lo único que la corta es cerrar el puerto (01 §9).
-        toClose?.Dispose();
+        CloseQuietly(toClose);
         signal.TrySetResult();
         _log.Info(SourceId, on ? "Se soltó el puerto de la consola." : "Se vuelve a tomar el puerto de la consola.");
     }
@@ -225,7 +225,7 @@ public sealed partial class SerialConsole : IInputSource
             }
         }
 
-        stream.Dispose();
+        CloseQuietly(stream);
         return false;
     }
 
@@ -238,6 +238,24 @@ public sealed partial class SerialConsole : IInputSource
             _stream = null;
         }
 
-        stream?.Dispose();
+        CloseQuietly(stream);
+    }
+
+    /// <summary>
+    /// Cierra el flujo y no deja salir el error. Con la placa desenchufada, SerialStream.Dispose tira UnauthorizedAccessException,
+    /// pero el runtime ya cerró el handle en su finally: no queda nada por reintentar. El motivo del corte lo anota el bucle cuando
+    /// falla la lectura. Si el error saliera, mataría el bucle (la consola quedaría "conectada" para siempre) o llegaría hasta quien
+    /// suelta el puerto desde la interfaz o apaga el programa.
+    /// </summary>
+    private static void CloseQuietly(Stream? stream)
+    {
+        try
+        {
+            stream?.Dispose();
+        }
+        catch (Exception)
+        {
+            // Ver arriba: el puerto ya está cerrado, el error de cierre no cambia nada.
+        }
     }
 }

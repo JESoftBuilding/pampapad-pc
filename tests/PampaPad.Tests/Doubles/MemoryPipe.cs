@@ -15,6 +15,19 @@ public sealed class MemoryPipe : Stream
 
     public bool Closed => _closed;
 
+    /// <summary>
+    /// Cerrar tira, como el puerto real con la placa desenchufada: SerialStream.Dispose falla en EscapeCommFunction con
+    /// UnauthorizedAccessException, pero el runtime cierra el handle igual en su finally. Por eso primero se cierra
+    /// (se corta la lectura pendiente) y recién después tira, y sólo la primera vez: cerrar de nuevo no hace nada.
+    /// </summary>
+    public bool FailsToClose { get; init; }
+
+    /// <summary>
+    /// Se corre en la primera vez que se cierra, con el cable ya cerrado y antes de tirar. Sirve para ordenar una carrera:
+    /// que, mientras SerialConsole cierra el cable, alguien más toque el estado de la consola.
+    /// </summary>
+    public Action? OnFirstClose { get; init; }
+
     public override bool CanRead => true;
 
     public override bool CanSeek => false;
@@ -73,8 +86,19 @@ public sealed class MemoryPipe : Stream
 
     protected override void Dispose(bool disposing)
     {
+        var first = !_closed;
         _closed = true;
         _incoming.Writer.TryComplete();
         base.Dispose(disposing);
+        if (!first)
+        {
+            return;
+        }
+
+        OnFirstClose?.Invoke();
+        if (FailsToClose)
+        {
+            throw new UnauthorizedAccessException("Access to the path is denied.");
+        }
     }
 }
