@@ -159,9 +159,11 @@ public sealed class UpdateCycleTests : IAsyncLifetime
         var result = await cycle.DownloadAndApplyAsync(CancellationToken.None);
 
         Assert.Equal(ErrorCodes.ReadOnlyWhileRecording, result.Failure?.Code);
+        Assert.Equal("Se está grabando", result.Failure?.Message);
         Assert.Equal(0, _feed.Downloads);
         Assert.Equal(0, _feed.Applies);
-        Assert.Equal(new UpdateState(UpdatePhase.Available, "0.1.1", "Se está grabando"), Update);
+        Assert.Equal(new UpdateState(UpdatePhase.Available, "0.1.1"), Update);    // el motivo no queda en el estado
+        Assert.Contains(_log.Recent(), entry => entry.Module == "update" && entry.Message == "No se instala la versión 0.1.1: Se está grabando");
     }
 
     [Fact]
@@ -183,7 +185,30 @@ public sealed class UpdateCycleTests : IAsyncLifetime
         Assert.Equal(ErrorCodes.ReadOnlyWhileRecording, result.Failure?.Code);
         Assert.Equal(1, _feed.Downloads);
         Assert.Equal(0, _feed.Applies);
-        Assert.Equal(new UpdateState(UpdatePhase.Available, "0.1.1", "Empezó una toma"), Update);
+        Assert.Equal(new UpdateState(UpdatePhase.Available, "0.1.1"), Update);
+        Assert.Contains(_log.Recent(), entry => entry.Module == "update" && entry.Message == "No se instala la versión 0.1.1: Empezó una toma");
+    }
+
+    [Fact]
+    public async Task A_refused_install_leaves_no_reason_behind_once_the_take_ends()
+    {
+        // Revisión de la etapa 2: el motivo quedaba en Detail, la bandeja seguía diciendo "Se está grabando" con la toma
+        // terminada (hasta 6 h) y una búsqueda que fallaba lo reponía. Con la política real, como la arma Updater.
+        var connected = ObsState.Initial with { Link = ObsLinkState.Ready };
+        var cycle = new UpdateCycle(_state, _settings, _log, _clock, _feed.AsFeed(), RestartPolicy.Evaluate);
+        _feed.FindResult = "0.2.0";
+        await cycle.CheckAsync(CancellationToken.None);
+        _state.Update(current => current with { Obs = connected with { Recording = RecordingState.Recording } });
+
+        var refused = await cycle.DownloadAndApplyAsync(CancellationToken.None);
+        _state.Update(current => current with { Obs = connected });
+        _feed.FindResult = new Failure(ErrorCodes.NoResponse, "Sin red");
+        await cycle.CheckAsync(CancellationToken.None);
+
+        Assert.Equal(ErrorCodes.ReadOnlyWhileRecording, refused.Failure?.Code);
+        Assert.Equal(new UpdateState(UpdatePhase.Available, "0.2.0"), Update);
+        Assert.Equal("Versión 0.2.0 lista para instalar", TraySummary.From(_state.Current).Tooltip);
+        Assert.Equal(new UpdateMenu(true, "Buscar actualización", true, true, "Instalar versión 0.2.0"), TraySummary.UpdateItems(_state.Current));
     }
 
     [Fact]

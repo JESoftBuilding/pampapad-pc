@@ -9,13 +9,19 @@ public enum UpdatePhase
     Applying,
 }
 
-/// <summary>En qué anda la actualización. Version es la que se ofrece; Detail, por qué no se instaló la última vez que se intentó.</summary>
+/// <summary>
+/// En qué anda la actualización. Version es la que se ofrece; Detail, la última falla al bajarla o al dejarla instalada.
+/// Que RestartPolicy no deje instalar no va acá: se calcula del estado cada vez (TraySummary.UpdateItems).
+/// </summary>
 public sealed record UpdateState(UpdatePhase Phase, string? Version = null, string? Detail = null)
 {
     public static UpdateState Idle { get; } = new(UpdatePhase.Idle);
 }
 
-/// <summary>La única foto de lo que el programa sabe (01 §3.1). En la etapa 1 sólo sabe de la actualización; E2-1 le suma el resto.</summary>
+/// <summary>De qué carpeta es la biblioteca y qué pasó al cargarla. Folder está vacía si no hay carpeta elegida.</summary>
+public sealed record LibraryState(LibraryStatus Status, string Folder);
+
+/// <summary>La única foto de lo que el programa sabe (01 §3.1). Hasta ahora: la actualización, OBS y la biblioteca; las etapas siguientes suman el resto.</summary>
 public sealed record AppState
 {
     public static AppState Initial { get; } = new();
@@ -24,4 +30,34 @@ public sealed record AppState
     public long Seq { get; init; }
 
     public UpdateState Update { get; init; } = UpdateState.Idle;
+
+    public ObsState Obs { get; init; } = ObsState.Initial;
+
+    /// <summary>Qué pasó con la última carga de la biblioteca, y de qué carpeta.</summary>
+    public LibraryState Library { get; init; } = new(LibraryStatus.NotLoaded, "");
+
+    /// <summary>Todos los problemas vigentes: los de la carga, los de los pasos y los atajos que Windows rechazó.</summary>
+    public IReadOnlyList<Problem> Problems { get; init; } = [];
+
+    /// <summary>Cuántos atajos tomó el programa y cuántos rechazó Windows.</summary>
+    public HotkeysState Hotkeys { get; init; } = new(0, 0);
+
+    /// <summary>La página base, de la que salen los atajos de tecla. Vacía si no hay páginas.</summary>
+    public string BasePage { get; init; } = "";
+
+    /// <summary>La página que rige: la base o, con la consola, la capa de la tecla del módulo mientras se la mantiene.</summary>
+    public string ActivePage { get; init; } = "";
+
+    /// <summary>Las acciones en curso (01 §4.5).</summary>
+    public IReadOnlyList<RunningAction> Running { get; init; } = [];
+
+    /// <summary>La última acción que falló. Se borra cuando la próxima termina bien o cuando se abre el menú de la bandeja.</summary>
+    public ActionFailure? LastFailure { get; init; }
 }
+
+public sealed record HotkeysState(int Registered, int Rejected);
+
+public sealed record RunningAction(Guid RunId, string ActionId, Trigger RequestedBy);
+
+/// <summary>NoticeId es el id del aviso (marker_failed o action_failed); Summary, "Falló acción: paso n (tipo)".</summary>
+public sealed record ActionFailure(string NoticeId, string Summary, string Message);

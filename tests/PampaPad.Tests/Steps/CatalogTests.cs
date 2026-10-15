@@ -1,0 +1,55 @@
+using System.Text.Json;
+using PampaPad.Core;
+
+namespace PampaPad.Tests;
+
+public sealed class CatalogTests : IAsyncLifetime
+{
+    private readonly TempFolder _temp = new();
+    private readonly StateStore _state = new();
+    private Log _log = null!;
+    private ObsClient _obs = null!;
+
+    public Task InitializeAsync()
+    {
+        _log = new Log(_temp.Combine("log"), TimeProvider.System);
+        _obs = new ObsClient(() => new Uri("ws://127.0.0.1:9"), () => null, _state, _log, TimeProvider.System);
+        return Task.CompletedTask;
+    }
+
+    public async Task DisposeAsync()
+    {
+        await _obs.DisposeAsync();
+        await _state.DisposeAsync();
+        await _log.DisposeAsync();
+        _temp.Dispose();
+    }
+
+    [Fact]
+    public void In_this_stage_the_only_step_type_is_the_marker()
+    {
+        Assert.Equal(new[] { "obs.marker" }, Catalog.Build(_obs, _state).Select(type => type.Id));
+    }
+
+    [Fact]
+    public void Ids_are_not_repeated()
+    {
+        IReadOnlyList<IStepType> catalog = Catalog.Build(_obs, _state);
+
+        Assert.Equal(catalog.Count, catalog.Select(type => type.Id).Distinct().Count());
+    }
+
+    [Fact]
+    public void Every_field_is_a_property_of_the_parameters_of_its_type()
+    {
+        foreach (IStepType type in Catalog.Build(_obs, _state))
+        {
+            Type parameters = type.GetType().BaseType!.GetGenericArguments()[0];
+            HashSet<string> names = [.. parameters.GetProperties().Select(property => JsonNamingPolicy.CamelCase.ConvertName(property.Name))];
+
+            Assert.All(type.Fields, field => Assert.Contains(field.Name, names));
+            Assert.False(string.IsNullOrWhiteSpace(type.Name));
+            Assert.False(string.IsNullOrWhiteSpace(type.Group));
+        }
+    }
+}

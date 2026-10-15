@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using Microsoft.Win32;
 using PampaPad.Core;
 
 namespace PampaPad.App;
@@ -8,9 +10,11 @@ internal static class AppIdentity
 #if DEBUG
     public const string Name = "PampaPad-dev";
     public const string Title = "PampaPad (dev)";
+    public const bool Dev = true;
 #else
     public const string Name = "PampaPad";
     public const string Title = "PampaPad";
+    public const bool Dev = false;
 #endif
 
     public static string Version { get; } = typeof(AppIdentity).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
@@ -27,13 +31,18 @@ internal sealed class Composition : IAsyncDisposable
     private readonly CancellationTokenSource _life = new();
     private readonly List<Task> _loops = [];
     private readonly StateStore _state;
+    private readonly ObsClient _obs;
     private readonly Updater _updater;
     private IDisposable? _painter;
+    private Dispatcher? _dispatcher;
+    private HotkeySource? _hotkeys;
+    private SystemHotkeys? _systemHotkeys;
 
-    private Composition(Log log, StateStore state, Updater updater)
+    private Composition(Log log, StateStore state, ObsClient obs, Updater updater)
     {
         Log = log;
         _state = state;
+        _obs = obs;
         _updater = updater;
     }
 
@@ -41,19 +50,68 @@ internal sealed class Composition : IAsyncDisposable
 
     public Tray? Tray { get; private set; }
 
-    public static Composition Build(string? root, SynchronizationContext ui) =>
-        Build(root, ui, AppIdentity.LocalFolder, headless: false);
+    public Library Library { get; private set; } = null!;
 
-    /// <summary>La forma sin bandeja es la de la prueba de humo, que además usa una carpeta local propia.</summary>
-    internal static Composition Build(string? root, SynchronizationContext ui, string localFolder, bool headless)
+    /// <summary>Lo que el programa sabe ahora. La prueba de humo lo lee: los problemas del estado incluyen los de los pasos, que la biblioteca sola no ve.</summary>
+    public AppState Snapshot => _state.Current;
+
+    public static Composition Build(string? root, SynchronizationContext ui) =>
+        Build(
+            DataRoot.LibraryFolder(root, AppIdentity.Dev, Environment.GetEnvironmentVariable, AppContext.BaseDirectory),
+            ui,
+            AppIdentity.LocalFolder,
+            headless: false);
+
+    /// <summary>
+    /// La forma sin bandeja es la de la prueba de humo, que además usa una carpeta local propia y le pasa la biblioteca
+    /// de ejemplo. Recibe la carpeta de la biblioteca ya resuelta; <c>null</c> es "sin biblioteca".
+    /// </summary>
+    internal static Composition Build(string? libraryFolder, SynchronizationContext ui, string localFolder, bool headless)
     {
         var clock = TimeProvider.System;
         var log = new Log(Path.Combine(localFolder, "log"), clock);
         var settings = new LocalSettings(Path.Combine(localFolder, "local.json"), log);
         settings.Load();    // si falla ya quedó en el registro, y sigue con los valores por defecto
+
+        // Después de settings.Load(): es el lugar de "raíz de datos" y "Library.Load" de 01 §4.3. Sin carpeta compone igual y queda "sin biblioteca".
+        var library = new Library(libraryFolder ?? "", Path.Combine(localFolder, "backup"));
+        library.Load();
+        log.Info("app", $"Biblioteca: {(library.Folder.Length == 0 ? "sin carpeta elegida" : library.Folder)}; estado {library.Status}; problemas {library.Problems.Count}");
+
         var state = new StateStore(log);
+
+        // OBS: la dirección y la clave salen del archivo del propio OBS en cada intento (03 §2). El programa no guarda la clave.
+        var obsFiles = new ObsFiles(ObsFiles.DefaultFolder);
+        var obs = new ObsClient(obsFiles.Address, obsFiles.Password, state, log, clock, ObsIsRunning);
+
+        // El Dispatcher publica la biblioteca en el estado al construirse y en cada recarga, junto con los problemas de los pasos y de los atajos.
+        IReadOnlyList<IStepType> catalog = Catalog.Build(obs, state);
+        var executor = new Executor(catalog, clock);
+        var dispatcher = new Dispatcher(library, state, executor, log);
         var updater = new Updater(state, settings, log, clock);
-        var composition = new Composition(log, state, updater);
+        var composition = new Composition(log, state, obs, updater);
+        composition.Library = library;
+        composition._dispatcher = dispatcher;
+
+        // Va acá y no en su lugar exacto de 01 §4.3, entre las fuentes de entrada y el Updater: sus dos canales necesitan la bandeja, que cuelga de composition.
+        var notifier = new Notifier(
+            state,
+            library,
+            log,
+            playSound: notice => ui.Post(_ => composition.Tray?.PlayFailed(), null),
+            showBalloon: notice => ui.Post(_ => composition.Tray?.ShowBalloon(notice.Title, notice.Text), null));
+        dispatcher.Finished += notifier.OnFinished;
+        if (!headless && (settings.Current.HotkeysEnabled ?? !AppIdentity.Dev))
+        {
+            // Los atajos son globales. La copia de desarrollo no los toma, para no sacárselos a la instalada (05 §10);
+            // se encienden a mano con "hotkeysEnabled": true en su local.json. La prueba de humo tampoco los toma.
+            var systemHotkeys = new SystemHotkeys();
+            var hotkeys = new HotkeySource(systemHotkeys, state, log);
+            dispatcher.Attach(hotkeys);
+            composition._systemHotkeys = systemHotkeys;
+            composition._hotkeys = hotkeys;
+        }
+
         if (!headless)
         {
             Application.ThreadException += (_, e) =>
@@ -69,7 +127,40 @@ internal sealed class Composition : IAsyncDisposable
 
             var tray = new Tray($"{AppIdentity.Title} {AppIdentity.Version}", onCheck, onInstall);
             composition.Tray = tray;
-            composition._painter = state.Subscribe((_, _) => ui.Post(_ => tray.Paint(state.Current), null));
+            tray.MenuOpened += notifier.Dismiss;
+            tray.ReconnectRequested += (_, _) => obs.Reconnect();
+
+            // Leer el archivo puede tardar (un disco de red, un antivirus): fuera del hilo de la interfaz, y sin dejar escapar una excepción.
+            tray.ReloadRequested += () => _ = Task.Run(() =>
+            {
+                try
+                {
+                    var problems = library.Load();
+                    log.Info("app", $"Biblioteca recargada: estado {library.Status}; problemas {problems.Count}");
+                }
+                catch (Exception ex)
+                {
+                    log.Error("app", "Falló recargar la biblioteca: " + ex.Message, ErrorCodes.InternalError);
+                }
+            });
+            tray.ChooseFolderRequested += () =>
+            {
+                if (FirstRun.AskRoot() is not null)
+                {
+                    MessageBox.Show("Listo. Salí de PampaPad y volvé a abrirlo para usar la carpeta nueva.", AppIdentity.Title);
+                }
+            };
+
+            // Un solo pintor. Si llegan varios avisos antes de pintar, todos leen state.Current: se pinta el último.
+            void Repaint()
+            {
+                var now = state.Current;
+                tray.Paint(TraySummary.From(now));
+                tray.PaintUpdate(TraySummary.UpdateItems(now));
+            }
+
+            Repaint();
+            composition._painter = state.Subscribe((_, _) => ui.Post(_ => Repaint(), null));
         }
 
         log.Info("app", $"{AppIdentity.Title} {AppIdentity.Version}: compuesto, con datos en {localFolder}");
@@ -78,7 +169,18 @@ internal sealed class Composition : IAsyncDisposable
 
     public Task StartAsync()
     {
+        _loops.Add(_obs.KeepConnectedAsync(_life.Token));
         _loops.Add(_updater.KeepCheckingAsync(_life.Token));
+        if (_hotkeys is not null)
+        {
+            _loops.Add(_hotkeys.StartAsync(_life.Token));
+        }
+
+        if (Tray is not null)
+        {
+            SystemEvents.PowerModeChanged += OnPowerModeChanged;
+        }
+
         return Task.CompletedTask;
     }
 
@@ -87,9 +189,11 @@ internal sealed class Composition : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         // Lo que es de la interfaz se suelta primero y en su hilo, antes del primer await.
+        SystemEvents.PowerModeChanged -= OnPowerModeChanged;
         _painter?.Dispose();
         Tray?.Dispose();
         _life.Cancel();
+        _dispatcher?.CancelAll();
         try
         {
             await Task.WhenAll(_loops).WaitAsync(ShutdownLimit).ConfigureAwait(false);
@@ -103,10 +207,42 @@ internal sealed class Composition : IAsyncDisposable
             Log.Error("app", "Un bucle terminó con error: " + ex.Message, ErrorCodes.InternalError);
         }
 
+        // El orden de 01 §4.3: cancelar, esperar los bucles, soltar los atajos y recién después cerrar OBS.
+        if (_hotkeys is not null)
+        {
+            await _hotkeys.DisposeAsync().ConfigureAwait(false);
+        }
+
+        _systemHotkeys?.Dispose();
+        await _obs.DisposeAsync().ConfigureAwait(false);
         await _state.DisposeAsync().ConfigureAwait(false);
         Log.Info("app", "Salida ordenada");
         await Log.DisposeAsync().ConfigureAwait(false);
         _life.Dispose();
+    }
+
+    // Al volver de una suspensión el socket con OBS puede quedar abierto de un solo lado (01 §9): se fuerza el reintento.
+    private void OnPowerModeChanged(object sender, PowerModeChangedEventArgs e)
+    {
+        if (e.Mode != PowerModes.Resume)
+        {
+            return;
+        }
+
+        Log.Info("app", "la PC volvió de la suspensión: se rearma la conexión con OBS");
+        _obs.Reconnect();
+    }
+
+    // "¿Hay proceso obs64?" separa closed, no_websocket, lost y exiting (03 §2). Cuando exista IWindows.IsProcessRunning, se usa esa.
+    private static bool ObsIsRunning()
+    {
+        var found = Process.GetProcessesByName("obs64");
+        foreach (var process in found)
+        {
+            process.Dispose();
+        }
+
+        return found.Length > 0;
     }
 
     private void CheckUpdate() => _ = RunAsync("buscar una actualización", () => _updater.CheckAsync(_life.Token));
