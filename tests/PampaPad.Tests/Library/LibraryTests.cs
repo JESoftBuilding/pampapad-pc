@@ -185,7 +185,8 @@ public sealed class LibraryTests : IDisposable
         var library = new CoreLibrary(Path.Combine(AppContext.BaseDirectory, "Data", "example-library"), Path.Combine(_folder, "backup"));
 
         Assert.Empty(library.Load());
-        Assert.Equal(5, library.Current.Pages![0].Keys!.Count);
-        Assert.Equal(5, library.Current.Actions!.Count);
+        Assert.Equal(8, library.Current.Pages![0].Keys!.Count);       // las cinco marcas, el micrófono, la pausa y grabar
+        Assert.Equal(12, library.Current.Pages![1].Keys!.Count);      // la grilla de escenas (decisión 27)
+        Assert.Equal(22, library.Current.Actions!.Count);
     }
 }
