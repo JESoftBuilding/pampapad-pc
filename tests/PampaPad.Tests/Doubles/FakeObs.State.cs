@@ -56,6 +56,7 @@ public sealed partial class FakeObs
     [
         "GetVersion", "GetRecordStatus", "GetStreamStatus", "GetSceneList", "GetSpecialInputs", "GetInputList",
         "GetInputMute", "StartRecord", "StopRecord", "PauseRecord", "ResumeRecord", "CreateRecordChapter",
+        "SetCurrentProgramScene", "SetInputMute", "GetStreamServiceSettings",
     ];
 
     // Como si se hiciera desde la ventana de OBS: cambia el estado y manda los eventos.

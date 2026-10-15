@@ -165,7 +165,7 @@ public class DispatcherRefreshTests
             {
               "version": 1,
               "pages": [ { "id": "p", "name": "P", "keys": [ { "position": 1, "label": "Uno", "action": "no-existe", "hotkey": "Ctrl+Alt+U" } ] } ],
-              "actions": [ { "id": "escena", "name": "Escena", "steps": [ { "type": "obs.scene", "scene": "Banco" } ] } ]
+              "actions": [ { "id": "escena", "name": "Escena", "steps": [ { "type": "obs.filter", "filter": "Ruido" } ] } ]
             }
             """;
         await using var rig = new DispatcherRig(both, windows => windows.Taken.Add(Hotkey.Parse("Ctrl+Alt+U")!.Value));

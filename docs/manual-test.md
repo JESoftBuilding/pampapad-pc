@@ -159,3 +159,57 @@ pio device monitor -p COM20 -b 115200 --rts 0 --dtr 0
 - **Fila 9, el `fin` de más.** Si `C` llega a estar apretada unos 850 ms antes de que salga el cable, entra `fin`: la tecla seguía fresca al llegar al umbral (E3b-2). No es un mantenido fantasma y se descuenta al leer los capítulos.
 - **Fila 5, el arranque de la placa.** Tomar el puerto después de cerrar el monitor puede reiniciar la placa; por eso se espera un segundo antes de apretar.
 - **Lo que repasa la prueba automática y no hace falta repetir a mano:** el códec de la línea, los gestos con su umbral al milisegundo, la reconexión y el cierre con un puerto que falla al cerrar. Lo que sólo se ve a mano es todo lo de arriba: la placa, el cable, el driver del CH343 y el OBS real.
+
+## Etapa 4: escena, grabar, pausa y micrófono
+
+Se repasa con la copia de desarrollo de la rama `etapa-4`, que lee la biblioteca de ejemplo: ya tiene grabar, pausa, micrófono y la página de escenas. La biblioteca real no se toca hasta instalar la v0.3.0. Hace falta OBS abierto, sin grabar nada que importe, y para las filas marcadas `(placa)` el prototipo con el firmware `banco`.
+
+**Estado al 2026-10-15.** Emmanuel no usa el prototipo hasta que la consola esté terminada, así que las filas `(placa)` (2 a 8, 11 y 12) quedan **pendientes de cuando lo use**: están escritas y no se repasaron. Las que se hacen con el teclado de la PC y la bandeja (1, 9, 10, 13 y 14) se pueden repasar ya; sin la placa, el `local.json` lleva sólo `"hotkeysEnabled": true`, sin `consolePort`.
+
+Antes: si OBS quedó con la grabación colgada de la corrida de Claude del 2026-10-15 (marca "Grabando 0:00:00" y un `D:\Canal\grabaciones\2026-10-15 13-27-08.mp4` de 0 bytes: ver las notas de abajo), detenerla desde OBS o cerrar OBS y borrar ese archivo. Después, "Salir" en la copia instalada, que tiene los atajos y el puerto. Y en `%APPDATA%\PampaPad-dev\local.json`, que la copia de desarrollo tome los dos (05 §10):
+
+```json
+{
+  "version": 1,
+  "hotkeysEnabled": true,
+  "consolePort": "COM20"
+}
+```
+
+Para la fila 11 hace falta una copia de la biblioteca a la que se le pueda cambiar la página principal. Desde la raíz del worktree:
+
+```powershell
+New-Item -ItemType Directory -Force D:\repos\pampapad-construccion\E4-11-biblioteca | Out-Null
+Copy-Item examples\library\config.json D:\repos\pampapad-construccion\E4-11-biblioteca\config.json
+$env:PAMPAPAD_LIBRARY = "D:\repos\pampapad-construccion\E4-11-biblioteca"
+dotnet run --project src\PampaPad.App
+```
+
+Las teclas se nombran por lo que tienen impreso, como en la etapa 3b: `1 2 3 A` son las posiciones 1 a 4, `4 5 6 B` las 5 a 8 y `7 8 9 C` las 9 a 12. En `grabacion`: `8` micrófono, `9` pausa, `C` grabar. Cada toma de prueba se mueve de `D:\Canal\grabaciones` a `D:\Canal\pruebas` al terminar.
+
+| N | Qué hacer | Qué tiene que pasar |
+|---|---|---|
+| 1 | Mirar el texto de ayuda de la bandeja | "PampaPad · OBS conectado", sin problema de configuración. El registro dice "Atajos tomados: 8; rechazados por Windows: 0." |
+| 2 (placa) | Un toque en `C` | OBS empieza a grabar. El ícono pasa a círculo rojo, "Grabando 0:00:0N", cuando OBS avisa |
+| 3 (placa) | Otro toque en `C` | Nada: sigue grabando. El registro dice "grabar: OBS ya está grabando, no se manda nada." |
+| 4 (placa) | Mantener `9` un segundo, sin soltar | Al segundo OBS pausa: dos barras ámbar, "En pausa: las marcas no entran". Soltar no hace nada más |
+| 5 (placa) | Un toque en `9` | OBS sigue: círculo rojo; el tiempo sigue desde donde estaba |
+| 6 (placa) | Un toque en `8`, mirar el texto de ayuda y el mezclador de OBS; otro toque | El texto suma " · micrófono silenciado" y "Mic/Aux" queda silenciado en OBS; el segundo toque lo abre |
+| 7 (placa) | Mantener `C` un segundo | Al segundo OBS detiene: contorno gris |
+| 8 (placa) | Con la grabación detenida, mantener `9` un segundo | Triángulo rojo, con un texto de ayuda que empieza con "Falló Pausar la grabación: paso 1 (obs.record)" (la bandeja lo recorta: `Tray.cs:89`), y el sonido y el cartel, porque no hay toma en curso. El cartel dice "No estás grabando: no hay grabación para pausar." |
+| 9 | Ctrl+Shift+Alt+G; Ctrl+Shift+Alt+M dos veces; Ctrl+Shift+Alt+D | Graba; silencia y abre el micrófono; para. El atajo de parar no pide mantener: por teclado no existe (02 §6, pregunta 39) |
+| 10 | Grabando, Ctrl+Shift+Alt+F10 y después F11, los atajos de OBS | OBS pausa y sigue, y la bandeja lo muestra: pausar y seguir no tienen atajo propio (decisión 19). Detener la toma |
+| 11 (placa) | En `D:\repos\pampapad-construccion\E4-11-biblioteca\config.json`, cambiar `"mainPage": "grabacion"` por `"mainPage": "escenas"` y elegir "Recargar biblioteca". Apretar de a una, mirando OBS, `1 2 3 A`, `4 5`, `B`, `7 8 9 C`; después `6` y esperar 15 s | Cada tecla pone al aire su escena de la grilla: Cámara, Pantalla, Banco, Ya arrancamos, Cámara (zoom), Pantalla + Cámara, Ya vuelvo, Vertical Cámara, Vertical SolidWorks, Vertical Pantalla + Banco, Fin. Las verticales se ven reescaladas en el perfil horizontal, y es lo esperado. `6` es Intro: suena y a los 12 s salta sola a Cámara |
+| 12 (placa) | Volver a `"mainPage": "grabacion"` y "Recargar biblioteca" | Las teclas vuelven a ser las de grabación: `4` marca `short` si se graba |
+| 13 | "Salir" | El registro termina en "Salida ordenada" |
+| 14 | Con el teclado: Ctrl+Shift+Alt+G; esperar 3 s; Ctrl+Shift+Alt+F10 (pausa de OBS); esperar 3 s; Ctrl+Shift+Alt+D | OBS detiene la toma en pausa, la bandeja pasa a detenida en menos de un segundo y el archivo queda legible. Es lo que la corrida de Claude no pudo medir (ver las notas): si la bandeja se queda en "Deteniendo" más de 2 s, anotar la hora y no insistir con la tecla |
+
+Al terminar: en `%APPDATA%\PampaPad-dev\local.json`, `hotkeysEnabled` en `false` y sin `consolePort`, o borrar el archivo; volver a abrir la copia instalada.
+
+## Notas de la etapa 4
+
+- **Lo que repasó Claude solo, el 2026-10-15**, con `D:\repos\pampapad-construccion\E4-11-repaso` (plan de la etapa 4, E4-11), una sola corrida contra el OBS real 32.2.2 (13:26 a 13:27). **Valió:** las doce escenas por sus acciones (304 a 351 ms hasta `CurrentProgramSceneChanged`), el salto solo de la intro a Cámara (12,9 s), la escena que ya está al aire con "Desvanecimiento" (el paso termina bien y no llega evento), una toma completa con pausa (arrancar 115 ms, parar 302 ms), los códigos de carrera 500, 502 y 503, el micrófono, `SetInputMute` al estado en que ya está (OBS manda el evento igual), el 604 de una entrada sin audio y que la clave de transmisión no sale del paso. El informe está en `D:\repos\pampapad-construccion\E4-11-repaso.txt`, con la lectura de cada línea, y lo medido está en 03 §3, §5 e Incierto y en 02, Incierto.
+- **Lo que no valió, y OBS quedó colgado.** Las tomas 2 y 3 salieron mal. Un `StartRecord` mandado en los ~30 ms siguientes al `STOPPED` de la toma anterior contestó 100 y OBS no arrancó. Después el script pidió pausa y parada a los ~30 ms de que OBS avisó que grababa: OBS mandó `STOPPING` y nunca `STOPPED`; la salida de grabación quedó activa y con el archivo en 0 bytes (`D:\Canal\grabaciones\2026-10-15 13-27-08.mp4`). El programa se comportó como está diseñado (`obs_timeout` a los 2 s sin mandar). No se pudo separar si lo colgó parar desde la pausa o parar casi al arrancar; la etapa 0 detuvo en pausa una toma de 3 s sin problema. Quedaron sin medir el 501 y `PauseRecord`/`ResumeRecord` con la grabación detenida. La fila 14 es la prueba con tiempos humanos.
+- **Lo que repasó Emmanuel con el teclado, el 2026-10-15** (14:42 a 14:58), con la copia de desarrollo de la rama y la biblioteca de ejemplo, con la copia instalada cerrada: fila 1, "Atajos tomados: 8; rechazados por Windows: 0." y la bandeja conectada; fila 9, grabar, micrófono dos veces y parar por sus atajos (parar detuvo en 0,3 s); filas 10 y 14, pausar y seguir con los atajos de OBS y parar en pausa con Ctrl+Shift+Alt+D, que detuvo en 0,3 s sin colgarse, con la toma legible (12,1 s grabados); fila 13, "Salida ordenada". Las filas `(placa)` (2 a 8, 11 y 12) esperan a que use el prototipo.
+- **Lo que no se repasa a mano:** renombrar, borrar o crear una escena en OBS. Cambia OBS, y con el tope de 12 escenas es una decisión de Emmanuel, no una prueba. Lo cubren las pruebas contra el OBS falso (`ObsSceneTests`, `ObsMirrorListsTests`).
+- **Lo que repasa la prueba automática y no hace falta repetir a mano:** la tabla de `obs.record` fila por fila (`RecordRulesTests`), la espera mientras OBS arranca o detiene (`ObsRecordTests`), la tecla que para o pausa con un toque (`DispatcherHoldRuleTests`), y de la tecla y el atajo al estado del OBS falso (`ObsKeysEndToEndTests`).

@@ -20,7 +20,7 @@ public class DispatcherTests
             { "position": 5, "label": "Short", "action": "marca-short", "hotkey": "Ctrl+Shift+Alt+F9" }
           ] } ],
           "actions": [
-            { "id": "escena", "name": "Escena", "steps": [ { "type": "obs.scene", "scene": "Banco" } ] },
+            { "id": "escena", "name": "Escena", "steps": [ { "type": "obs.filter", "filter": "Ruido" } ] },
             { "id": "cuidada", "name": "Cuidada", "steps": [ { "type": "obs.marker", "marker": "short", "onlyIf": { "type": "recording.is", "state": "recording" } } ] },
             { "id": "marca-short", "name": "Marca: short", "steps": [ { "type": "obs.marker", "marker": "short" } ] },
             { "id": "marca-largo", "name": "Marca: largo", "steps": [ { "type": "obs.marker", "marker": "largo" } ] }
@@ -182,7 +182,7 @@ public class DispatcherTests
 
         Assert.Equal("pages[0].keys[1].hotkey", problem.Where);
         Assert.Equal(ErrorCodes.HotkeyTaken, problem.Code);
-        Assert.Equal(new HotkeysState(4, 1), rig.State.Current.Hotkeys);
+        Assert.Equal(new HotkeysState(7, 1), rig.State.Current.Hotkeys);
     }
 
     [Fact]
@@ -225,7 +225,7 @@ public class DispatcherTests
         rig.Dispatcher.Refresh();
 
         Assert.Equal("grabacion", rig.State.Current.BasePage);
-        Assert.Equal(5, rig.Windows.Registered.Count);
+        Assert.Equal(8, rig.Windows.Registered.Count);
     }
 
     [Fact]
@@ -280,7 +280,7 @@ public class DispatcherTests
             Library = new CoreLibrary(_temp.Combine("biblioteca"), _temp.Combine("backup"));
             Library.Load();
             before?.Invoke(Windows);
-            Dispatcher = new Dispatcher(Library, State, new Executor([Marker], TimeProvider.System), new Gestures(TimeProvider.System, Gestures.HoldFrom(null), Gestures.DefaultFreshness), Log);
+            Dispatcher = new Dispatcher(Library, State, new Executor([Marker, new FakeStep("obs.scene"), new FakeStep("obs.record"), new FakeStep("obs.mute"), new FakeStep("obs.request")], TimeProvider.System), new Gestures(TimeProvider.System, Gestures.HoldFrom(null), Gestures.DefaultFreshness), Log);
             Dispatcher.Finished += Finished.Enqueue;
             Hotkeys = new HotkeySource(Windows, State, Log);
             _ = Hotkeys.StartAsync(CancellationToken.None);

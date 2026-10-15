@@ -5,7 +5,7 @@ using CoreLibrary = PampaPad.Core.Library;
 namespace PampaPad.Tests;
 
 /// <summary>
-/// El despachador armado como lo arma Composition, con un paso obs.marker de mentira, atajos de Windows de mentira y una biblioteca
+/// El despachador armado como lo arma Composition, con un paso de mentira por cada tipo de OBS, atajos de Windows de mentira y una biblioteca
 /// en una carpeta temporal. Sin config es "sin carpeta elegida". Las pruebas de bordes comparten esto; las del plan tienen su Rig.
 /// </summary>
 internal sealed class DispatcherRig : IAsyncDisposable
@@ -15,7 +15,7 @@ internal sealed class DispatcherRig : IAsyncDisposable
 
     private readonly TempFolder _temp = new();
 
-    public DispatcherRig(string? config, Action<FakeSystemHotkeys>? beforeWindows = null, Action<FakeStep>? beforeDispatcher = null, bool attach = true)
+    public DispatcherRig(string? config, Action<FakeSystemHotkeys>? beforeWindows = null, Action<FakeStep>? beforeDispatcher = null, bool attach = true, TimeProvider? clock = null)
     {
         Directory.CreateDirectory(_temp.Combine("biblioteca"));
         if (config is not null)
@@ -28,7 +28,8 @@ internal sealed class DispatcherRig : IAsyncDisposable
         Library.Load();
         beforeWindows?.Invoke(Windows);
         beforeDispatcher?.Invoke(Marker);
-        Dispatcher = new Dispatcher(Library, State, new Executor([Marker], TimeProvider.System), new Gestures(TimeProvider.System, Gestures.HoldFrom(null), Gestures.DefaultFreshness), Log);
+        var steps = new IStepType[] { Marker, Scene, Record, Mute, Request };
+        Dispatcher = new Dispatcher(Library, State, new Executor(steps, TimeProvider.System), new Gestures(clock ?? TimeProvider.System, Gestures.HoldFrom(null), Gestures.DefaultFreshness), Log);
         Dispatcher.Finished += Finished.Enqueue;
         Hotkeys = new HotkeySource(Windows, State, Log);
         _ = Hotkeys.StartAsync(CancellationToken.None);
@@ -45,6 +46,14 @@ internal sealed class DispatcherRig : IAsyncDisposable
     public Log Log { get; }
 
     public FakeStep Marker { get; } = new("obs.marker");
+
+    public FakeStep Scene { get; } = new("obs.scene");
+
+    public FakeStep Record { get; } = new("obs.record");
+
+    public FakeStep Mute { get; } = new("obs.mute");
+
+    public FakeStep Request { get; } = new("obs.request");
 
     public FakeSystemHotkeys Windows { get; } = new();
 

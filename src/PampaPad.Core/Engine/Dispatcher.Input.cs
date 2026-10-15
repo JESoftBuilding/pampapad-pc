@@ -111,6 +111,15 @@ public sealed partial class Dispatcher
                 ? null
                 : config.FindPage(basePage)?.Keys.Indexed().Select(item => item.Item).FirstOrDefault(candidate => candidate.Position == position);
             actionId = key is null ? null : ActionOf(key, e.Gesture, viaGestures);
+
+            // Problema 10 (02 §6 y §10): una tecla que para o pausa con el toque está rota y el toque no dispara, venga de la consola o
+            // de su atajo. El mantenido sí. El atajo general "parar" no pasa por acá: por teclado no hay mantener.
+            bool held = viaGestures && e.Gesture == Gesture.Hold;
+            if (actionId is not null && !held && Validator.StopsOrPauses(config.FindAction(actionId)))
+            {
+                _log.Warning("dispatcher", $"La tecla {position} para o pausa la grabación con un toque: no se dispara. Va en onHold, que pide mantener.", ProblemCodes.HoldRequired);
+                return;
+            }
         }
 
         if (actionId is null)

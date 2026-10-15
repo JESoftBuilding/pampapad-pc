@@ -67,7 +67,7 @@ internal sealed class Composition : IAsyncDisposable
         var obs = new ObsClient(obsFiles.Address, obsFiles.Password, state, log, clock, ObsIsRunning);
 
         // El Dispatcher publica la biblioteca en el estado al construirse y en cada recarga, junto con los problemas de los pasos y de los atajos.
-        IReadOnlyList<IStepType> catalog = Catalog.Build(obs, state);
+        IReadOnlyList<IStepType> catalog = Catalog.Build(obs, state, log, clock);
         var executor = new Executor(catalog, clock);
 
         // El umbral de mantener sale de console.holdMs de la biblioteca; si no está, es un segundo (02 §4.10).

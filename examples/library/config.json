@@ -35,6 +35,95 @@
           "label": "Largo",
           "action": "marca-largo",
           "hotkey": "Ctrl+Shift+Alt+F5"
+        },
+        {
+          "position": 10,
+          "label": "Micrófono",
+          "action": "mic",
+          "hotkey": "Ctrl+Shift+Alt+M"
+        },
+        {
+          "position": 11,
+          "label": "Pausa",
+          "action": "seguir",
+          "onHold": {
+            "action": "pausar"
+          }
+        },
+        {
+          "position": 12,
+          "label": "Grabar",
+          "action": "grabar",
+          "hotkey": "Ctrl+Shift+Alt+G",
+          "onHold": {
+            "action": "parar"
+          }
+        }
+      ]
+    },
+    {
+      "id": "escenas",
+      "name": "Escenas",
+      "keys": [
+        {
+          "position": 1,
+          "label": "Cámara",
+          "action": "escena-camara"
+        },
+        {
+          "position": 2,
+          "label": "Pantalla",
+          "action": "escena-pantalla"
+        },
+        {
+          "position": 3,
+          "label": "Banco",
+          "action": "escena-banco"
+        },
+        {
+          "position": 4,
+          "label": "Ya arrancamos",
+          "action": "escena-ya-arrancamos"
+        },
+        {
+          "position": 5,
+          "label": "Cámara (zoom)",
+          "action": "escena-camara-zoom"
+        },
+        {
+          "position": 6,
+          "label": "Pantalla + Cámara",
+          "action": "escena-pantalla-camara"
+        },
+        {
+          "position": 7,
+          "label": "Intro",
+          "action": "escena-intro"
+        },
+        {
+          "position": 8,
+          "label": "Ya vuelvo",
+          "action": "escena-ya-vuelvo"
+        },
+        {
+          "position": 9,
+          "label": "Vertical Cámara",
+          "action": "escena-vertical-camara"
+        },
+        {
+          "position": 10,
+          "label": "Vertical SolidWorks",
+          "action": "escena-vertical-solidworks"
+        },
+        {
+          "position": 11,
+          "label": "Vertical Pantalla + Banco",
+          "action": "escena-vertical-pantalla-banco"
+        },
+        {
+          "position": 12,
+          "label": "Fin",
+          "action": "escena-fin"
         }
       ]
     }
@@ -89,6 +178,217 @@
           "marker": "largo"
         }
       ]
+    },
+    {
+      "id": "grabar",
+      "name": "Grabar",
+      "steps": [
+        {
+          "type": "obs.record",
+          "do": "start"
+        }
+      ]
+    },
+    {
+      "id": "parar",
+      "name": "Parar la grabación",
+      "steps": [
+        {
+          "type": "obs.record",
+          "do": "stop"
+        }
+      ]
+    },
+    {
+      "id": "pausar",
+      "name": "Pausar la grabación",
+      "steps": [
+        {
+          "type": "obs.record",
+          "do": "pause"
+        }
+      ]
+    },
+    {
+      "id": "seguir",
+      "name": "Seguir grabando",
+      "steps": [
+        {
+          "type": "obs.record",
+          "do": "resume"
+        }
+      ]
+    },
+    {
+      "id": "mic",
+      "name": "Micrófono: silenciar o abrir",
+      "steps": [
+        {
+          "type": "obs.mute"
+        }
+      ]
+    },
+    {
+      "id": "escena-camara",
+      "name": "Escena: Cámara",
+      "steps": [
+        {
+          "type": "obs.scene",
+          "scene": {
+            "uuid": "3da67a13-6704-4c87-9e09-c8be28efdf20",
+            "name": "Cámara"
+          }
+        }
+      ]
+    },
+    {
+      "id": "escena-pantalla",
+      "name": "Escena: Pantalla",
+      "steps": [
+        {
+          "type": "obs.scene",
+          "scene": {
+            "uuid": "f3637453-bc14-4e54-b4c5-1b76f4fb4a21",
+            "name": "Pantalla"
+          }
+        }
+      ]
+    },
+    {
+      "id": "escena-banco",
+      "name": "Escena: Banco",
+      "steps": [
+        {
+          "type": "obs.scene",
+          "scene": {
+            "uuid": "900ebc25-03ef-443e-80cc-2ad8991268ff",
+            "name": "Banco"
+          }
+        }
+      ]
+    },
+    {
+      "id": "escena-ya-arrancamos",
+      "name": "Escena: Ya arrancamos",
+      "steps": [
+        {
+          "type": "obs.scene",
+          "scene": {
+            "uuid": "f221061d-d50a-4904-be00-a381efe74757",
+            "name": "Ya arrancamos"
+          }
+        }
+      ]
+    },
+    {
+      "id": "escena-camara-zoom",
+      "name": "Escena: Cámara (zoom)",
+      "steps": [
+        {
+          "type": "obs.scene",
+          "scene": {
+            "uuid": "11b848c4-d5c6-4e0a-9746-a316341ab7db",
+            "name": "Cámara (zoom)"
+          }
+        }
+      ]
+    },
+    {
+      "id": "escena-pantalla-camara",
+      "name": "Escena: Pantalla + Cámara",
+      "steps": [
+        {
+          "type": "obs.scene",
+          "scene": {
+            "uuid": "5bcf806a-9dac-430c-a437-3eab544e8419",
+            "name": "Pantalla + Cámara"
+          }
+        }
+      ]
+    },
+    {
+      "id": "escena-intro",
+      "name": "Escena: Intro",
+      "steps": [
+        {
+          "type": "obs.scene",
+          "scene": {
+            "uuid": "49ecf855-9581-4dc8-a4d0-4bd0aef50c29",
+            "name": "Intro"
+          }
+        }
+      ]
+    },
+    {
+      "id": "escena-ya-vuelvo",
+      "name": "Escena: Ya vuelvo",
+      "steps": [
+        {
+          "type": "obs.scene",
+          "scene": {
+            "uuid": "e231ef9c-23aa-4957-a74b-27181da1d8cf",
+            "name": "Ya vuelvo"
+          }
+        }
+      ]
+    },
+    {
+      "id": "escena-vertical-camara",
+      "name": "Escena: Vertical Cámara",
+      "steps": [
+        {
+          "type": "obs.scene",
+          "scene": {
+            "uuid": "8307a333-485e-404c-bea6-f9f91dd11dd1",
+            "name": "Vertical Cámara"
+          }
+        }
+      ]
+    },
+    {
+      "id": "escena-vertical-solidworks",
+      "name": "Escena: Vertical SolidWorks",
+      "steps": [
+        {
+          "type": "obs.scene",
+          "scene": {
+            "uuid": "67178d64-00f6-4b61-be02-7364b8f5cfe3",
+            "name": "Vertical SolidWorks"
+          }
+        }
+      ]
+    },
+    {
+      "id": "escena-vertical-pantalla-banco",
+      "name": "Escena: Vertical Pantalla + Banco",
+      "steps": [
+        {
+          "type": "obs.scene",
+          "scene": {
+            "uuid": "d0b27da7-0fd1-463d-bee2-e86e6ff4b3a9",
+            "name": "Vertical Pantalla + Banco"
+          }
+        }
+      ]
+    },
+    {
+      "id": "escena-fin",
+      "name": "Escena: Fin",
+      "steps": [
+        {
+          "type": "obs.scene",
+          "scene": {
+            "uuid": "ed2f1482-848c-4500-840d-807aee465d1f",
+            "name": "Fin"
+          }
+        }
+      ]
+    }
+  ],
+  "hotkeys": [
+    {
+      "hotkey": "Ctrl+Shift+Alt+D",
+      "action": "parar"
     }
   ]
 }

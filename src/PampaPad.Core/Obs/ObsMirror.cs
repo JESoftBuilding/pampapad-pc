@@ -28,6 +28,12 @@ public static class ObsMirror
             SceneUuid = ObsMessages.Text(e.Data, "sceneUuid"),
         },
         "InputMuteStateChanged" when IsMic(state, e.Data) => state with { MicMuted = ObsMessages.Flag(e.Data, "inputMuted") },
+        "SceneCreated" when !ObsMessages.Flag(e.Data, "isGroup") => SceneAdded(state, e.Data),
+        "SceneRemoved" => state with { Scenes = ObsItems.Without(state.Scenes, ObsMessages.Text(e.Data, "sceneUuid")) },
+        "SceneNameChanged" => SceneRenamed(state, e.Data),
+        "InputCreated" => InputAdded(state, e.Data),
+        "InputRemoved" => InputRemoved(state, e.Data),
+        "InputNameChanged" => InputRenamed(state, e.Data),
         _ => state,
     };
 
@@ -66,7 +72,13 @@ public static class ObsMirror
             {
                 SceneName = ObsMessages.Text(scenes.Data, "currentProgramSceneName"),
                 SceneUuid = ObsMessages.Text(scenes.Data, "currentProgramSceneUuid"),
+                Scenes = ObsItems.Read(scenes.Data, "scenes", "sceneName", "sceneUuid"),
             };
+        }
+
+        if (inputs.Ok)
+        {
+            state = state with { Inputs = ObsItems.Read(inputs.Data, "inputs", "inputName", "inputUuid") };
         }
 
         if (special.Ok)
@@ -118,6 +130,41 @@ public static class ObsMirror
         "OBS_WEBSOCKET_OUTPUT_STOPPED" => state with { Streaming = false },
         _ => state,
     };
+
+    // Las listas de escenas y entradas (03 §5): el nombre de hoy se corrige por uuid. Los nombres de los campos son los del protocolo
+    // (03 §1: SceneNameChanged trae sceneUuid, oldSceneName y sceneName; InputNameChanged, inputUuid, oldInputName e inputName).
+    private static ObsState SceneAdded(ObsState state, JsonElement data) =>
+        Item(data, "sceneName", "sceneUuid") is { } scene ? state with { Scenes = ObsItems.With(state.Scenes, scene) } : state;
+
+    private static ObsState InputAdded(ObsState state, JsonElement data) =>
+        Item(data, "inputName", "inputUuid") is { } input ? state with { Inputs = ObsItems.With(state.Inputs, input) } : state;
+
+    private static ObsState SceneRenamed(ObsState state, JsonElement data)
+    {
+        var uuid = ObsMessages.Text(data, "sceneUuid");
+        var name = ObsMessages.Text(data, "sceneName");
+        var renamed = state with { Scenes = ObsItems.Renamed(state.Scenes, uuid, name) };
+        return uuid is not null && name is not null && uuid == state.SceneUuid ? renamed with { SceneName = name } : renamed;
+    }
+
+    // El micrófono se nombra también en MicName: si su entrada se renombra o se borra, el micrófono la sigue.
+    private static ObsState InputRenamed(ObsState state, JsonElement data)
+    {
+        var uuid = ObsMessages.Text(data, "inputUuid");
+        var name = ObsMessages.Text(data, "inputName");
+        var renamed = state with { Inputs = ObsItems.Renamed(state.Inputs, uuid, name) };
+        return uuid is not null && name is not null && uuid == state.MicUuid ? renamed with { MicName = name } : renamed;
+    }
+
+    private static ObsState InputRemoved(ObsState state, JsonElement data)
+    {
+        var uuid = ObsMessages.Text(data, "inputUuid");
+        var removed = state with { Inputs = ObsItems.Without(state.Inputs, uuid) };
+        return uuid is not null && uuid == state.MicUuid ? removed with { MicName = null, MicUuid = null, MicMuted = false } : removed;
+    }
+
+    private static ObsItem? Item(JsonElement data, string nameField, string uuidField) =>
+        ObsMessages.Text(data, nameField) is { } name && ObsMessages.Text(data, uuidField) is { } uuid ? new ObsItem(uuid, name) : null;
 
     private static bool IsMic(ObsState state, JsonElement data) => state.MicUuid is not null
         ? ObsMessages.Text(data, "inputUuid") == state.MicUuid
