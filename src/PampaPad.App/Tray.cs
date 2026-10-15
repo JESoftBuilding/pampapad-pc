@@ -22,8 +22,12 @@ internal sealed class Tray : ApplicationContext
     /// <summary>Sin los dos manejadores, la bandeja no ofrece nada de actualización: es la copia sin instalar.</summary>
     public Tray(string title, System.Action? onCheckUpdate, System.Action? onInstallUpdate)
     {
-        // Fuera del if de las actualizaciones: la copia de desarrollo también los necesita. "Reconectar con OBS" se inserta
-        // más abajo en el lugar 0 y queda arriba de todo (05 §3).
+        // El orden de la tabla de 05 §3: la ventana, "Reconectar con OBS" (visible sólo en auth_failed y kicked) y después lo demás.
+        // Fuera del if de las actualizaciones: la copia de desarrollo también los necesita.
+        _menu.Items.Add("Abrir PampaPad", null, (_, _) => OpenWindowRequested?.Invoke());
+        _menu.Items.Add("Estado", null, (_, _) => StatusRequested?.Invoke());
+        _menu.Items.Add(_reconnect);
+        _menu.Items.Add(new ToolStripSeparator());
         _menu.Items.Add("Recargar biblioteca", null, (_, _) => ReloadRequested?.Invoke());
         _menu.Items.Add("Elegir carpeta de datos", null, (_, _) => ChooseFolderRequested?.Invoke());
 
@@ -43,9 +47,7 @@ internal sealed class Tray : ApplicationContext
 
         _menu.Items.Add("Salir", null, (_, _) => ExitThread());
 
-        // Arriba de todo, y sólo visible en auth_failed y kicked (05 §3).
         _reconnect.Click += (_, _) => ReconnectRequested?.Invoke(this, EventArgs.Empty);
-        _menu.Items.Insert(0, _reconnect);
         _menu.Opening += (_, _) => MenuOpened?.Invoke();
 
         _icon = new NotifyIcon
@@ -58,6 +60,12 @@ internal sealed class Tray : ApplicationContext
     }
 
     public event EventHandler? ReconnectRequested;
+
+    /// <summary>Se eligió "Abrir PampaPad" (05 §3).</summary>
+    public event System.Action? OpenWindowRequested;
+
+    /// <summary>Se eligió "Estado" (05 §3).</summary>
+    public event System.Action? StatusRequested;
 
     public event System.Action? ReloadRequested;
 

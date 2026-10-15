@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+
 namespace PampaPad.App;
 
 /// <summary>Instancia única: un mutex con nombre y un evento con nombre. La segunda copia señala a la residente y sale (05 §1).</summary>
@@ -15,6 +17,9 @@ internal static class SingleInstance
             mutex.Dispose();
             if (EventWaitHandle.TryOpenExisting($@"Local\{name}.open", out var existing))
             {
+                // La residente va a traer su ventana al frente: sin este permiso, Windows sólo haría parpadear la barra de tareas
+                // (05 §1; 01 §9). ASFW_ANY, porque esta copia no sabe el número de proceso de la residente.
+                _ = AllowSetForegroundWindow(AnyProcess);
                 existing.Set();
                 existing.Dispose();
             }
@@ -34,4 +39,10 @@ internal static class SingleInstance
         _signal?.Dispose();
         _mutex?.Dispose();
     }
+
+    private const int AnyProcess = -1;   // ASFW_ANY
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool AllowSetForegroundWindow(int processId);
 }

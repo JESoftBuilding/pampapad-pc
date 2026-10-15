@@ -5,7 +5,7 @@ using PampaPad.Core;
 namespace PampaPad.App;
 
 /// <summary>La única raíz de composición: todos los new, en el orden de 01 §4.3, y el apagado en orden inverso.</summary>
-internal sealed class Composition : IAsyncDisposable
+internal sealed partial class Composition : IAsyncDisposable
 {
     private static readonly TimeSpan ShutdownLimit = TimeSpan.FromSeconds(3);
 
@@ -110,10 +110,21 @@ internal sealed class Composition : IAsyncDisposable
             dispatcher.Attach(composition._console);
         }
 
+        // El puente con todos sus pedidos, después de las fuentes de entrada y el Notifier (01 §4.3). Fuera del if de la bandeja:
+        // la prueba de humo comprueba que cada pedido tenga manejador (01 §3.2).
+        composition.ComposeBridge(state, library, dispatcher, catalog, settings, ui, localFolder);
+
         if (!headless)
         {
+            // La excepción entera, con su tipo y su pila: con sólo el mensaje no se sabe dónde pasó (hallazgo de E1-3).
             Application.ThreadException += (_, e) =>
-                log.Error("app", "Excepción sin atender en la interfaz: " + e.Exception.Message, ErrorCodes.InternalError);
+                log.Error("app", "Excepción sin atender en la interfaz: " + e.Exception, ErrorCodes.InternalError);
+            AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+            {
+                // Fuera de la interfaz (un hilo del grupo, una devolución de WebView2) el proceso se cae enseguida: se vacía el registro antes.
+                log.Error("app", "Excepción sin atender fuera de la interfaz: " + e.ExceptionObject, ErrorCodes.InternalError);
+                log.FlushAsync().Wait(TimeSpan.FromSeconds(1));
+            };
 
             System.Action? onCheck = null;
             System.Action? onInstall = null;
@@ -126,6 +137,8 @@ internal sealed class Composition : IAsyncDisposable
             var tray = new Tray($"{AppIdentity.Title} {AppIdentity.Version}", onCheck, onInstall);
             composition.Tray = tray;
             tray.MenuOpened += notifier.Dismiss;
+            tray.OpenWindowRequested += () => composition.OpenWindow(EditorWindow.FirstScreen);
+            tray.StatusRequested += () => composition.OpenWindow(EditorWindow.StatusScreen);
             tray.ReconnectRequested += (_, _) => obs.Reconnect();
             tray.ConsoleToggleRequested += () =>
                 composition._console?.Release(state.Current.Console.State != ConsoleLinkState.Released);
@@ -196,13 +209,12 @@ internal sealed class Composition : IAsyncDisposable
         return Task.CompletedTask;
     }
 
-    public void OpenRequested() => Log.Info("app", "Otra copia pidió abrir la ventana; todavía no hay ventana");
-
     public async ValueTask DisposeAsync()
     {
         // Lo que es de la interfaz se suelta primero y en su hilo, antes del primer await.
         SystemEvents.PowerModeChanged -= OnPowerModeChanged;
         _painter?.Dispose();
+        CloseWindow();
         Tray?.Dispose();
         _life.Cancel();
         _dispatcher?.CancelAll();
@@ -260,32 +272,5 @@ internal sealed class Composition : IAsyncDisposable
         }
 
         return found.Length > 0;
-    }
-
-    private void CheckUpdate() => _ = RunAsync("buscar una actualización", () => _updater.CheckAsync(_life.Token));
-
-    private void InstallUpdate() => _ = RunAsync("instalar la actualización", async () =>
-    {
-        var result = await _updater.DownloadAndApplyAsync(_life.Token);
-        if (result.Ok)
-        {
-            // Seguimos en el hilo de la interfaz. Velopack ya espera a que el programa salga para instalarlo y reabrirlo.
-            Tray?.ExitThread();
-        }
-
-        return result;
-    });
-
-    /// <summary>Los manejadores del menú no pueden dejar escapar una excepción ni quedar sin anotar.</summary>
-    private async Task RunAsync(string what, Func<Task<Result>> work)
-    {
-        try
-        {
-            await work();
-        }
-        catch (Exception ex)
-        {
-            Log.Error("app", $"Falló {what}: {ex.Message}", ErrorCodes.InternalError);
-        }
     }
 }

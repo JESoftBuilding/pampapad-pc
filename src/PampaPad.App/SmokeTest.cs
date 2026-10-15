@@ -3,8 +3,9 @@ using PampaPad.Core;
 namespace PampaPad.App;
 
 /// <summary>
-/// --smoke-test: arma todo sin bandeja con la biblioteca de ejemplo, comprueba que cargue limpia y que el registro
-/// llegue al disco, y sale con 0 (05 §9). Sale con 2 si la biblioteca de ejemplo no carga limpia o alguna de sus acciones tiene un problema.
+/// --smoke-test: arma todo sin bandeja con la biblioteca de ejemplo y comprueba, en este orden, que cargue limpia (si no, sale con 2), que
+/// cada nombre de pedido tenga manejador (3; 01 §3.2), que la página esté al lado del ejecutable (4) y que el registro llegue al disco (1).
+/// Si todo está, sale con 0 (05 §9).
 /// </summary>
 internal static class SmokeTest
 {
@@ -20,7 +21,8 @@ internal static class SmokeTest
             // Los problemas del estado son los de la carga más los de los pasos (los junta el Dispatcher): con un catálogo sin obs.marker
             // la biblioteca de ejemplo cargaría limpia y ninguna de sus acciones correría.
             IReadOnlyList<Problem> problems = composition.Snapshot.Problems;
-            composition.Log.Info("smoke", $"Biblioteca de ejemplo: {exampleFolder}. Estado: {library.Status}; problemas: {problems.Count}");
+            IReadOnlyCollection<string> registered = composition.Bridge.Registered;
+            composition.Log.Info("smoke", $"Biblioteca de ejemplo: {exampleFolder}. Estado: {library.Status}; problemas: {problems.Count}; pedidos: {registered.Count}");
             composition.DisposeAsync().AsTask().GetAwaiter().GetResult();
             if (library.Status != LibraryStatus.Loaded || library.Problems.Count > 0 || problems.Count > 0)
             {
@@ -31,6 +33,20 @@ internal static class SmokeTest
 
                 Console.Error.WriteLine($"La biblioteca de ejemplo no cargó limpia: {library.Status}");
                 return 2;
+            }
+
+            string[] missing = [.. RequestNames.All.Where(name => !registered.Contains(name))];
+            if (missing.Length > 0)
+            {
+                Console.Error.WriteLine("Pedidos sin manejador: " + string.Join(", ", missing));
+                return 3;
+            }
+
+            string page = Path.Combine(AppContext.BaseDirectory, "ui", "index.html");
+            if (!File.Exists(page))
+            {
+                Console.Error.WriteLine($"Falta la página de la ventana: {page}. Se arma con pnpm -C ui build antes de compilar o publicar.");
+                return 4;
             }
 
             var logFolder = Path.Combine(folder, "log");
@@ -62,8 +78,9 @@ internal static class SmokeTest
                 Directory.Delete(folder, recursive: true);
             }
         }
-        catch (IOException ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            // Hallazgo del backlog: una UnauthorizedAccessException al borrar la carpeta temporal hacía fallar el humo por otra cosa.
             Console.Error.WriteLine($"No se pudo borrar {folder}: {ex.Message}");
         }
     }
