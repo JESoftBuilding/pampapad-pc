@@ -92,6 +92,8 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # --runtime win-x64: sin el, vpk avisa que empaqueta como x86 (E0-6). El programa es x64.
+# --icon y --splashImage: el icono de los lentes y la animacion del arranque de la consola mientras instala
+# (build\assets\generar.py las arma desde el logo del canal); la barra en el ambar del canal.
 Invoke-Dotnet 'vpk pack' @(
     'vpk', 'pack',
     '--packId', 'PampaPad',
@@ -104,6 +106,9 @@ Invoke-Dotnet 'vpk pack' @(
     '--runtime', 'win-x64',
     '--channel', 'win',
     '--shortcuts', 'StartMenuRoot',
+    '--icon', (Join-Path $root 'src\PampaPad.App\Resources\pampapad.ico'),
+    '--splashImage', (Join-Path $root 'build\assets\instalando.gif'),
+    '--splashProgressColor', '#F5A623',
     '--outputDir', $releaseDir)
 
 if ($Upload) {
