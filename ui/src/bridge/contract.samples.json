@@ -1,0 +1,329 @@
+{
+  "requests": {
+    "app.snapshot": {
+      "request": {
+        "id": 1,
+        "request": "app.snapshot",
+        "data": {}
+      },
+      "response": {
+        "id": 1,
+        "ok": true,
+        "data": {
+          "version": "0.2.1",
+          "schemaVersion": 1,
+          "config": {
+            "version": 1,
+            "mainPage": "grabacion",
+            "pages": [
+              {
+                "id": "grabacion",
+                "name": "Grabación",
+                "keys": [
+                  {
+                    "position": 5,
+                    "label": "Short",
+                    "action": "marca-short",
+                    "hotkey": "Ctrl+Shift+Alt+F9"
+                  }
+                ]
+              }
+            ],
+            "actions": [
+              {
+                "id": "marca-short",
+                "name": "Marca: short",
+                "steps": [
+                  {
+                    "type": "obs.marker",
+                    "marker": "short"
+                  }
+                ]
+              }
+            ]
+          },
+          "state": {
+            "seq": 42,
+            "update": {
+              "phase": "idle"
+            },
+            "obs": {
+              "link": "ready",
+              "recording": "recording",
+              "streaming": false,
+              "recordedMs": 754000,
+              "sceneName": "Pantalla",
+              "micName": "Mic/Aux",
+              "micMuted": false,
+              "supportsMarkers": true,
+              "takeInProgress": true
+            },
+            "library": {
+              "status": "loaded",
+              "folder": "D:\\Conocimiento\\Areas\\marca-personal\\pampapad"
+            },
+            "problems": [
+              {
+                "where": "pages[0].keys[1].hotkey",
+                "code": "hotkey_taken",
+                "message": "Windows no dejó registrar Ctrl+Shift+Alt+F6: la tiene otro programa.",
+                "severity": "warning"
+              }
+            ],
+            "hotkeys": {
+              "registered": 4,
+              "rejected": 1
+            },
+            "basePage": "grabacion",
+            "activePage": "grabacion",
+            "running": [
+              {
+                "runId": "0f8fad5b-d9cb-469f-a165-70867728950e",
+                "actionId": "marca-largo",
+                "requestedBy": "key"
+              }
+            ],
+            "console": {
+              "state": "connected",
+              "port": "COM20"
+            }
+          },
+          "stepTypes": [
+            {
+              "id": "obs.marker",
+              "name": "Marcar capítulo",
+              "group": "OBS",
+              "fields": [
+                {
+                  "name": "marker",
+                  "label": "Tipo de marca",
+                  "kind": "option",
+                  "optional": false,
+                  "options": [
+                    "short",
+                    "inicio",
+                    "fin",
+                    "sacar",
+                    "largo"
+                  ]
+                },
+                {
+                  "name": "label",
+                  "label": "Etiqueta",
+                  "kind": "text",
+                  "optional": true
+                }
+              ]
+            }
+          ],
+          "conditionTypes": [],
+          "settings": {
+            "hotkeysEnabled": true,
+            "consolePort": "COM20"
+          }
+        }
+      }
+    },
+    "log.read": {
+      "request": {
+        "id": 2,
+        "request": "log.read",
+        "data": {
+          "count": 200
+        }
+      },
+      "response": {
+        "id": 2,
+        "ok": true,
+        "data": {
+          "entries": [
+            {
+              "at": "2026-10-14T23:30:00-03:00",
+              "level": "info",
+              "module": "obs",
+              "message": "enlace con OBS: Ready (lectura inicial completa)"
+            },
+            {
+              "at": "2026-10-14T23:30:04-03:00",
+              "level": "info",
+              "module": "dispatcher",
+              "message": "marca-short terminó bien en 18 ms.",
+              "requestedBy": "key",
+              "runId": "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+            },
+            {
+              "at": "2026-10-14T23:30:09-03:00",
+              "level": "warning",
+              "module": "dispatcher",
+              "message": "marca-fin falló en el paso 1 (obs.marker): Estás en pausa: la marca no entró.",
+              "code": "marker_paused",
+              "requestedBy": "hotkey",
+              "runId": "5c1b2f0e-3d4a-4b6c-9e8f-a1b2c3d4e5f6"
+            }
+          ]
+        }
+      }
+    },
+    "action.cancel": {
+      "request": {
+        "id": 3,
+        "request": "action.cancel",
+        "data": {
+          "runId": "0f8fad5b-d9cb-469f-a165-70867728950e",
+          "all": false
+        }
+      },
+      "response": {
+        "id": 3,
+        "ok": true,
+        "data": {
+          "cancelled": 1
+        }
+      }
+    },
+    "window.ready": {
+      "request": {
+        "id": 4,
+        "request": "window.ready",
+        "data": {}
+      },
+      "response": {
+        "id": 4,
+        "ok": true,
+        "data": {}
+      }
+    }
+  },
+  "events": {
+    "state": {
+      "event": "state",
+      "seq": 42,
+      "data": {
+        "seq": 42,
+        "update": {
+          "phase": "idle"
+        },
+        "obs": {
+          "link": "ready",
+          "recording": "recording",
+          "streaming": false,
+          "recordedMs": 754000,
+          "sceneName": "Pantalla",
+          "micName": "Mic/Aux",
+          "micMuted": false,
+          "supportsMarkers": true,
+          "takeInProgress": true
+        },
+        "library": {
+          "status": "loaded",
+          "folder": "D:\\Conocimiento\\Areas\\marca-personal\\pampapad"
+        },
+        "problems": [
+          {
+            "where": "pages[0].keys[1].hotkey",
+            "code": "hotkey_taken",
+            "message": "Windows no dejó registrar Ctrl+Shift+Alt+F6: la tiene otro programa.",
+            "severity": "warning"
+          }
+        ],
+        "hotkeys": {
+          "registered": 4,
+          "rejected": 1
+        },
+        "basePage": "grabacion",
+        "activePage": "grabacion",
+        "running": [
+          {
+            "runId": "0f8fad5b-d9cb-469f-a165-70867728950e",
+            "actionId": "marca-largo",
+            "requestedBy": "key"
+          }
+        ],
+        "console": {
+          "state": "connected",
+          "port": "COM20"
+        }
+      }
+    },
+    "log": {
+      "event": "log",
+      "seq": 42,
+      "data": {
+        "at": "2026-10-14T23:30:04-03:00",
+        "level": "info",
+        "module": "dispatcher",
+        "message": "marca-short terminó bien en 18 ms.",
+        "requestedBy": "key",
+        "runId": "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+      }
+    },
+    "action.finished": {
+      "event": "action.finished",
+      "seq": 42,
+      "data": {
+        "actionId": "marca-fin",
+        "runId": "5c1b2f0e-3d4a-4b6c-9e8f-a1b2c3d4e5f6",
+        "requestedBy": "hotkey",
+        "ok": false,
+        "stepNumber": 1,
+        "stepType": "obs.marker",
+        "failure": {
+          "code": "marker_paused",
+          "message": "Estás en pausa: la marca no entró."
+        },
+        "durationMs": 12,
+        "steps": [
+          {
+            "outcome": "failed",
+            "message": "Estás en pausa: la marca no entró."
+          }
+        ]
+      }
+    },
+    "config.changed": {
+      "event": "config.changed",
+      "seq": 42,
+      "data": {
+        "config": {
+          "version": 1,
+          "mainPage": "grabacion",
+          "pages": [
+            {
+              "id": "grabacion",
+              "name": "Grabación",
+              "keys": [
+                {
+                  "position": 5,
+                  "label": "Short",
+                  "action": "marca-short",
+                  "hotkey": "Ctrl+Shift+Alt+F9"
+                }
+              ]
+            }
+          ],
+          "actions": [
+            {
+              "id": "marca-short",
+              "name": "Marca: short",
+              "steps": [
+                {
+                  "type": "obs.marker",
+                  "marker": "short"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "error": {
+    "id": 5,
+    "ok": false,
+    "error": {
+      "code": "unknown_request",
+      "message": "No existe el pedido config.sav.",
+      "where": "request"
+    }
+  }
+}
