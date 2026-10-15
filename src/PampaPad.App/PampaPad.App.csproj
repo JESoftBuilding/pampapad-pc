@@ -7,9 +7,16 @@
     <AssemblyName>PampaPad</AssemblyName>
     <RootNamespace>PampaPad.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!--
+      El paquete de WebView2 trae también el control de WPF, que pide WindowsBase 5.0.0.0 contra el 4.0.0.0 del marco: MSB3277 en cada
+      compilación (E0-3; 01 Incierto). PampaPad no usa WPF. No rompe el build (medido el 2026-10-14): se baja a mensaje para que no tape
+      otras advertencias.
+    -->
+    <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);MSB3277</MSBuildWarningsAsMessages>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" />
     <PackageReference Include="System.IO.Ports" />
     <PackageReference Include="Velopack" />
   </ItemGroup>
@@ -20,6 +27,8 @@
 
   <ItemGroup>
     <Content Include="..\..\examples\library\**" Link="examples\library\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <!-- La página armada (pnpm -C ui build) va a ui\ al lado del ejecutable: es la carpeta que mapea el host virtual (01 §5). Sin armar, no copia nada. -->
+    <Content Include="..\..\ui\dist\**" Link="ui\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <EmbeddedResource Include="Resources\failed.wav" />
   </ItemGroup>
 
