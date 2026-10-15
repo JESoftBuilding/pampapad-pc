@@ -1,4 +1,4 @@
-# Publica PampaPad: dotnet publish -> rutas -> prueba de humo -> vpk pack -> (con -Upload) vpk upload.
+# Publica PampaPad: pagina (ui) -> dotnet publish -> rutas -> prueba de humo -> vpk pack -> (con -Upload) vpk upload.
 # Uso: powershell -ExecutionPolicy Bypass -File build\publish.ps1 -Version 0.1.0
 # Con -Upload crea la version en GitHub: eso lo hace solo el workflow publish, con una etiqueta v*.
 
@@ -46,6 +46,24 @@ if (Test-Path $artifacts) {
 New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
 
 Invoke-Dotnet 'tool restore' @('tool', 'restore')
+
+# La pagina (01, seccion 2: "ui -> publish -> humo -> vpk"). PampaPad.App.csproj la copia a ui\ al lado del ejecutable, que es la carpeta
+# que mapea el host virtual de WebView2 (01, seccion 5). Si falta, la prueba de humo sale con 4.
+$pnpm = Get-Command 'pnpm.cmd' -ErrorAction SilentlyContinue
+if ($null -eq $pnpm) {
+    $pnpm = Get-Command 'pnpm' -ErrorAction Stop
+}
+
+Write-Host '== ui'
+& $pnpm.Source -C (Join-Path $root 'ui') install --frozen-lockfile
+if ($LASTEXITCODE -ne 0) {
+    throw "pnpm install fallo con codigo $LASTEXITCODE"
+}
+
+& $pnpm.Source -C (Join-Path $root 'ui') build
+if ($LASTEXITCODE -ne 0) {
+    throw "pnpm build fallo con codigo $LASTEXITCODE"
+}
 
 # Dependiente del framework (Decidido 23): el instalador pone .NET y WebView2 solo si faltan.
 # dotnet publish compila como el CI (ContinuousIntegrationBuild, en Directory.Build.props): rutas relativas al repo.
