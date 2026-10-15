@@ -21,6 +21,13 @@ public sealed class Log : IAsyncDisposable
     public const int MemoryLimit = 500;
     public const int DaysKept = 14;
 
+    /// <summary>
+    /// Cada entrada nueva, fuera del lock y en el hilo de quien escribió. El puente la publica como evento log (05 §4.4).
+    /// Un suscriptor que tira no le llega a quien escribe: queda una línea propia del registro, que no vuelve a avisar.
+    /// Quien escribe puede tener un lock propio tomado (el Dispatcher): un suscriptor no puede esperar otro lock.
+    /// </summary>
+    public event Action<LogEntry>? Written;
+
     private static readonly UTF8Encoding Utf8 = new(encoderShouldEmitUTF8Identifier: false);
 
     private readonly string _folder;
@@ -146,6 +153,22 @@ public sealed class Log : IAsyncDisposable
     }
 
     private void Remember(LogEntry entry)
+    {
+        Keep(entry);
+        try
+        {
+            Written?.Invoke(entry);
+        }
+        catch (Exception ex)
+        {
+            // No pasa por Remember: si avisara de nuevo, un suscriptor roto entraría en un bucle.
+            var failure = new LogEntry(entry.At, LogLevel.Error, "log", "Un suscriptor del registro tiró: " + ex, ErrorCodes.InternalError);
+            Keep(failure);
+            _pending.Writer.TryWrite(new Item(failure, null));
+        }
+    }
+
+    private void Keep(LogEntry entry)
     {
         lock (_gate)
         {

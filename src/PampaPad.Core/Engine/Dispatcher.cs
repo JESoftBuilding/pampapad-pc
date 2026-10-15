@@ -151,7 +151,8 @@ public sealed partial class Dispatcher
         return found is not null;
     }
 
-    public void CancelAll()
+    /// <summary>Cancela todas las acciones en curso y dice cuántas eran: es lo que contesta action.cancel con "all" (05 §11).</summary>
+    public int CancelAll()
     {
         Run[] all;
         lock (_gate)
@@ -164,6 +165,8 @@ public sealed partial class Dispatcher
         {
             run.Cancel.Cancel();
         }
+
+        return all.Length;
     }
 
     private static ActionResult Rejected(string actionId, Invocation invocation, string code, string message) =>
