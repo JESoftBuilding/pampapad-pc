@@ -12,5 +12,6 @@ public static class Catalog
         new ObsScene(obs, state, log),
         new ObsRecord(obs, state, log, clock),
         new ObsMute(obs, state),
+        new ObsRequestStep(obs, state),
     ];
 }
