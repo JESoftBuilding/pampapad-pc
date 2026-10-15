@@ -9,5 +9,6 @@ public static class Catalog
     public static IReadOnlyList<IStepType> Build(ObsClient obs, StateStore state, Log log, TimeProvider clock) =>
     [
         new ObsMarker(obs, state),
+        new ObsScene(obs, state, log),
     ];
 }

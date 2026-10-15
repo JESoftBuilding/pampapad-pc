@@ -28,7 +28,7 @@ public sealed class CatalogTests : IAsyncLifetime
     [Fact]
     public void The_catalog_has_the_marker_first_and_then_the_steps_of_stage_4()
     {
-        Assert.Equal(new[] { "obs.marker" }, Catalog.Build(_obs, _state, _log, TimeProvider.System).Select(type => type.Id));
+        Assert.Equal(new[] { "obs.marker", "obs.scene" }, Catalog.Build(_obs, _state, _log, TimeProvider.System).Select(type => type.Id));
     }
 
     [Fact]
