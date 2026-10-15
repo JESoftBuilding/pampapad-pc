@@ -36,6 +36,49 @@ Get-Content "$env:APPDATA\PampaPad\log\$(Get-Date -Format yyyy-MM-dd).jsonl" -Ta
 - **Paso 9.** Es una búsqueda que cae, no una falla del programa: no tiene que aparecer ningún cartel ni ícono de error. La siguiente búsqueda periódica (a las 6 horas) reintenta sola; con "Buscar actualización" se reintenta en el momento.
 - **Paso 12.** La desinstalación sin ventana, para repetirla sin un clic de más, es `& "$env:LOCALAPPDATA\PampaPad\Update.exe" uninstall --silent`; sin `--silent` queda una ventana esperando un clic.
 
+## Etapa 2: OBS y estado
+
+Se repasa con la copia de desarrollo y el OBS real, sin grabar nada que importe:
+
+```powershell
+dotnet run --project src/PampaPad.App
+```
+
+El texto de ayuda se lee dejando el mouse quieto sobre el ícono de la bandeja. Cada grabación de prueba se
+mueve de `D:\Canal\grabaciones` a `D:\Canal\pruebas` al terminar, para que `marcas.cmd` no la tome como la
+más nueva.
+
+| N | Qué se hace | Qué se tiene que ver en la bandeja |
+|---|---|---|
+| 1 | Con OBS cerrado, arrancar el programa | X gris. "Sin OBS: no está abierto" |
+| 2 | Abrir OBS y esperar | En menos de 10 s, contorno de círculo gris y "PampaPad · OBS conectado". Mientras OBS arranca puede pasar por "Sin OBS: está abierto, sin WebSocket" y "Sin OBS: conectando" |
+| 3 | En OBS, "Iniciar grabación" | Círculo rojo lleno. "Grabando 0:00:0N", y el tiempo avanza de a un segundo |
+| 4 | Ctrl+Shift+Alt+F10, el atajo de OBS para pausar | Dos barras ámbar. "En pausa: las marcas no entran" |
+| 5 | Ctrl+Shift+Alt+F11, el atajo de OBS para reanudar | Círculo rojo otra vez. El tiempo sigue desde donde estaba: es tiempo grabado, no de reloj |
+| 6 | En el mezclador de OBS, silenciar "Mic/Aux" y volver a activarlo | Al silenciar, el texto suma " · micrófono silenciado". Al activarlo, se va |
+| 7 | En OBS, "Detener grabación" | Contorno gris. "PampaPad · OBS conectado" |
+| 8 | "Salir" en el menú de PampaPad. Iniciar una grabación en OBS. Arrancar el programa | En menos de 5 s, círculo rojo con el tiempo que OBS lleva grabado, no desde cero. Detener la grabación |
+| 9 | Cerrar OBS con el programa andando | "Sin OBS: se está cerrando" mientras OBS termina, y después X gris con "Sin OBS: no está abierto" |
+| 10 | Volver a abrir OBS, sin tocar el programa. Iniciar y detener una grabación | Vuelve solo a "PampaPad · OBS conectado" y sigue la grabación como en las filas 3 y 7 |
+| 11 | En OBS, Herramientas, ajustes del servidor WebSocket: en la lista de sesiones conectadas, expulsar la de PampaPad. Si hay otra sesión abierta (el MCP de OBS de Claude), cerrarla antes para no confundirlas | X gris. "Sin OBS: OBS cerró la sesión". No vuelve sola aunque se espere 10 s. En el menú aparece "Reconectar con OBS": al elegirlo vuelve a "PampaPad · OBS conectado" y el ítem desaparece |
+| 12 | Suspender la PC desde el menú Inicio, esperar un minuto y despertarla | En menos de 15 s el ícono vuelve a "PampaPad · OBS conectado". Iniciar y detener una grabación: el ícono la sigue |
+| 13 | Correr la búsqueda de la clave en el registro, que está abajo | El número que imprime es 0 |
+
+Búsqueda de la fila 13. Lee la clave del archivo de OBS a una variable y cuenta en cuántas líneas del
+registro aparece, sin mostrarla:
+
+```powershell
+$clave = (Get-Content "$env:APPDATA\obs-studio\plugin_config\obs-websocket\config.json" -Raw | ConvertFrom-Json).server_password
+(Select-String -Path "$env:APPDATA\PampaPad-dev\log\*" -SimpleMatch $clave | Measure-Object).Count
+```
+
+En la fila 12, el registro del día tiene que tener además la línea "la PC volvió de la suspensión: se
+rearma la conexión con OBS".
+
+No se repasa a mano la clave rechazada: el programa lee la clave del archivo de OBS en cada intento, así
+que para provocarla habría que tocar la configuración de OBS. La cubre la prueba automática
+`A_rejected_password_does_not_retry_until_the_obs_file_changes`.
+
 ## Etapa 3: marcas con tipo desde el teclado
 
 Se repasa con el OBS real, sin grabar nada que importe. Las marcas se leen del archivo con:
