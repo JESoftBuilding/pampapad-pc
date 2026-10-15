@@ -11,5 +11,6 @@ public static class Catalog
         new ObsMarker(obs, state),
         new ObsScene(obs, state, log),
         new ObsRecord(obs, state, log, clock),
+        new ObsMute(obs, state),
     ];
 }
