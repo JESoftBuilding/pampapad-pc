@@ -9,10 +9,10 @@ Lo que no tiene prueba automática: todo `PampaPad.App`. Se repasa con la copia 
 | N | Qué hacer | Qué tiene que pasar |
 |---|---|---|
 | 1 | Correr `PampaPad.exe --smoke-test` sobre la carpeta publicada (`build\publish.ps1 -Version 999.0.0` lo hace solo, sin subir nada) | Sale con código 0 |
-| 2 | Abrir el programa | Aparece el ícono: X gris con "Sin OBS: no está abierto" si OBS está cerrado, o contorno gris con "PampaPad · OBS conectado". La versión está en la línea "<título> <versión>: compuesto" del registro |
-| 3 | Abrirlo de nuevo con la primera copia corriendo | La segunda copia sale sola; sigue habiendo un solo proceso `PampaPad`; el registro dice "Otra copia pidió abrir la ventana" |
-| 4 | Clic derecho en el ícono, con la copia instalada | El menú tiene "Recargar biblioteca", "Elegir carpeta de datos", "Buscar actualización" y "Salir", en ese orden y con una línea separadora antes de "Buscar actualización" y otra antes de "Salir" |
-| 5 | Clic derecho en el ícono, con la copia de desarrollo | El menú tiene "Recargar biblioteca", "Elegir carpeta de datos" y "Salir", y el registro dice "Copia sin instalar: no busca actualizaciones" |
+| 2 | Abrir el programa | Aparece el ícono: X gris con "Sin OBS: no está abierto" si OBS está cerrado, o contorno gris con "PampaPad · OBS conectado". La versión está en la línea "<título> <versión>: compuesto" del registro y, desde la etapa 6, en la ventana: Estado, tarjeta Programa |
+| 3 | Abrirlo de nuevo con la primera copia corriendo | La segunda copia sale sola; sigue habiendo un solo proceso `PampaPad`; el registro dice "Otra copia pidió abrir la ventana" y, desde la etapa 6, se abre la ventana en Estado |
+| 4 | Clic derecho en el ícono, con la copia instalada | El menú tiene "Abrir PampaPad", "Estado", una línea, "Recargar biblioteca", "Elegir carpeta de datos", una línea, "Buscar actualización", una línea y "Salir", en ese orden. "Reconectar con OBS" aparece debajo de "Estado" sólo con la clave rechazada o la sesión cerrada por OBS, y el ítem de la consola, debajo de "Elegir carpeta de datos", sólo con un puerto en `local.json`. Los dos primeros son de la etapa 6 |
+| 5 | Clic derecho en el ícono, con la copia de desarrollo | El menú tiene "Abrir PampaPad", "Estado", una línea, "Recargar biblioteca", "Elegir carpeta de datos", una línea y "Salir", y el registro dice "Copia sin instalar: no busca actualizaciones" |
 | 6 | Elegir "Salir" | El ícono desaparece, no queda proceso y la última línea del registro dice "Salida ordenada" |
 | 7 | Con una versión más nueva publicada, abrir el programa y esperar medio minuto sin tocar nada | Con OBS abierto y sin grabar, el ícono pasa a la flecha y el texto dice "Versión X lista para instalar". Con OBS cerrado queda la X y el texto suma la versión. El menú ofrece "Instalar versión X"; si OBS está grabando, queda el círculo rojo y el ítem figura apagado, como "Instalar versión X (Se está grabando)". El programa sigue en la versión anterior: nada se bajó ni se instaló solo |
 | 8 | Elegir "Instalar versión X" | El ítem dice "Bajando la versión X…", el programa se cierra y vuelve a abrirse solo en la versión X; el registro, en orden, "La versión X se instala al salir" y "PampaPad X: compuesto" |
@@ -32,7 +32,7 @@ Get-Content "$env:APPDATA\PampaPad\log\$(Get-Date -Format yyyy-MM-dd).jsonl" -Ta
 - **Paso 1.** Con una versión ya publicada en GitHub, `build\publish.ps1` baja la última y `vpk pack` rechaza una versión menor o igual (`There is a release in channel win which is equal or greater`). Por eso el ejemplo usa `999.0.0`, que es mayor que cualquier versión real, y es lo que usa el trabajo `package` del CI. El instalador que deja en `artifacts\releases` es de prueba: no se ejecuta, porque instalaría una versión 999.0.0 que nunca se actualizaría.
 - **Versión del ejecutable.** `(Get-Item (Get-Process PampaPad).Path).VersionInfo.ProductVersion` da `0.1.0+<sha>`: el sufijo lo pone SourceLink. El menú y el registro dicen `0.1.0`. Al comparar, se mira cómo empieza.
 - **Pasos 7 y 8** necesitan una versión publicada más nueva que la instalada: con la v0.1.0 recién instalada, se hacen cuando exista la v0.1.1. El programa nunca instala solo: si se actualizó sin que alguien elija "Instalar versión X", es un error.
-- **Pasos 4 y 5.** La copia de desarrollo (Debug) y la instalada conviven: tienen carpeta local y mutex distintos (`PampaPad-dev` y `PampaPad`). Los dos ítems de la biblioteca son de la etapa 3 (E3-3): con la v0.1.x el menú tiene sólo "Buscar actualización" y "Salir" en la instalada, y "Salir" en la de desarrollo. "Reconectar con OBS" aparece arriba de todo sólo con la clave rechazada o la sesión cerrada por OBS.
+- **Pasos 4 y 5.** La copia de desarrollo (Debug) y la instalada conviven: tienen carpeta local y mutex distintos (`PampaPad-dev` y `PampaPad`). Los dos ítems de la biblioteca son de la etapa 3 (E3-3): con la v0.1.x el menú tiene sólo "Buscar actualización" y "Salir" en la instalada, y "Salir" en la de desarrollo. "Reconectar con OBS" aparecía arriba de todo (desde la etapa 6, debajo de "Estado") sólo con la clave rechazada o la sesión cerrada por OBS. Las filas 4 y 5 de arriba ya son las de la etapa 6.
 - **Paso 9.** Es una búsqueda que cae, no una falla del programa: no tiene que aparecer ningún cartel ni ícono de error. La siguiente búsqueda periódica (a las 6 horas) reintenta sola; con "Buscar actualización" se reintenta en el momento.
 - **Paso 12.** La desinstalación sin ventana, para repetirla sin un clic de más, es `& "$env:LOCALAPPDATA\PampaPad\Update.exe" uninstall --silent`; sin `--silent` queda una ventana esperando un clic.
 
@@ -116,3 +116,38 @@ pio device monitor -p COM20 -b 115200 --rts 0 --dtr 0
 - **Fila 9, el `fin` de más.** Si `C` llega a estar apretada unos 850 ms antes de que salga el cable, entra `fin`: la tecla seguía fresca al llegar al umbral (E3b-2). No es un mantenido fantasma y se descuenta al leer los capítulos.
 - **Fila 5, el arranque de la placa.** Tomar el puerto después de cerrar el monitor puede reiniciar la placa; por eso se espera un segundo antes de apretar.
 - **Lo que repasa la prueba automática y no hace falta repetir a mano:** el códec de la línea, los gestos con su umbral al milisegundo, la reconexión y el cierre con un puerto que falla al cerrar. Lo que sólo se ve a mano es todo lo de arriba: la placa, el cable, el driver del CH343 y el OBS real.
+
+## Etapa 6: la ventana de lectura y la pantalla Estado
+
+Se repasa con la copia de desarrollo de la rama `etapa-6` (worktree `D:\Conocimiento\Sistemas\electronica\pampapad-pc-etapa-6`), armada con la página:
+
+```powershell
+pnpm.cmd -C ui build
+dotnet run --project src\PampaPad.App
+```
+
+Usa `%APPDATA%\PampaPad-dev` y la biblioteca de ejemplo, sin atajos ni consola (05 §10); la instalada puede seguir abierta. Con `$env:PAMPAPAD_LIBRARY = "D:\Conocimiento\Areas\marca-personal\pampapad"` antes de `dotnet run`, lee la biblioteca real: esta etapa no escribe nada.
+
+| N | Qué hacer | Qué tiene que pasar |
+|---|---|---|
+| 1 | Clic derecho en el ícono de la copia de desarrollo | El menú empieza con "Abrir PampaPad" y "Estado" |
+| 2 | Elegir "Estado" | En unos segundos se abre "PampaPad (dev)", al frente y sin destello blanco, en la pantalla Estado. El registro dice "La página avisó que está lista (window.ready)" y "Ventana mostrada al frente" |
+| 3 | Mirar la ventana | A la izquierda, Teclas, Acciones, Scripts, Estado y Ajustes; las que no existen dicen "etapa 7" u "etapa 8" y, al elegirlas, en qué etapa llegan. Arriba, OBS, la grabación y la consola. En Estado: Conexiones, Acciones en curso, Problemas de la configuración, Programa (versión 0.0.0, esquema 1), Chequeo previo ("llega en la etapa 5") y Registro |
+| 4 | Con la ventana abierta, abrir el programa otra vez (otro `dotnet run`, o el `PampaPad.exe` de `bin\Debug`) | No se abre otra ventana: la que estaba vuelve al frente, y en el Registro aparece solo, sin recargar, "Otra copia pidió abrir la ventana" |
+| 5 | En la página: F5, Ctrl+R, Ctrl con la rueda del mouse, Ctrl+más y clic derecho | Nada: ni recarga, ni zoom, ni menú |
+| 6 | Con OBS abierto, empezar a grabar una toma de prueba; mirar la franja de arriba unos segundos; pausar; detener | "Grabando 0:00:0N", que avanza de a un segundo; "En pausa"; y vuelve a "OBS conectado" sin grabación, sin tocar la ventana |
+| 7 | Cerrar OBS | En la franja y en Conexiones: "Sin OBS: no está abierto" |
+| 8 | En Registro, elegir "Sólo errores" y después "Todo" | Con "Sólo errores" quedan sólo las líneas de error, o "Nada con este filtro."; con "Todo" vuelven todas |
+| 9 | Cerrar la ventana con la X y mirar el Administrador de tareas | En un par de segundos no queda ningún `msedgewebview2.exe` del programa; el ícono sigue en la bandeja |
+| 10 | "Abrir PampaPad" | Se abre en Estado: Teclas llega en la etapa 7 |
+| 11 | Con la ventana abierta, "Salir" | La ventana se cierra, el ícono desaparece y el registro termina en "Salida ordenada" |
+
+## Notas de la etapa 6
+
+- **Lo que repasó Claude solo, el 2026-10-15** (filas 2 a 4 y 9, sin mirar): abrió la copia de desarrollo con `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`, abrió la ventana con una segunda copia, leyó la página con `node ui\scripts\capture-window.mjs <captura.png>`, vio llegar en vivo la línea de una tercera y una cuarta copia (la página no se recargó: un marcador puesto antes siguió ahí) y contó los `msedgewebview2.exe` antes y después de cerrar: seis y cero, con "Ventana cerrada" en el registro. Lo que dio va en el backlog, tarea E6-15.
+- **Lo que queda para Emmanuel:** mirar la ventana (fila 3), el frente desde la bandeja (fila 2), las teclas apagadas (fila 5), OBS de verdad (filas 6 y 7), el filtro (fila 8), "Abrir PampaPad" (fila 10) y la salida con la ventana abierta (fila 11).
+- **Fila 2, "al frente".** Show y Activate no siempre la traen al frente (E0-3: 2 de 3). El registro dice en cada apertura si quedó al frente; si no queda, se anota cuándo pasó. En el repaso de Claude, las tres veces ("Ventana mostrada, pero Windows no la dejó al frente"): la segunda copia, la tercera y la cuarta, lanzadas con `Start-Process` desde una herramienta, sin un clic en el menú de la bandeja que diera permiso de primer plano. Con el clic del menú, que es lo que supone el plan, no se midió.
+- **Fila 3, el aro de foco.** En la captura de la ventana real, "Teclas" (el primer botón de la columna) se ve con un aro blanco de foco al abrir. Mirar si molesta.
+- **La página sola, sin el programa:** `pnpm.cmd -C ui dev` y `http://localhost:5173/#/status` en el navegador. Contesta el puente falso con las muestras de `ui/src/bridge/contract.samples.json`.
+- **La ventana abierta mientras se graba sale en el video** si está en el monitor que se captura. No hay regla todavía (05, Incierto).
+- **Lo que repasa la prueba automática y no hace falta repetir a mano:** los sobres y los permisos del puente, la foto y los eventos con cadenas (`BridgeTests`, `StatusRequestsTests`), el contrato entre C# y la página (`Contract.cs` y `contract.test.ts`) y la pantalla contra el puente falso, con un evento simulado (`ui/tests/status.spec.ts`).
