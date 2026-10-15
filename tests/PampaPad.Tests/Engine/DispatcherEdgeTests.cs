@@ -41,12 +41,13 @@ public class DispatcherEdgeTests
         }
         """;
 
+    // Desde la etapa 3b lo crudo pasa por Gestures (02 §6): un Press ya no se ignora, porque una tecla sin onHold dispara al apretar.
+    // Un soltado, un giro o un mantenido sueltos, sin la pulsación que los precede, siguen sin disparar nada.
     [Theory]
-    [InlineData(Gesture.Press)]
     [InlineData(Gesture.Release)]
     [InlineData(Gesture.Turn)]
     [InlineData(Gesture.Hold)]
-    public async Task Only_a_tap_runs_an_action(Gesture gesture)
+    public async Task A_release_a_turn_or_a_hold_on_their_own_run_nothing(Gesture gesture)
     {
         await using var rig = new DispatcherRig(WithGeneral);
 
@@ -57,6 +58,22 @@ public class DispatcherEdgeTests
         Assert.Empty(rig.Marker.Runs);
         Assert.Empty(rig.State.Current.Running);
         Assert.Empty(rig.Finished);
+    }
+
+    [Fact]
+    public async Task A_press_runs_the_key_without_on_hold_and_never_a_general_hotkey()
+    {
+        await using var rig = new DispatcherRig(WithGeneral);
+
+        rig.Dispatcher.Receive(new InputEvent("hotkeys", "hotkey", Gesture.Press, 0));
+        rig.Dispatcher.Receive(new InputEvent("hotkeys", "hotkey", Gesture.Press, 1));
+        Assert.Empty(rig.State.Current.Running);
+
+        rig.Dispatcher.Receive(new InputEvent("console", "key.5", Gesture.Press));
+        await Poll.Until(() => rig.Finished.Count == 1);
+
+        Assert.Equal("marca-short", Assert.Single(rig.Finished).ActionId);
+        Assert.Single(rig.Marker.Runs);
     }
 
     [Theory]

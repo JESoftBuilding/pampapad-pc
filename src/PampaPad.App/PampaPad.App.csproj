@@ -10,6 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="System.IO.Ports" />
     <PackageReference Include="Velopack" />
   </ItemGroup>
 

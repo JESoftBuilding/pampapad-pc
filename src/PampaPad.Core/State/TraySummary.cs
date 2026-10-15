@@ -84,13 +84,30 @@ public sealed record TraySummary(TrayIcon Icon, string Tooltip, bool CanReconnec
         }
 
         var canReconnect = obs.Link is ObsLinkState.AuthFailed or ObsLinkState.Kicked;
-        return new TraySummary(icons[0], string.Join(Separator, texts), canReconnect);
+        return new TraySummary(icons[0], string.Join(Separator, texts), canReconnect) { ConsoleItem = ConsoleText(state) };
 
         void Add(TrayIcon icon, string text)
         {
             icons.Add(icon);
             texts.Add(text);
         }
+    }
+
+    /// <summary>El texto del ítem de la consola en el menú de la bandeja; null si no hay consola (05 §3).</summary>
+    public string? ConsoleItem { get; init; }
+
+    /// <summary>Dice qué hace el clic y cómo está el enlace: hasta la pantalla Estado, es la única señal de si el puerto abrió.</summary>
+    public static string? ConsoleText(AppState state)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+
+        return state.Console.State switch
+        {
+            ConsoleLinkState.Off => null,
+            ConsoleLinkState.Released => $"Tomar la consola ({state.Console.Port})",
+            ConsoleLinkState.Waiting => $"Soltar la consola ({state.Console.Port}, sin conexión)",
+            _ => $"Soltar la consola ({state.Console.Port})",
+        };
     }
 
     /// <summary>Lo que el texto de ayuda dice de la biblioteca, o <c>null</c> si no hay nada que decir.</summary>

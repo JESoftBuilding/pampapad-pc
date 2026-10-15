@@ -113,6 +113,29 @@ public sealed class LocalSettingsTests : IAsyncLifetime
         Assert.Equal(newer, File.ReadAllText(_path));
     }
 
+    [Fact]
+    public void The_console_port_written_by_hand_is_read()
+    {
+        WriteFile("""{ "version": 1, "consolePort": "COM7" }""");
+        var settings = new LocalSettings(_path, _log);
+
+        var result = settings.Load();
+
+        Assert.True(result.Ok);
+        Assert.Equal("COM7", settings.Current.ConsolePort);
+    }
+
+    [Fact]
+    public void Without_the_key_there_is_no_console_port()
+    {
+        WriteFile("""{ "version": 1 }""");
+        var settings = new LocalSettings(_path, _log);
+
+        settings.Load();
+
+        Assert.Null(settings.Current.ConsolePort);
+    }
+
     private void WriteFile(string text, bool withBom = false)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(_path)!);

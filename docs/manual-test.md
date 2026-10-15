@@ -118,3 +118,44 @@ Cada marca es un capítulo, y su tipo es `tags.title`. El capítulo "Iniciar", e
   Set-Content -Path "$env:APPDATA\PampaPad-dev\local.json" -Value '{ "version": 1 }' -Encoding ASCII
   ```
 - **Lo que repasa la prueba automática y no hace falta repetir a mano:** del atajo simulado al capítulo con su título en un OBS falso (`MarkersEndToEndTests`). Lo que sólo se ve a mano es todo lo de arriba: el teclado y las ventanas de verdad, el sonido, el cartel y el OBS real.
+
+## Etapa 3b: las teclas del prototipo de banco
+
+Se repasa con la placa del prototipo enchufada por el USB-C del CH343, el firmware de banco cargado y el OBS real, sin grabar nada que importe. El puerto va a mano en `%APPDATA%\PampaPad\local.json`, en la clave `consolePort` (en esta PC, `COM20`; `pio device list` dice cuál es). Se corre el Release de la rama, después de salir de la copia instalada: usan la misma carpeta local y la misma biblioteca.
+
+Para probar el mantenido hace falta una tecla con `onHold`. Durante el repaso se agrega a la biblioteca, en la página `grabacion`, la tecla 12 con `"action": "marca-inicio"` y `"onHold": { "action": "marca-fin" }`, y se saca al terminar (`git diff --stat -- Areas/marca-personal/pampapad/config.json`, desde `D:\Conocimiento`, no tiene que mostrar nada).
+
+Las teclas se nombran por lo que tienen impreso. El teclado de membrana tiene tres filas en uso, y la posición es fila por cuatro más columna más uno:
+
+| | | | | |
+|---|---|---|---|---|
+| Fila 1 | `1` (1) | `2` (2) | `3` (3) | `A` (4) |
+| Fila 2 | `4` (5) `short` | `5` (6) `inicio` | `6` (7) `fin` | `B` (8) `sacar` |
+| Fila 3 | `7` (9) `largo` | `8` (10) | `9` (11) | `C` (12) prueba |
+
+El monitor serie se abre siempre con el puerto escrito: sin `-p`, `pio` elige el primero que encuentra, que puede ser otra placa.
+
+```powershell
+pio device monitor -p COM20 -b 115200 --rts 0 --dtr 0
+```
+
+| N | Qué hacer | Qué tiene que pasar |
+|---|---|---|
+| 1 | Abrir el programa y mirar el menú de la bandeja | `Soltar la consola (COM20)` entre "Elegir carpeta de datos" y la línea. El registro dice "La consola está conectada." |
+| 2 | Grabando, apretar de a una, soltando enseguida: `4`, `5`, `6`, `B`, `7` | Cinco capítulos: `short`, `inicio`, `fin`, `sacar` y `largo`, en ese orden |
+| 3 | Grabando, mantener `4` tres segundos | Un solo capítulo `short` |
+| 4 | Grabando, un toque corto de `C`; después mantener `C` tres segundos | `inicio` al soltar el toque; `fin` al segundo de mantenerla, sin soltar, y nada al soltar |
+| 5 | "Soltar la consola (COM20)". Abrir el monitor serie y apretar `3`. Cerrarlo con Ctrl+C, "Tomar la consola (COM20)", esperar un segundo y apretar `5` | El ítem pasa a `Tomar la consola (COM20)`. En el monitor salen líneas `#301110BAAAAAAAAAA=` y en OBS no entra nada. Después de tomarla, `inicio` |
+| 6 | Con el programa teniendo el puerto, abrir el monitor serie | Falla con "Acceso denegado" (`PermissionError(13, ...)`). El registro no cambia |
+| 7 | "Soltar la consola", abrir el monitor, y con el monitor abierto elegir "Tomar la consola". Mirar el menú. Cerrar el monitor, esperar tres segundos y mirarlo otra vez. Apretar `6` | Con el monitor abierto: `Soltar la consola (COM20, sin conexión)` y una sola línea "Sin consola: Access to the path 'COM20' is denied. Se reintenta cada 2 s.". Al cerrarlo vuelve solo a `Soltar la consola (COM20)`. `6` da `fin` |
+| 8 | Grabando, Ctrl+Shift+Alt+F9 en el teclado de la PC | `short`: el teclado y la consola conviven |
+| 9 | Apretar `C` y, antes de medio segundo, sacar el cable USB con la tecla apretada. Esperar tres segundos y mirar el menú. Volver a enchufar, esperar unos cinco segundos y mirarlo otra vez. Apretar `4` | Ninguna marca. `Soltar la consola (COM20, sin conexión)`, con "Sin consola: Access to the path 'COM20' is denied." y, dos segundos después, "Sin consola: Could not find file 'COM20'.". Al enchufar vuelve solo a `Soltar la consola (COM20)` y `4` llega |
+| 10 | "Salir" | El registro termina en "Salida ordenada" y no hay un error de ".NET Runtime" en el registro de aplicaciones de Windows |
+
+## Notas de la etapa 3b
+
+- **Repasado el 2026-10-14 con la placa en COM20.** Las filas 1 a 8 dieron lo esperado; la toma tuvo 15 capítulos, uno por cada marca del registro, sin perdidos ni repetidos. La fila 9 encontró un defecto: al sacar el cable, cerrar el puerto tiraba `UnauthorizedAccessException`, el bucle de la consola se moría sin avisar, el menú se quedaba en "Soltar la consola (COM20)" y al salir el programa se caía. Se arregló en `SerialConsole` (cerrar el puerto ya no deja salir el error; pruebas en `SerialConsoleCloseFailureTests`) y las filas 9 y 10 se repitieron con el arreglo: dieron lo esperado.
+- **Fila 4, el toque.** Un toque que dura cerca de un segundo ya cuenta como mantenido: desde 850 ms (`holdMs` menos la ventana de frescura de 150 ms) sale `fin` en lugar de `inicio`. En el repaso pasó una vez con un toque que pareció corto.
+- **Fila 9, el `fin` de más.** Si `C` llega a estar apretada unos 850 ms antes de que salga el cable, entra `fin`: la tecla seguía fresca al llegar al umbral (E3b-2). No es un mantenido fantasma y se descuenta al leer los capítulos.
+- **Fila 5, el arranque de la placa.** Tomar el puerto después de cerrar el monitor puede reiniciar la placa; por eso se espera un segundo antes de apretar.
+- **Lo que repasa la prueba automática y no hace falta repetir a mano:** el códec de la línea, los gestos con su umbral al milisegundo, la reconexión y el cierre con un puerto que falla al cerrar. Lo que sólo se ve a mano es todo lo de arriba: la placa, el cable, el driver del CH343 y el OBS real.

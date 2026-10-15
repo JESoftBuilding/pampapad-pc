@@ -53,6 +53,9 @@ public sealed record AppState
 
     /// <summary>La última acción que falló. Se borra cuando la próxima termina bien o cuando se abre el menú de la bandeja.</summary>
     public ActionFailure? LastFailure { get; init; }
+
+    /// <summary>El enlace con la consola por cable y el puerto que dice local.json. Sin puerto, apagada.</summary>
+    public ConsoleLink Console { get; init; } = ConsoleLink.None;
 }
 
 public sealed record HotkeysState(int Registered, int Rejected);

@@ -1,0 +1,23 @@
+; Líneas de muestra del cable de la consola (04 §7). Las lee ConsoleProtocolTests.
+; Las de clase "keys" con ocho bytes son las que arma el firmware (test/test_inputstate).
+; Formato: <clase> <teclas en hexadecimal, o ----> <la línea, tal como llega>
+keys 0004 #301110BAAAAAAAAAA=
+keys 0000 #301110AAAAAAAAAAA=
+keys 0001 #301110AQAAAAAAAAA=
+keys 0010 #301110EAAAAAAAAAA=
+keys 0100 #301110AAEAAAAAAAA=
+keys 0800 #301110AAgAAAAAAAA=
+keys 0801 #301110AQgAAAAAAAA=
+keys 0fff #301110/w8AAAAAAAA=
+keys 0004 #301110BAAAAAAAAAD//w==
+keys 0004 #301110BPAAAAAAAAA=
+short ---- #301110BAAAAAAAAA==
+unknown ---- #311110AAAAAAAAAAA=
+text ---- ESP-ROM:esp32s3-20210327
+text ---- PampaPad, firmware de banco: estado de las 12 teclas por el cable
+text ---- tecla 3 apretada (fila 1, columna 3)
+malformed ---- #
+malformed ---- #30111
+malformed ---- #3G1110BAAAAAAAAAA=
+malformed ---- #301110BAAAAAAAAAA
+malformed ---- #301110BAAA*AAAAAA=

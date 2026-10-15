@@ -28,7 +28,7 @@ internal sealed class DispatcherRig : IAsyncDisposable
         Library.Load();
         beforeWindows?.Invoke(Windows);
         beforeDispatcher?.Invoke(Marker);
-        Dispatcher = new Dispatcher(Library, State, new Executor([Marker], TimeProvider.System), Log);
+        Dispatcher = new Dispatcher(Library, State, new Executor([Marker], TimeProvider.System), new Gestures(TimeProvider.System, Gestures.HoldFrom(null), Gestures.DefaultFreshness), Log);
         Dispatcher.Finished += Finished.Enqueue;
         Hotkeys = new HotkeySource(Windows, State, Log);
         _ = Hotkeys.StartAsync(CancellationToken.None);
