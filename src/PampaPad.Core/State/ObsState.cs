@@ -3,7 +3,8 @@ namespace PampaPad.Core;
 // Estado de la grabación según OBS (spec 03 §5). Sale de RecordStateChanged.outputState, nunca de outputActive.
 public enum RecordingState { Stopped, Starting, Recording, Paused, Stopping }
 
-// Estado del enlace con OBS (spec 03 §2). En JSON viajan con guion bajo: closed, no_websocket, auth_failed...
+// Estado del enlace con OBS (spec 03 §2). Por el puente viaja con guion bajo (no_websocket, auth_failed), convertido a mano en
+// ObsView.LinkName: pregunta abierta 59, escrito (b). Con las opciones de Json.cs iría en camelCase.
 public enum ObsLinkState { Closed, NoWebsocket, AuthFailed, Loading, Ready, Switching, Lost, Kicked, Exiting }
 
 // Lo que el programa sabe de OBS. Inmutable: se cambia la referencia entera.
