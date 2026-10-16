@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Microsoft.Win32;
 using PampaPad.Core;
 
@@ -63,8 +62,10 @@ internal sealed class Composition : IAsyncDisposable
         var state = new StateStore(log);
 
         // OBS: la dirección y la clave salen del archivo del propio OBS en cada intento (03 §2). El programa no guarda la clave.
+        // "¿Hay proceso obs64?" separa closed, no_websocket, lost y exiting (03 §2): lo contesta IWindows (01 §3.1).
+        var windows = new Win32Windows();
         var obsFiles = new ObsFiles(ObsFiles.DefaultFolder);
-        var obs = new ObsClient(obsFiles.Address, obsFiles.Password, state, log, clock, ObsIsRunning);
+        var obs = new ObsClient(obsFiles.Address, obsFiles.Password, state, log, clock, () => windows.IsProcessRunning("obs64"));
 
         // El Dispatcher publica la biblioteca en el estado al construirse y en cada recarga, junto con los problemas de los pasos y de los atajos.
         IReadOnlyList<IStepType> catalog = Catalog.Build(obs, state, log, clock);
@@ -248,18 +249,6 @@ internal sealed class Composition : IAsyncDisposable
 
         Log.Info("app", "la PC volvió de la suspensión: se rearma la conexión con OBS");
         _obs.Reconnect();
-    }
-
-    // "¿Hay proceso obs64?" separa closed, no_websocket, lost y exiting (03 §2). Cuando exista IWindows.IsProcessRunning, se usa esa.
-    private static bool ObsIsRunning()
-    {
-        var found = Process.GetProcessesByName("obs64");
-        foreach (var process in found)
-        {
-            process.Dispose();
-        }
-
-        return found.Length > 0;
     }
 
     private void CheckUpdate() => _ = RunAsync("buscar una actualización", () => _updater.CheckAsync(_life.Token));
