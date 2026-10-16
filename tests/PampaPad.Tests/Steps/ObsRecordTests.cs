@@ -145,12 +145,21 @@ public class ObsRecordTests
     [Fact]
     public async Task A_real_start_of_the_fake_obs_is_waited_for()
     {
-        // StartDelay no tenía prueba (hallazgo E2-2). Medido: 90 ms y 142 ms; acá 300 ms, para que el paso llegue a esperarlo.
-        await using ObsSession session = await ObsSession.StartAsync(RecordingState.Stopped, obs => obs.StartDelay = TimeSpan.FromMilliseconds(300));
+        // Con el reloj falso en el OBS falso y en el paso (hallazgo E4-6): el STARTED llega cuando la prueba avanza el reloj, no a los
+        // 300 ms reales. Medido: 90 ms y 142 ms; acá 300 ms, para que el paso llegue a esperarlo.
+        var clock = new FakeTimeProvider();
+        await using ObsSession session = await ObsSession.StartAsync(RecordingState.Stopped, obs =>
+        {
+            obs.StartDelay = TimeSpan.FromMilliseconds(300);
+            obs.Clock = clock;
+        });
         Task fromObs = session.Obs.StartRecordingAsync();            // como desde la ventana de OBS: STARTING ya, STARTED a los 300 ms
-        await Poll.Until(() => session.State.Current.Obs.Recording == RecordingState.Starting);
+        await Poll.Until(() => session.State.Current.Obs.Recording == RecordingState.Starting && session.Obs.Waiting == 1);
 
-        StepResult result = await StepOf(session).RunAsync(Do("start"), Key, CancellationToken.None);
+        Task<StepResult> running = StepOf(session, clock).RunAsync(Do("start"), Key, CancellationToken.None);
+        Assert.False(running.IsCompleted);
+        clock.Advance(TimeSpan.FromMilliseconds(300));
+        StepResult result = await running.WaitAsync(TimeSpan.FromSeconds(10));
         await fromObs;
 
         Assert.Null(result.Failure);
@@ -161,12 +170,20 @@ public class ObsRecordTests
     [Fact]
     public async Task A_real_stop_of_the_fake_obs_is_waited_for()
     {
-        // StopDelay tampoco tenía prueba (hallazgo E2-2). Medido: 310 ms y 311 ms.
-        await using ObsSession session = await ObsSession.StartAsync(RecordingState.Recording, obs => obs.StopDelay = TimeSpan.FromMilliseconds(300));
+        // StopDelay, con el mismo reloj falso. Medido: 310 ms y 311 ms.
+        var clock = new FakeTimeProvider();
+        await using ObsSession session = await ObsSession.StartAsync(RecordingState.Recording, obs =>
+        {
+            obs.StopDelay = TimeSpan.FromMilliseconds(300);
+            obs.Clock = clock;
+        });
         Task fromObs = session.Obs.StopRecordingAsync();
-        await Poll.Until(() => session.State.Current.Obs.Recording == RecordingState.Stopping);
+        await Poll.Until(() => session.State.Current.Obs.Recording == RecordingState.Stopping && session.Obs.Waiting == 1);
 
-        StepResult result = await StepOf(session).RunAsync(Do("stop"), Key, CancellationToken.None);
+        Task<StepResult> running = StepOf(session, clock).RunAsync(Do("stop"), Key, CancellationToken.None);
+        Assert.False(running.IsCompleted);
+        clock.Advance(TimeSpan.FromMilliseconds(300));
+        StepResult result = await running.WaitAsync(TimeSpan.FromSeconds(10));
         await fromObs;
 
         Assert.Null(result.Failure);

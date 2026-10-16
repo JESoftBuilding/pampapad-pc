@@ -54,7 +54,7 @@ public sealed partial class FakeObs
         {
             if (e.After > TimeSpan.Zero)
             {
-                await Task.Delay(e.After, _stop.Token);
+                await DelayAsync(e.After);
             }
 
             await EmitAsync(e.Type, e.Intent, e.Data);
