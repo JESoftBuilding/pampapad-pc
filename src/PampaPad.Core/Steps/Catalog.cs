@@ -25,6 +25,7 @@ public static class Catalog
             new WaitTime(clock),
             new WaitWindow(chains.Windows, clock),
             new ScriptRun(chains.Scripts, chains.Library),
+            new PageGo(chains.Library, chains.GoToPage),
         ];
     }
 }

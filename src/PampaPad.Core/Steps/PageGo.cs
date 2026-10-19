@@ -1,0 +1,39 @@
+namespace PampaPad.Core;
+
+public sealed record PageGoParameters(string? Target);
+
+/// <summary>
+/// page.go: cambia la página base (02 §5 y §7; preguntas abiertas 12 y 44, escrito (a)). Con una toma en curso falla con
+/// navigation_blocked y corta la cadena: lo decide Navigation, a través de Dispatcher.Go. Un target que no nombra una página es el
+/// problema 4 de 02 §10, de gravedad error: la acción no corre.
+/// </summary>
+public sealed class PageGo(Library library, Func<string, Failure?> go) : StepType<PageGoParameters>
+{
+    public const string TypeId = "page.go";
+
+    public override string Id => TypeId;
+
+    public override string Name => "Ir a otra página";
+
+    public override string Group => "Cadenas";
+
+    public override IReadOnlyList<Field> Fields { get; } =
+    [
+        new Field("target", "Página", FieldKind.Page),
+    ];
+
+    protected override IEnumerable<Problem> Check(PageGoParameters p)
+    {
+        if (string.IsNullOrWhiteSpace(p.Target))
+        {
+            yield return Invalid("target", "Falta la página: va su id, o next, previous o main.");
+        }
+        else if (p.Target is not (Navigation.Main or Navigation.Next or Navigation.Previous) && library.Current.FindPage(p.Target) is null)
+        {
+            yield return new Problem("target", ProblemCodes.PageNotFound, $"page.go nombra la página \"{p.Target}\", que no existe.", Severity.Error);
+        }
+    }
+
+    protected override Task<StepResult> RunAsync(PageGoParameters p, Invocation invocation, CancellationToken ct) =>
+        Task.FromResult(new StepResult(go(p.Target ?? "")));
+}
