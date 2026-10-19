@@ -37,8 +37,14 @@ public class WindowMatchTests
         Assert.True(WindowMatch.HasSize(Mirror, 1823, 850));
         Assert.True(WindowMatch.HasSize(Mirror, null, null));
         Assert.False(WindowMatch.HasSize(Mirror with { Width = 1824 }, 1823, 850));
+        Assert.False(WindowMatch.HasSize(Mirror with { Height = 851 }, 1823, 850));
         Assert.False(WindowMatch.HasSize(Mirror with { Minimized = true }, 1823, 850));
         Assert.False(WindowMatch.HasSize(Mirror with { Minimized = true }, 1823, null));
+
+        // wait.window pide el ancho y el alto por separado (02 §5): con uno solo, se compara ése y el otro no cuenta.
+        Assert.True(WindowMatch.HasSize(Mirror with { Height = 851 }, 1823, null));
+        Assert.False(WindowMatch.HasSize(Mirror with { Height = 851 }, null, 850));
+        Assert.True(WindowMatch.HasSize(Mirror with { Width = 1824 }, null, 850));
 
         // 02 §5: wait.window exige el tamaño sólo "si se piden"; sin ancho ni alto, una minimizada existe igual, como para window.exists.
         Assert.True(WindowMatch.HasSize(Mirror with { Minimized = true, Width = 160, Height = 28 }, null, null));
@@ -58,6 +64,12 @@ public class WindowMatchTests
         Assert.Equal(
             "La ventana \"bancocam\" está minimizada.",
             WindowMatch.Describe([Mirror with { Minimized = true, Width = 160, Height = 28 }], "bancocam", null, null, null));
+        Assert.Equal(
+            "La ventana \"bancocam\" mide 960 x 600 y se esperaba 1823 x cualquier alto.",
+            WindowMatch.Describe([Folder], "bancocam", null, 1823, null));
+        Assert.Equal(
+            "La ventana \"bancocam\" mide 960 x 600 y se esperaba cualquier ancho x 850.",
+            WindowMatch.Describe([Folder], "bancocam", null, null, 850));
     }
 
     [Fact]
@@ -65,6 +77,10 @@ public class WindowMatchTests
     {
         string detail = WindowMatch.Describe([Folder, Mirror], "bancocam", null, 1823, 850);
 
+        // Sin tamaño pedido sirven las dos, y se dice la que se ve antes que la minimizada.
+        string shown = WindowMatch.Describe([Mirror with { Minimized = true, Width = 160, Height = 28 }, Mirror], "bancocam", null, null, null);
+
         Assert.Equal("La ventana \"bancocam\" mide 1823 x 850.", detail);
+        Assert.Equal("La ventana \"bancocam\" mide 1823 x 850.", shown);
     }
 }

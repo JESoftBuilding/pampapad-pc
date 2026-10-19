@@ -28,10 +28,14 @@ public sealed partial class Win32Windows : IWindows
                 return true;
             }
 
+            // Una ventana que se cierra mientras se la lee hace fallar estas llamadas: no se lista, en vez de entrar sin título, de 0 x 0 o
+            // con el proceso 0 (revisión de E5-3).
             var title = new StringBuilder(length + 1);
-            GetWindowText(handle, title, title.Capacity);
-            GetWindowRect(handle, out Rect rect);
-            GetWindowThreadProcessId(handle, out uint id);
+            if (GetWindowText(handle, title, title.Capacity) == 0 || !GetWindowRect(handle, out Rect rect) || GetWindowThreadProcessId(handle, out uint id) == 0)
+            {
+                return true;
+            }
+
             found.Add(new WindowInfo(title.ToString(), NameOf(id, names), rect.Right - rect.Left, rect.Bottom - rect.Top, IsIconic(handle)));
             return true;
         }, IntPtr.Zero);
@@ -49,7 +53,7 @@ public sealed partial class Win32Windows : IWindows
         return running.Length > 0;
     }
 
-    // Un proceso que terminó entre EnumWindows y esta lectura queda sin nombre: la ventana se lista igual.
+    // Un proceso que terminó entre GetWindowThreadProcessId y esta lectura queda sin nombre: la ventana se lista igual.
     private static string NameOf(uint id, Dictionary<uint, string> names)
     {
         if (names.TryGetValue(id, out string? known))
