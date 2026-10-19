@@ -96,7 +96,10 @@ public static partial class Conditions
 
             Result<bool> muted = await MutedAsync(obs, input.Value!, ct).ConfigureAwait(false);
             return muted.Ok ? new Verdict(!muted.Value, $"\"{input.Value!.Name}\" está {(muted.Value ? "silenciado" : "abierto")}.") : muted.Failure;
-        });
+        })
+    {
+        Check = CheckSource,
+    };
 
     /// <summary>
     /// La cámara no manda su audio (02 §5; 03 §7): silenciada y sin ninguna de las pistas 1 a 6. Sin source mira cada dshow_input de la
@@ -116,7 +119,7 @@ public static partial class Conditions
 
             if (cameras.Value!.Count == 0)
             {
-                return Verdict.NotApplicable($"no hay cámara en \"{obs.SceneName}\".");
+                return Verdict.NotApplicable(NotOnAir(obs, p, "cámara", "una cámara"));
             }
 
             foreach (SceneSource camera in cameras.Value)
@@ -144,7 +147,10 @@ public static partial class Conditions
             }
 
             return new Verdict(true, $"La cámara de \"{obs.SceneName}\" está silenciada y sin pistas.");
-        });
+        })
+    {
+        Check = CheckSource,
+    };
 
     // Las cámaras que mira una condición: la de source si es una cámara, o las de la escena al aire.
     private static async Task<Result<IReadOnlyList<SceneSource>>> CamerasAsync(ObsQueries obs, JsonElement p, CancellationToken ct)
@@ -181,6 +187,23 @@ public static partial class Conditions
         return answer.Ok
             ? ObsMessages.Text(answer.Value, "parameterValue") ?? ObsMessages.Text(answer.Value, "defaultParameterValue") ?? ""
             : answer.Failure;
+    }
+
+    // El motivo del "no aplica" cuando no quedó nada que mirar: con source, que esa no es de la clase que mira la condición o no está al
+    // aire; sin él, que la escena al aire no tiene ninguna (revisión de E5-15: con source decía que no había, y Pantalla tiene la cámara).
+    private static string NotOnAir(ObsQueries obs, JsonElement p, string none, string one) =>
+        ConditionRules.Reference(p, "source") is { } wanted
+            ? $"\"{wanted.Name}\" no es {one} al aire en \"{obs.SceneName}\"."
+            : $"no hay {none} en \"{obs.SceneName}\".";
+
+    // Un source que no se entiende como referencia de 02 §4.8 (un número, un texto vacío, un objeto sin name) se leería como si no
+    // estuviera, y la condición miraría el mic1 o todas las cámaras sin avisar. Es un problema, como process (revisión de E5-15).
+    private static IEnumerable<Problem> CheckSource(JsonElement p)
+    {
+        if (ObsMessages.Has(p, "source", out JsonElement value) && value.ValueKind != JsonValueKind.Null && ConditionRules.Reference(p, "source") is null)
+        {
+            yield return ConditionRules.Invalid("source", "source va como el nombre de la fuente, \"Mic/Aux\", o { \"uuid\": \"...\", \"name\": \"Mic/Aux\" }.");
+        }
     }
 
     private static IEnumerable<Problem> RequiredText(JsonElement p, string name) =>

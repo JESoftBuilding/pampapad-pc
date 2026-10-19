@@ -27,10 +27,14 @@ public class ObsConditionsTests
         ConditionResult advanced = await ConditionProbe.EvaluateAsync(session, """{ "type": "obs.recordFormatIs", "format": "hybrid_mp4" }""");
         session.Obs.OutputMode = "Simple";
         ConditionResult simple = await ConditionProbe.EvaluateAsync(session, """{ "type": "obs.recordFormatIs", "format": "mkv" }""");
+        session.Obs.OutputMode = null;      // sin parameterValue: vale defaultParameterValue, Simple (03 §7)
+        ConditionResult unwritten = await ConditionProbe.EvaluateAsync(session, """{ "type": "obs.recordFormatIs", "format": "mkv" }""");
 
         Assert.Equal(ConditionOutcome.Fail, advanced.Outcome);
         Assert.Equal("El perfil graba en mkv (salida Advanced); se pedía hybrid_mp4.", advanced.Detail);
         Assert.Equal(ConditionOutcome.Pass, simple.Outcome);
+        Assert.Equal(ConditionOutcome.Pass, unwritten.Outcome);
+        Assert.Equal("El perfil graba en mkv (salida Simple); se pedía mkv.", unwritten.Detail);
     }
 
     [Fact]
@@ -70,10 +74,14 @@ public class ObsConditionsTests
         await using ObsSession session = await ObsSession.StartAsync();
 
         ConditionResult silent = await ConditionProbe.EvaluateAsync(session, """{ "type": "obs.cameraAudioOff" }""");
+        session.Obs.SetAudioTrack(FakeObs.CameraInputUuid, 6, on: true);
+        ConditionResult track = await ConditionProbe.EvaluateAsync(session, """{ "type": "obs.cameraAudioOff" }""");
         await session.Client.RequestAsync("SetInputMute", new { inputUuid = FakeObs.CameraInputUuid, inputMuted = false }, CancellationToken.None);
         ConditionResult loud = await ConditionProbe.EvaluateAsync(session, """{ "type": "obs.cameraAudioOff" }""");
 
         Assert.Equal(ConditionOutcome.Pass, silent.Outcome);
+        Assert.Equal(ConditionOutcome.Fail, track.Outcome);         // silenciada, pero la pista 6 la sigue mandando a la grabación
+        Assert.Equal("La cámara \"Dispositivo de captura de video\" manda audio por la pista 6.", track.Detail);
         Assert.Equal(ConditionOutcome.Fail, loud.Outcome);
         Assert.Equal("La cámara \"Dispositivo de captura de video\" no está silenciada.", loud.Detail);
     }
@@ -88,9 +96,9 @@ public class ObsConditionsTests
         ConditionResult phone = await ConditionProbe.EvaluateAsync(session, """{ "type": "obs.cameraAudioOff", "source": "Celu (scrcpy)" }""");
 
         Assert.Equal(ConditionOutcome.Pass, banco.Outcome);
-        Assert.StartsWith("No aplica", banco.Detail, StringComparison.Ordinal);
+        Assert.Equal("No aplica: no hay cámara en \"Banco\".", banco.Detail);
         Assert.Equal(ConditionOutcome.Pass, phone.Outcome);
-        Assert.StartsWith("No aplica", phone.Detail, StringComparison.Ordinal);
+        Assert.Equal("No aplica: \"Celu (scrcpy)\" no es una cámara al aire en \"Banco\".", phone.Detail);
     }
 
     [Theory]
@@ -108,10 +116,28 @@ public class ObsConditionsTests
         Assert.Equal(ErrorCodes.ObsDisconnected, result.Failure?.Code);
     }
 
+    // El token llega a OBS: el chequeo corta con su tope cancelando (E5-17), y sin esto cada pedido esperaría su propio tope.
+    [Theory]
+    [InlineData("""{ "type": "obs.profileIs", "profile": "Sin Título" }""")]
+    [InlineData("""{ "type": "obs.recordFormatIs", "format": "hybrid_mp4" }""")]
+    [InlineData("""{ "type": "obs.micNotMuted", "source": "Sting triste" }""")]
+    [InlineData("""{ "type": "obs.cameraAudioOff" }""")]
+    public async Task With_the_token_already_cancelled_each_one_is_skipped_as_cancelled(string json)
+    {
+        await using ObsSession session = await ObsSession.StartAsync();
+
+        ConditionResult result = await ConditionProbe.EvaluateAsync(session, json, new CancellationToken(true));
+
+        Assert.Equal(ConditionOutcome.Skipped, result.Outcome);
+        Assert.Equal(ErrorCodes.Cancelled, result.Failure?.Code);
+    }
+
     [Theory]
     [InlineData("""{ "type": "obs.profileIs" }""", "profile")]
     [InlineData("""{ "type": "obs.profileIs", "profile": "" }""", "profile")]
     [InlineData("""{ "type": "obs.recordFormatIs", "format": 4 }""", "format")]
+    [InlineData("""{ "type": "obs.micNotMuted", "source": 5 }""", "source")]
+    [InlineData("""{ "type": "obs.cameraAudioOff", "source": { "uuid": "668dffa0-e0b7-4ae5-b469-a99fd220fb96" } }""", "source")]
     public async Task A_missing_text_is_a_problem_of_the_condition(string json, string where)
     {
         await using var offline = new OfflineObs();

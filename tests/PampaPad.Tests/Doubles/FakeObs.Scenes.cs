@@ -75,6 +75,15 @@ public sealed partial class FakeObs
         }
     }
 
+    /// <summary>Prende o apaga una pista de audio, de 1 a 6, como desde la ventana de OBS. Sin evento: el programa no lo escucha.</summary>
+    public void SetAudioTrack(string uuid, int track, bool on)
+    {
+        lock (_sync)
+        {
+            _tracks[uuid][track - 1] = on;
+        }
+    }
+
     // Como si se hiciera desde la ventana de OBS. Cada cambio manda su evento (03 §1); ninguno se provocó en el OBS real (03 Incierto).
     public Task CreateSceneAsync(string name, string uuid)
     {

@@ -35,7 +35,7 @@ public sealed partial class FakeObs
 
     public string Profile { get; set; } = "Sin Título";
 
-    public string OutputMode { get; set; } = "Advanced";
+    public string? OutputMode { get; set; } = "Advanced";          // null: un perfil sin Output/Mode escrito
 
     public string RecordFormat { get; set; } = "hybrid_mp4";
 
@@ -160,7 +160,7 @@ public sealed partial class FakeObs
         ["profiles"] = new JsonArray("Reels vertical", "Sin Título"),
     });
 
-    // Medido el 2026-10-13 (perfil_activo): Output/Mode da Advanced con Simple por defecto; RecFormat2 da hybrid_mp4.
+    // Medido el 2026-10-13 (perfil_activo): Output/Mode da Advanced con Simple por defecto; RecFormat2 da hybrid_mp4. Sin Output/Mode rige Simple.
     private Reply ProfileParameter(JsonObject? data)
     {
         string key = $"{(string?)data?["parameterCategory"]}/{(string?)data?["parameterName"]}";
@@ -168,7 +168,7 @@ public sealed partial class FakeObs
         {
             "Output/Mode" => (OutputMode, "Simple"),
             "AdvOut/RecFormat2" => (OutputMode == "Advanced" ? RecordFormat : "hybrid_mp4", "hybrid_mp4"),
-            "SimpleOutput/RecFormat2" => (OutputMode == "Simple" ? RecordFormat : "hybrid_mp4", "hybrid_mp4"),
+            "SimpleOutput/RecFormat2" => (OutputMode is null or "Simple" ? RecordFormat : "hybrid_mp4", "hybrid_mp4"),
             "General/Name" => (Profile, null),
             _ => (null, null),
         };
