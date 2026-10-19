@@ -1,3 +1,4 @@
+using System.Text.Json;
 using PampaPad.Core;
 using PampaPad.Tests.Doubles;
 
@@ -22,14 +23,24 @@ public class SceneConditionsTests
     }
 
     [Fact]
-    public async Task A_source_named_that_is_not_on_air_does_not_apply()
+    public async Task A_source_named_that_is_not_on_air_or_not_of_the_kind_it_looks_at_does_not_apply()
     {
         await using ObsSession session = await ObsSession.StartAsync();
 
-        ConditionResult result = await ConditionProbe.EvaluateAsync(session, """{ "type": "obs.sourceHasImage", "source": "Celu (scrcpy)" }""");
+        ConditionResult away = await ConditionProbe.EvaluateAsync(session, """{ "type": "obs.sourceHasImage", "source": "Celu (scrcpy)" }""");
+        ConditionResult screen = await ConditionProbe.EvaluateAsync(session, """{ "type": "obs.cameraNotCovered", "source": "Captura de pantalla" }""");
+        await ConditionProbe.OnAirAsync(session, "Pantalla + Cámara", "5bcf806a-9dac-430c-a437-3eab544e8419");
+        ConditionResult mic = await ConditionProbe.EvaluateAsync(session, """{ "type": "obs.sourceHasImage", "source": "Mic/Aux" }""");
+        await ConditionProbe.OnAirAsync(session, "Banco", FakeObs.BancoUuid);
+        ConditionResult phone = await ConditionProbe.EvaluateAsync(session, """{ "type": "obs.captureHasMonitor", "source": "Celu (scrcpy)" }""");
 
-        Assert.Equal(ConditionOutcome.Pass, result.Outcome);
-        Assert.StartsWith("No aplica", result.Detail, StringComparison.Ordinal);
+        // Mic/Aux se ve en Pantalla + Cámara y mide 0 x 0, como toda entrada de sólo audio; el celular no tiene monitor_id (OBS da 600).
+        Assert.Equal("No aplica: \"Celu (scrcpy)\" no es una captura ni una cámara al aire en \"Pantalla\".", away.Detail);
+        Assert.Equal("No aplica: \"Captura de pantalla\" no es una cámara al aire en \"Pantalla\".", screen.Detail);
+        Assert.Equal(ConditionOutcome.Pass, mic.Outcome);
+        Assert.Equal("No aplica: \"Mic/Aux\" no es una captura ni una cámara al aire en \"Pantalla + Cámara\".", mic.Detail);
+        Assert.Equal(ConditionOutcome.Pass, phone.Outcome);
+        Assert.Equal("No aplica: \"Celu (scrcpy)\" no es una captura de pantalla al aire en \"Banco\".", phone.Detail);
     }
 
     [Fact]
@@ -124,5 +135,36 @@ public class SceneConditionsTests
 
         Assert.Equal(ConditionOutcome.Skipped, result.Outcome);
         Assert.Equal(ErrorCodes.ObsDisconnected, result.Failure?.Code);
+    }
+
+    // El token llega a OBS: el chequeo corta con su tope cancelando (E5-17), y sin esto cada pedido esperaría su propio tope.
+    [Theory]
+    [InlineData("""{ "type": "obs.sourceHasImage" }""")]
+    [InlineData("""{ "type": "obs.captureHasMonitor" }""")]
+    [InlineData("""{ "type": "obs.cameraNotCovered" }""")]
+    [InlineData("""{ "type": "obs.canvasFilled" }""")]
+    public async Task With_the_token_already_cancelled_each_one_is_skipped_as_cancelled(string json)
+    {
+        await using ObsSession session = await ObsSession.StartAsync();
+
+        ConditionResult result = await ConditionProbe.EvaluateAsync(session, json, new CancellationToken(true));
+
+        Assert.Equal(ConditionOutcome.Skipped, result.Outcome);
+        Assert.Equal(ErrorCodes.Cancelled, result.Failure?.Code);
+    }
+
+    [Theory]
+    [InlineData("""{ "type": "obs.sourceHasImage", "source": 5 }""")]
+    [InlineData("""{ "type": "obs.captureHasMonitor", "source": "" }""")]
+    [InlineData("""{ "type": "obs.cameraNotCovered", "source": { "uuid": "668dffa0-e0b7-4ae5-b469-a99fd220fb96" } }""")]
+    public async Task A_source_that_is_not_a_reference_is_a_problem_of_the_condition(string json)
+    {
+        await using var offline = new OfflineObs();
+        Condition condition = JsonSerializer.Deserialize<Condition>(json, Json.Options)!;
+        ConditionType type = Conditions.Build(new FakeWindows(), offline.State, offline.Client).Single(candidate => candidate.Id == condition.Type);
+
+        Problem problem = Assert.Single(ConditionRules.Validate(type, condition));
+
+        Assert.Equal("source", problem.Where);
     }
 }

@@ -36,14 +36,17 @@ public static partial class Conditions
 
             if (sources.Value!.Count == 0)
             {
-                return Verdict.NotApplicable($"no hay capturas ni cámaras en \"{obs.SceneName}\".");
+                return Verdict.NotApplicable(NotOnAir(obs, p, "capturas ni cámaras", "una captura ni una cámara"));
             }
 
             SceneSource? empty = sources.Value.FirstOrDefault(source => source.Width <= 0 || source.Height <= 0);
             return empty is null
                 ? new Verdict(true, $"Las capturas de \"{obs.SceneName}\" tienen imagen.")
                 : new Verdict(false, $"\"{empty.Name}\" mide {empty.Width:0} x {empty.Height:0}: no tiene imagen.");
-        });
+        })
+    {
+        Check = CheckSource,
+    };
 
     /// <summary>
     /// La captura de pantalla apunta a un monitor que OBS todavía lista (03 §7): monitor_id de GetInputSettings contra los itemValue de
@@ -63,7 +66,7 @@ public static partial class Conditions
 
             if (captures.Value!.Count == 0)
             {
-                return Verdict.NotApplicable($"no hay captura de pantalla en \"{obs.SceneName}\".");
+                return Verdict.NotApplicable(NotOnAir(obs, p, "captura de pantalla", "una captura de pantalla"));
             }
 
             foreach (SceneSource capture in captures.Value)
@@ -86,7 +89,10 @@ public static partial class Conditions
             }
 
             return new Verdict(true, $"Las capturas de \"{obs.SceneName}\" tienen su monitor.");
-        });
+        })
+    {
+        Check = CheckSource,
+    };
 
     /// <summary>
     /// La cámara no está tapada ni en negro (03 §7): captura de la fuente, no de la escena, en bmp de 160 de ancho, y el desvío del brillo.
@@ -111,7 +117,7 @@ public static partial class Conditions
 
             if (cameras.Value!.Count == 0)
             {
-                return Verdict.NotApplicable($"no hay cámara en \"{obs.SceneName}\".");
+                return Verdict.NotApplicable(NotOnAir(obs, p, "cámara", "una cámara"));
             }
 
             int measured = 0;
@@ -150,7 +156,10 @@ public static partial class Conditions
             return measured == 0
                 ? Verdict.NotApplicable($"la cámara de \"{obs.SceneName}\" no está activa.")
                 : new Verdict(true, $"La cámara de \"{obs.SceneName}\" tiene imagen.");
-        });
+        })
+    {
+        Check = CheckSource,
+    };
 
     /// <summary>
     /// La escena al aire llena el lienzo (03 §7; Decidido 18): la unión del área real de sus elementos visibles de primer nivel sobre
@@ -179,7 +188,8 @@ public static partial class Conditions
                 $"\"{obs.SceneName}\" llena el {Decimal(share * 100)} % del lienzo de {width:0} x {height:0}; se pide {FilledShare * 100:0} %.");
         });
 
-    // Las fuentes de esas clases que se ven en la escena al aire; con source, sólo esa, si está al aire (si no, no aplica).
+    // Las fuentes de esas clases que se ven en la escena al aire; con source, sólo esa, si está al aire y es de esas clases (si no, no aplica:
+    // la protección de 03 §7 vale también con source; revisión de E5-16).
     private static async Task<Result<IReadOnlyList<SceneSource>>> SourcesAsync(ObsQueries obs, JsonElement p, string[] kinds, CancellationToken ct)
     {
         Result<IReadOnlyList<SceneSource>> visible = await obs.VisibleSourcesAsync(ct).ConfigureAwait(false);
@@ -195,7 +205,7 @@ public static partial class Conditions
 
         Result<ObsItem> input = obs.FindInput(wanted);
         return input.Ok
-            ? Result<IReadOnlyList<SceneSource>>.Success([.. visible.Value!.Where(source => source.Uuid == input.Value!.Uuid)])
+            ? Result<IReadOnlyList<SceneSource>>.Success([.. visible.Value!.Where(source => source.Uuid == input.Value!.Uuid && source.InputKind is { } kind && kinds.Contains(kind))])
             : input.Failure;
     }
 
