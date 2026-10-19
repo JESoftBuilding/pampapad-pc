@@ -14,12 +14,21 @@ public static partial class Conditions
 
     private static readonly string[] RecordingWords = ["stopped", "recording", "paused"];
 
-    public static IReadOnlyList<ConditionType> Build(IWindows windows, StateStore state, ObsClient obs) =>
-    [
-        Exists(windows),
-        SizeIs(windows),
-        Recording(state),
-    ];
+    /// <summary>Las de 02 §5 que ya existen, en el orden de su tabla.</summary>
+    public static IReadOnlyList<ConditionType> Build(IWindows windows, StateStore state, ObsClient obs)
+    {
+        var queries = new ObsQueries(obs, state);
+        return
+        [
+            Exists(windows),
+            SizeIs(windows),
+            Recording(state),
+            Profile(queries),
+            RecordFormat(queries),
+            CameraAudio(queries),
+            Mic(queries, state),
+        ];
+    }
 
     /// <summary>Hay una ventana con ese título (02 §5); process, opcional, la limita a la de ese programa (decisión 32).</summary>
     public static ConditionType Exists(IWindows windows) => new(
