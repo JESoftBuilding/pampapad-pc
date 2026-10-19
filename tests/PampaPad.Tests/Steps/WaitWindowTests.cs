@@ -150,4 +150,15 @@ public class WaitWindowTests
         Assert.Equal(where, problem.Where);
         Assert.Equal(ProblemCodes.ParameterInvalid, problem.Code);
     }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(60)]
+    public void The_step_of_02_8_with_every_parameter_is_valid_from_1_s_to_the_limit_of_the_action(int timeoutSec)
+    {
+        // 02 §5: timeoutSec de 1 a 60. La de arriba prueba sólo lo que se rechaza: un borde corrido no la haría fallar (revisión de E5-9).
+        Step step = Parse($$"""{ "type": "wait.window", "title": "bancocam", "width": 1823, "height": 850, "timeoutSec": {{timeoutSec}}, "process": "scrcpy" }""");
+
+        Assert.Empty(new WaitWindow(new FakeWindows(), TimeProvider.System).Validate(step));
+    }
 }
