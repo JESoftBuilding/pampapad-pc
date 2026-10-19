@@ -52,6 +52,13 @@ public sealed class Preflight(IReadOnlyList<ConditionType> conditions, Library l
             try
             {
                 result = await CheckAsync(check, linked.Token).ConfigureAwait(false);
+
+                // Una lectura de OBS devuelve el corte en vez de tirarlo y no sabe quién cortó: si fue el tope, se antepone y se conserva lo
+                // que dijo de lo suyo, como con un paso del Executor.
+                if (result.Code == ErrorCodes.Cancelled && limit.IsCancellationRequested && !ct.IsCancellationRequested)
+                {
+                    result = result with { Detail = $"Pasó el tope de {Timeout.TotalSeconds:0} s del chequeo. {result.Detail}" };
+                }
             }
             catch (OperationCanceledException)
             {

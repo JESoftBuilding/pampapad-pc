@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Time.Testing;
 using PampaPad.Core;
 using PampaPad.Tests.Doubles;
 using CoreLibrary = PampaPad.Core.Library;
@@ -6,18 +7,27 @@ namespace PampaPad.Tests;
 
 public sealed class PreflightTests : IDisposable
 {
+    // Dos comprobaciones de mentira, para las pruebas del tope: la primera es la que está corriendo cuando vence.
+    private const string TwoFakes = """
+        { "version": 1, "preflight": [ { "condition": { "type": "test.first" }, "message": "Primera" }, { "condition": { "type": "test.met" }, "message": "Se cumple" } ] }
+        """;
+
     private readonly TempFolder _temp = new();
 
     public void Dispose() => _temp.Dispose();
 
     // Una biblioteca con ese config.json y el chequeo armado como Composition, contra ese OBS.
-    private Preflight Build(ObsClient obs, StateStore state, Log log, string config = """{ "version": 1 }""")
+    private Preflight Build(ObsClient obs, StateStore state, Log log, string config = """{ "version": 1 }""") =>
+        Build(Conditions.Build(new FakeWindows(), state, obs), state, log, TimeProvider.System, config);
+
+    // El mismo chequeo con esas condiciones y ese reloj.
+    private Preflight Build(IReadOnlyList<ConditionType> conditions, StateStore state, Log log, TimeProvider clock, string config)
     {
         Directory.CreateDirectory(_temp.Combine("biblioteca"));
         File.WriteAllText(_temp.Combine("biblioteca", "config.json"), config);
         var library = new CoreLibrary(_temp.Combine("biblioteca"), _temp.Combine("backup"));
         library.Load();
-        return new Preflight(Conditions.Build(new FakeWindows(), state, obs), library, state, log, TimeProvider.System);
+        return new Preflight(conditions, library, state, log, clock);
     }
 
     [Fact]
@@ -167,6 +177,63 @@ public sealed class PreflightTests : IDisposable
 
         Assert.Equal(7, report.Unchecked.Count);
         Assert.Empty(report.Failures);
+        Assert.All(report.Unchecked, check => Assert.Equal(ErrorCodes.Cancelled, check.Code));
+        Assert.All(report.Unchecked, check => Assert.Equal("No se comprobó: se canceló.", check.Detail));
+    }
+
+    [Fact]
+    public void The_cap_is_fifteen_seconds()
+    {
+        Assert.Equal(TimeSpan.FromSeconds(15), Preflight.Timeout);
+    }
+
+    [Fact]
+    public async Task Passing_the_cap_leaves_what_is_left_unchecked_and_says_it_was_the_cap()
+    {
+        var clock = new FakeTimeProvider();
+        var slow = new FakeCondition("test.first")
+        {
+            Answer = async (_, ct) =>
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, ct);
+                return new Verdict(true, "Se cumple.");
+            },
+        };
+        await using var offline = new OfflineObs();
+        Preflight preflight = Build([slow.Type, FakeCondition.Met("test.met").Type], offline.State, offline.Log, clock, TwoFakes);
+
+        Task<PreflightReport> running = preflight.RunAsync(Trigger.Tray, CancellationToken.None);
+        await Eventually.UntilAsync(() => slow.Evaluations == 1, "empezó la primera comprobación");
+        clock.Advance(Preflight.Timeout);
+        PreflightReport report = await running.WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.Equal(2, report.Unchecked.Count);
+        Assert.All(report.Unchecked, check => Assert.Equal(ErrorCodes.Cancelled, check.Code));
+        Assert.All(report.Unchecked, check => Assert.Equal("No se comprobó: pasó el tope de 15 s del chequeo.", check.Detail));
+    }
+
+    [Fact]
+    public async Task A_check_that_answers_cancelled_after_the_cap_fired_gets_the_cap_text_and_keeps_its_own()
+    {
+        // Como una lectura de OBS: ObsConnection devuelve el corte como resultado, no lo tira.
+        var clock = new FakeTimeProvider();
+        var polite = new FakeCondition("test.first")
+        {
+            Answer = (_, _) =>
+            {
+                clock.Advance(Preflight.Timeout);
+                return Task.FromResult<Result<Verdict>>(new Failure(ErrorCodes.Cancelled, "Se canceló esperando la respuesta a la lectura de X: no se sabe si OBS lo hizo."));
+            },
+        };
+        await using var offline = new OfflineObs();
+        Preflight preflight = Build([polite.Type, FakeCondition.Met("test.met").Type], offline.State, offline.Log, clock, TwoFakes);
+
+        PreflightReport report = await preflight.RunAsync(Trigger.Tray, CancellationToken.None);
+
+        Assert.Equal(
+            new[] { "Pasó el tope de 15 s del chequeo. Se canceló esperando la respuesta a la lectura de X: no se sabe si OBS lo hizo.", "No se comprobó: pasó el tope de 15 s del chequeo." },
+            report.Unchecked.Select(check => check.Detail));
+        Assert.All(report.Unchecked, check => Assert.Equal(ErrorCodes.Cancelled, check.Code));
     }
 
     [Fact]
