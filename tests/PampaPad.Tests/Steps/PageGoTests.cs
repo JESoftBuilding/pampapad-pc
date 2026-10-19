@@ -134,6 +134,7 @@ public sealed class PageGoTests : IAsyncDisposable
         ActionResult result = await PressAsync(4);
 
         Assert.Equal(ErrorCodes.ConfigInvalid, result.Failure?.Code);
+        Assert.Equal(StepOutcome.NotRun, Assert.Single(result.Steps).Outcome);
         Assert.Contains(_state.Current.Problems, problem => problem.Code == ProblemCodes.PageNotFound && problem.Where == "actions[0].steps[0].target");
     }
 }
