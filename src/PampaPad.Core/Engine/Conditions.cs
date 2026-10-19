@@ -14,7 +14,7 @@ public static partial class Conditions
 
     private static readonly string[] RecordingWords = ["stopped", "recording", "paused"];
 
-    /// <summary>Las de 02 §5 que ya existen, en el orden de su tabla.</summary>
+    /// <summary>Las once de 02 §5, en el orden de su tabla.</summary>
     public static IReadOnlyList<ConditionType> Build(IWindows windows, StateStore state, ObsClient obs)
     {
         var queries = new ObsQueries(obs, state);
@@ -25,8 +25,12 @@ public static partial class Conditions
             Recording(state),
             Profile(queries),
             RecordFormat(queries),
+            Image(queries),
+            Monitor(queries),
             CameraAudio(queries),
+            Covered(queries, state),
             Mic(queries, state),
+            Canvas(queries),
         ];
     }
 

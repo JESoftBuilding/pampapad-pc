@@ -45,6 +45,9 @@ public sealed partial class FakeObs
     /// <summary>La cámara con la tapa: su captura sale pareja, desvío 0.</summary>
     public bool CameraCovered { get; set; }
 
+    /// <summary>GetSourceActive dice que la cámara no está activa aunque se vea en la escena (sin medir: es para la protección de 03 §7).</summary>
+    public bool CameraInactive { get; set; }
+
     /// <summary>El espejo del celular abierto: "Celu (scrcpy)" mide 1823 x 850 en lugar de 0 x 0 y tiene captura.</summary>
     public bool MirrorOpen { get; set; }
 
@@ -229,7 +232,7 @@ public sealed partial class FakeObs
     private Reply SourceActive(JsonObject? data)
     {
         string? uuid = (string?)data?["sourceUuid"] ?? FindInput(data)?.Uuid;
-        bool active = uuid is not null && IsActive(uuid, SceneUuid, []);
+        bool active = uuid is not null && IsActive(uuid, SceneUuid, []) && !(uuid == CameraInputUuid && CameraInactive);
         return Reply.Ok(new JsonObject { ["videoActive"] = active, ["videoShowing"] = active });
     }
 
