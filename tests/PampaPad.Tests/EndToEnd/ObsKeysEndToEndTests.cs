@@ -88,6 +88,40 @@ public class ObsKeysEndToEndTests
         Assert.Equal("escenas", session.State.Current.BasePage);
     }
 
+    [Fact]
+    public async Task From_the_scenes_page_a_scene_goes_on_air_and_with_the_take_stopped_brings_back_the_main_page()
+    {
+        await using ObsSession session = await ObsSession.StartAsync();
+        await using var rig = new Rig(session, Example);
+        Assert.Null(rig.Dispatcher.Go("escenas"));
+
+        rig.Dispatcher.Receive(new InputEvent("console", Controls.Key(12), Gesture.Press));
+        await Poll.Until(() => rig.Finished.Count == 1);
+
+        ActionResult result = Assert.Single(rig.Finished);
+        Assert.True(result.Ok, result.Failure?.Message);
+        Assert.Equal(new[] { StepOutcome.Ok, StepOutcome.Ok }, result.Steps.Select(step => step.Outcome));
+        Assert.Equal("ed2f1482-848c-4500-840d-807aee465d1f", session.State.Current.Obs.SceneUuid);
+        Assert.Equal("grabacion", session.State.Current.BasePage);
+        Assert.Equal(new HotkeysState(9, 0), session.State.Current.Hotkeys);
+    }
+
+    [Fact]
+    public async Task Recording_a_scene_from_the_window_skips_the_page_change_and_goes_on_air()
+    {
+        await using ObsSession session = await ObsSession.StartAsync();
+        await using var rig = new Rig(session, Example);
+        Assert.True(rig.Windows.Press("Ctrl+Shift+Alt+G"));
+        await Poll.Until(() => session.State.Current.Obs.Recording == RecordingState.Recording && rig.Finished.Count == 1);
+
+        ActionResult result = await rig.Dispatcher.Launch("escena-fin", new Invocation(Guid.NewGuid(), Trigger.Window, null, null, null, null));
+
+        Assert.True(result.Ok, result.Failure?.Message);
+        Assert.Equal(new[] { StepOutcome.Omitted, StepOutcome.Ok }, result.Steps.Select(step => step.Outcome));
+        Assert.Equal("ed2f1482-848c-4500-840d-807aee465d1f", session.State.Current.Obs.SceneUuid);
+        Assert.Equal("grabacion", session.State.Current.BasePage);
+    }
+
     /// <summary>Lo que arma Composition para OBS, con Windows de mentira y la biblioteca en una carpeta temporal.</summary>
     private sealed class Rig : IAsyncDisposable
     {
