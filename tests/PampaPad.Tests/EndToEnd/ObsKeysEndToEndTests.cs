@@ -100,7 +100,7 @@ public class ObsKeysEndToEndTests
             File.WriteAllText(_temp.Combine("biblioteca", "config.json"), config);
             var library = new CoreLibrary(_temp.Combine("biblioteca"), _temp.Combine("backup"));
             library.Load();
-            var executor = new Executor(Catalog.Build(session.Client, session.State, session.Log, TimeProvider.System), TimeProvider.System);
+            var executor = new Executor(Catalog.Build(session.Client, session.State, session.Log, TimeProvider.System, TestChains.For(library, session.Log)), TimeProvider.System);
             var gestures = new Gestures(clock ?? TimeProvider.System, Gestures.HoldFrom(null), Gestures.DefaultFreshness);
             Dispatcher = new Dispatcher(library, session.State, executor, gestures, session.Log);
             Dispatcher.Finished += Finished.Enqueue;
