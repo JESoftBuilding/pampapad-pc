@@ -213,3 +213,49 @@ Al terminar: en `%APPDATA%\PampaPad-dev\local.json`, `hotkeysEnabled` en `false`
 - **Lo que repasó Emmanuel con el teclado, el 2026-10-15** (14:42 a 14:58), con la copia de desarrollo de la rama y la biblioteca de ejemplo, con la copia instalada cerrada: fila 1, "Atajos tomados: 8; rechazados por Windows: 0." y la bandeja conectada; fila 9, grabar, micrófono dos veces y parar por sus atajos (parar detuvo en 0,3 s); filas 10 y 14, pausar y seguir con los atajos de OBS y parar en pausa con Ctrl+Shift+Alt+D, que detuvo en 0,3 s sin colgarse, con la toma legible (12,1 s grabados); fila 13, "Salida ordenada". Las filas `(placa)` (2 a 8, 11 y 12) esperan a que use el prototipo.
 - **Lo que no se repasa a mano:** renombrar, borrar o crear una escena en OBS. Cambia OBS, y con el tope de 12 escenas es una decisión de Emmanuel, no una prueba. Lo cubren las pruebas contra el OBS falso (`ObsSceneTests`, `ObsMirrorListsTests`).
 - **Lo que repasa la prueba automática y no hace falta repetir a mano:** la tabla de `obs.record` fila por fila (`RecordRulesTests`), la espera mientras OBS arranca o detiene (`ObsRecordTests`), la tecla que para o pausa con un toque (`DispatcherHoldRuleTests`), y de la tecla y el atajo al estado del OBS falso (`ObsKeysEndToEndTests`).
+
+## Etapa 5: ir al banco y el chequeo previo
+
+Se repasa con la copia de desarrollo de la rama `etapa-5`, que lee la biblioteca de ejemplo: ya tiene "ir al banco" en la tecla 3 (`Ctrl+Shift+Alt+B`), "Escenas" en la 4 y `scripts/bancocam`, la copia del de `D:\Canal`. La biblioteca real no se toca hasta instalar la v0.4.0. Hace falta OBS abierto, sin grabar nada que importe; el celular, para las filas 2 a 5. Es con el teclado de la PC: las filas de la placa están al final, para cuando se use el prototipo.
+
+Antes: "Salir" en la copia instalada, que tiene los atajos. Y en `%APPDATA%\PampaPad-dev\local.json`, que la copia de desarrollo los tome (05 §10):
+
+```json
+{
+  "version": 1,
+  "hotkeysEnabled": true
+}
+```
+
+Desde la raíz del worktree:
+
+```powershell
+dotnet run --project src\PampaPad.App
+```
+
+Cada toma de prueba se mueve de `D:\Canal\grabaciones` a `D:\Canal\pruebas` al terminar.
+
+| N | Qué hacer | Qué tiene que pasar |
+|---|---|---|
+| 1 | Mirar el texto de ayuda de la bandeja y el menú | "PampaPad · OBS conectado", sin problema de configuración; el registro dice "Atajos tomados: 9; rechazados por Windows: 0." (con `grabacion` de base: `B` y `M` de sus teclas y los siete de la lista general, `D`, `G` y `F5` a `F9`). El menú tiene "Chequeo previo" y no tiene "Cancelar todo" |
+| 2 | Celular enchufado y desbloqueado, sin el espejo abierto y con la escena Pantalla al aire, sin grabar: Ctrl+Shift+Alt+B | Arranca el espejo y, con la ventana `bancocam` en 1823 x 850, OBS pone Banco. El registro dice "bancocam: arrancó (bancocam.cmd, tope 30 s).", "bancocam terminó con 0 en … s: bancocam corriendo fuera de pantalla en x=…" e "ir-al-banco terminó bien en … ms." Mirar la pantalla principal mientras tanto y anotar si aparece una consola de scrcpy o el espejo antes de irse de la pantalla, y cuánto dura: con Pantalla al aire grabando, saldría en el video ("Lo que puede morder", última fila) |
+| 3 | Con el espejo abierto, Ctrl+Shift+Alt+B otra vez | Banco enseguida, sin relanzar `bancocam`: el registro no tiene un "bancocam: arrancó" nuevo, sólo "ir-al-banco terminó bien en … ms.". Si en la fila 2 apareció una consola de scrcpy, mirar si sigue abierta en la barra de tareas |
+| 4 | Cerrar scrcpy, desenchufar el celular y Ctrl+Shift+Alt+B | Unos 20 s después (lo que espera `bancocam.ps1:16`): triángulo rojo, "Falló Ir al banco: paso 1 (script.run)", el sonido y el cartel con "scrcpy no abrio la ventana (celu conectado? depuracion USB? celu desbloqueado?)". La escena no cambia |
+| 5 | Ctrl+Shift+Alt+B como en la fila 4 y, mientras espera, abrir el menú | Figura "Cancelar todo"; elegirlo corta la cadena: el registro dice "Cancelar todo, desde la bandeja." y "Se canceló el script "bancocam": se cortó, con lo que había lanzado.", y la bandeja lo muestra como una falla del paso 1, con su sonido y su cartel |
+| 6 | Con OBS libre y la escena Cámara al aire, "Chequeo previo" | Un globo: "Chequeo previo: todo bien" o la primera falla con cuántas más hay. El registro tiene siete líneas `obs.…: bien.`, `falla.` o `sin comprobar.` y una de resumen |
+| 7 | Tapar la cámara y "Chequeo previo" | El globo nombra "La cámara está tapada o en negro" con el desvío que midió. Destapar |
+| 8 | Poner "Vertical SolidWorks" al aire desde OBS y "Chequeo previo" | "La escena no llena el lienzo. "Vertical SolidWorks" llena el 31,8 % del lienzo de 1920 x 1080; se pide 90 %." Volver a la escena de antes |
+| 9 | Ctrl+Shift+Alt+G (graba); con la toma en curso, "Chequeo previo"; después, Ctrl+Shift+Alt+D | Ningún globo (hay toma en curso); el registro tiene las siete líneas, y la de la cámara dice "No aplica: con una toma en curso no se pide una captura de la cámara." Ctrl+Shift+Alt+D para enseguida: pasó más de un segundo desde el arranque y el registro no tiene una línea "(E4-11)" |
+| 10 | Con OBS detenido desde hace más de un segundo: Ctrl+Shift+Alt+G y enseguida, antes de que pase un segundo, Ctrl+Shift+Alt+D | Graba y para, un poco después: el registro dice "parar: OBS avisó un cambio de la grabación hace menos de 1 s; se espera … ms antes de mandar (E4-11)." OBS termina en STOPPED, sin quedar en STOPPING |
+| 11 | Enseguida del STOPPED de la fila 10, antes de que pase un segundo, Ctrl+Shift+Alt+G | Graba después de esperar lo que falte del segundo: el registro dice "grabar: OBS avisó un cambio de la grabación hace menos de 1 s; se espera … ms antes de mandar (E4-11)." Si OBS contestara sin arrancar, sale "OBS aceptó el pedido de grabar pero no avisó que arrancaba en 2 s: puede que no esté grabando." Detener con Ctrl+Shift+Alt+D |
+| 12 | "Salir" | El registro termina en "Salida ordenada" |
+
+Filas de la placa, para cuando se use el prototipo (las teclas por lo que tienen impreso: `1 2 3 A` son las posiciones 1 a 4): `3` hace lo de la fila 2; `A` pasa a la página `escenas`, el texto de ayuda suma "página escenas" y el registro dice "Atajos tomados: 7; rechazados por Windows: 0." (sólo los de la lista general): con `escenas` de base, Ctrl+Shift+Alt+G graba y F5 a F9 marcan igual (pregunta 7), y `M` y `B` no andan por teclado hasta elegir una escena; una escena, con la grabación detenida, vuelve a `grabacion` y la pone al aire, y el registro vuelve a "Atajos tomados: 9"; grabando, `A` falla con `navigation_blocked` y la base sigue en `grabacion`.
+
+Al terminar: en `%APPDATA%\PampaPad-dev\local.json`, `hotkeysEnabled` en `false`, o borrar el archivo; volver a abrir la copia instalada.
+
+## Notas de la etapa 5
+
+- **Lo que repasó Claude solo, el 2026-10-19**, con `D:\repos\pampapad-construccion\E5-22-repaso` (plan de la etapa 5, E5-22): "ir al banco" con una ventana de prueba y sin OBS, `Win32Windows` contra esa ventana (también minimizada), un `.py` con acentos y `page.go`. El informe está en `D:\repos\pampapad-construccion\E5-22-repaso.txt`.
+- **Lo que queda para Emmanuel:** las filas 1 a 12, con el teclado, el celular y OBS. Las de la placa, cuando use el prototipo.
+- **Lo que no se repasa a mano:** el tope y la cancelación de un script (`ScriptRunnerTests`), el `onlyIf` que no se puede evaluar (`ExecutorOnlyIfTests`), la regla 2 de navegación (`DispatcherPagesTests`), las once condiciones contra el OBS falso (`ConditionsTests`, `ObsConditionsTests`, `SceneConditionsTests`) y "ir al banco" por la tecla 3 de la placa con un cable de mentira (`BancoEndToEndTests`).
