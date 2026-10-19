@@ -86,6 +86,23 @@ public sealed class Executor(IReadOnlyList<IStepType> catalog, IReadOnlyList<Con
         return found;
     }
 
+    /// <summary>
+    /// Los problemas de una condición suelta, como las de la lista preflight, que dependen del catálogo de condiciones (02 §10, problemas 7
+    /// y 8). Where es relativo a la condición: type, profile, negate o vacío. Sin "type" no dice nada: eso lo informa el validador.
+    /// </summary>
+    public IReadOnlyList<Problem> CheckCondition(Condition condition)
+    {
+        ArgumentNullException.ThrowIfNull(condition);
+        if (condition.Type.Length == 0)
+        {
+            return [];
+        }
+
+        return FindCondition(condition.Type) is { } type
+            ? ConditionRules.Validate(type, condition)
+            : [new Problem("type", ProblemCodes.ConditionUnknown, $"Condición desconocida: \"{condition.Type}\". El chequeo previo la da por no comprobada.", Severity.Warning)];
+    }
+
     public async Task<ActionResult> RunAsync(Action action, Invocation invocation, CancellationToken ct)
     {
         long started = clock.GetTimestamp();

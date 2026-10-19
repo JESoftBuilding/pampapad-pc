@@ -54,6 +54,9 @@ public sealed record AppState
     /// <summary>Las acciones en curso (01 §4.5).</summary>
     public IReadOnlyList<RunningAction> Running { get; init; } = [];
 
+    /// <summary>El último chequeo previo, o null si todavía no corrió (01 §3.1: el chequeo previo vive en el estado).</summary>
+    public PreflightReport? Preflight { get; init; }
+
     /// <summary>La última acción que falló. Se borra cuando la próxima termina bien o cuando se abre el menú de la bandeja.</summary>
     public ActionFailure? LastFailure { get; init; }
 

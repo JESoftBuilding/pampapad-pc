@@ -57,6 +57,13 @@ public sealed partial class Dispatcher
                 problems.AddRange(CheckAction(action, index));
             }
 
+            // La lista del chequeo previo también se revisa al cargar (02 §10, problemas 7 y 8): una condición mal escrita se ve en el ícono
+            // de la bandeja, y no sólo como "sin comprobar" cuando se corre el chequeo.
+            foreach ((int index, PreflightCheck check) in config.Preflight.Indexed())
+            {
+                problems.AddRange(CheckPreflight(check, index));
+            }
+
             // Los de la configuración se guardan aparte: cambiar de página vuelve a aplicar las fuentes sin volver a revisar cada acción.
             _configProblems = problems;
             ApplyPage(config);
@@ -74,6 +81,26 @@ public sealed partial class Dispatcher
         {
             _log.Error("dispatcher", $"No se pudo revisar la acción {action.Id}: {error.Message}", ErrorCodes.InternalError);
             return [new Problem($"actions[{index}]", ProblemCodes.ParameterInvalid, $"No se pudo revisar esta acción: {error.Message}", Severity.Error)];
+        }
+    }
+
+    // Una comprobación de la lista preflight, con el catálogo de condiciones del ejecutor. Sin "condition" no dice nada: lo informa el validador.
+    private IEnumerable<Problem> CheckPreflight(PreflightCheck check, int index)
+    {
+        if (check.Condition is not { } condition)
+        {
+            return [];
+        }
+
+        string where = $"preflight[{index}].condition";
+        try
+        {
+            return [.. _executor.CheckCondition(condition).Select(problem => problem with { Where = problem.Where.Length == 0 ? where : $"{where}.{problem.Where}" })];
+        }
+        catch (Exception error)
+        {
+            _log.Error("dispatcher", $"No se pudo revisar la comprobación {where}: {error.Message}", ErrorCodes.InternalError);
+            return [new Problem(where, ProblemCodes.ParameterInvalid, $"No se pudo revisar esta comprobación: {error.Message}", Severity.Warning)];
         }
     }
 
