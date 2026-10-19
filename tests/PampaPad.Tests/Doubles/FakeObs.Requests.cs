@@ -139,6 +139,12 @@ public sealed partial class FakeObs
             return Reply.Fail(500);
         }
 
+        if (IgnoreNextStart)
+        {
+            IgnoreNextStart = false;
+            return Reply.Ok();                // medido una vez (E4-11): 100 y OBS no arranca, sin ningún evento
+        }
+
         RecordingActive = true;
         RecordingPaused = false;
         RecordedMs = 0;

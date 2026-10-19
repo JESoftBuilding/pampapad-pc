@@ -11,6 +11,9 @@ public sealed partial class FakeObs
 
     public TimeProvider Clock { get; set; } = TimeProvider.System;
 
+    /// <summary>El próximo StartRecord contesta 100 y no arranca, como el que llegó ~30 ms después de un STOPPED (hallazgo E4-11).</summary>
+    public bool IgnoreNextStart { get; set; }
+
     /// <summary>Cuántos eventos con demora están esperando su hora. Sube recién con el temporizador creado: avanzar el reloj los suelta.</summary>
     public int Waiting => Volatile.Read(ref _waiting);
 
