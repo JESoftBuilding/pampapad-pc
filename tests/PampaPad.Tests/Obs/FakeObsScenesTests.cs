@@ -117,7 +117,7 @@ public class FakeObsScenesTests
         Assert.Equal("SceneRemoved", (string)removed!["d"]!["eventType"]!);
         Assert.Equal("InputRemoved", (string)gone!["d"]!["eventType"]!);
         Assert.Equal(15, fake.SceneNames.Count);
-        Assert.Equal(3, inputs["responseData"]!["inputs"]!.AsArray().Count);
+        Assert.Equal(5, inputs["responseData"]!["inputs"]!.AsArray().Count);         // seis desde la etapa 5, menos la que se borró
     }
 
     [Fact]

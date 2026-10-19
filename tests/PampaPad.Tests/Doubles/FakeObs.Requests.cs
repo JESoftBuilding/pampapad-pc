@@ -129,6 +129,16 @@ public sealed partial class FakeObs
         "PauseRecord" => PauseRecord(),
         "ResumeRecord" => ResumeRecord(),
         "CreateRecordChapter" => Chapter(data),
+        "GetSceneItemList" => SceneItemList(data),
+        "GetGroupSceneItemList" => GroupItemList(data),
+        "GetVideoSettings" => VideoSettings(),
+        "GetProfileList" => ProfileList(),
+        "GetProfileParameter" => ProfileParameter(data),
+        "GetInputSettings" => InputSettings(data),
+        "GetInputPropertiesListPropertyItems" => PropertyItems(data),
+        "GetInputAudioTracks" => AudioTracks(data),
+        "GetSourceActive" => SourceActive(data),
+        "GetSourceScreenshot" => Screenshot(data),
         _ => Reply.Fail(204, "Your request type is not valid."),
     };
 

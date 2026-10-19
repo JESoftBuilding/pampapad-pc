@@ -38,17 +38,20 @@ public sealed partial class FakeObs
         ("Pantalla + Cámara", "5bcf806a-9dac-430c-a437-3eab544e8419"),
     ];
 
-    // Las entradas que usan las pruebas, con lo medido el 2026-10-13: "Captura de pantalla" no tiene audio.
+    // Las entradas que usan las pruebas, con lo medido el 2026-10-13: "Captura de pantalla" no tiene audio. La cámara y el celular las usa
+    // el chequeo previo (etapa 5).
     private readonly List<FakeInput> _inputs =
     [
         new("Audio del escritorio", "364259ab-1ec2-4e92-9a4e-5faca2f47d6f", "wasapi_output_capture", HasAudio: true),
         new(MicName, MicUuid, "wasapi_input_capture", HasAudio: true),
         new("Captura de pantalla", ScreenCaptureUuid, "monitor_capture", HasAudio: false),
         new("Sting triste", StingUuid, "ffmpeg_source", HasAudio: true),
+        new("Dispositivo de captura de video", CameraInputUuid, "dshow_input", HasAudio: true),
+        new("Celu (scrcpy)", CeluUuid, "window_capture", HasAudio: true),
     ];
 
-    // El silencio de las entradas que no son el micrófono: el del micrófono es MicMuted.
-    private readonly Dictionary<string, bool> _muted = [];
+    // El silencio de las entradas que no son el micrófono: el del micrófono es MicMuted. La cámara estaba silenciada (Medido: 2026-10-13).
+    private readonly Dictionary<string, bool> _muted = new() { [CameraInputUuid] = true };
 
     /// <summary>Lo que tarda CurrentProgramSceneChanged después del pedido. Medido: 300 ms con Desvanecimiento y 19 ms con Corte (E0-1).</summary>
     public TimeSpan TransitionDelay { get; set; }
