@@ -24,6 +24,7 @@ public static class Catalog
             new ObsRequestStep(obs, state),
             new WaitTime(clock),
             new WaitWindow(chains.Windows, clock),
+            new ScriptRun(chains.Scripts, chains.Library),
         ];
     }
 }
