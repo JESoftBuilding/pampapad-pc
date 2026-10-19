@@ -17,17 +17,31 @@ public class WaitTimeTests
     [Fact]
     public async Task It_waits_exactly_the_time_of_the_clock()
     {
+        // 10 s: con el reloj real no termina dentro del WaitAsync de 5 s. Task.Delay con el reloj falso no sigue adentro de Advance
+        // sino en el pool: antes de mirar se le dan 200 ms reales para terminar, si fuera a terminar antes (revisión de E5-8).
         var clock = new FakeTimeProvider();
         var wait = new WaitTime(clock);
 
-        Task<StepResult> running = wait.RunAsync(Parse("""{ "type": "wait.time", "durationMs": 500 }"""), Tap, CancellationToken.None);
-        clock.Advance(TimeSpan.FromMilliseconds(499));
-        bool early = running.IsCompleted;
+        Task<StepResult> running = wait.RunAsync(Parse("""{ "type": "wait.time", "durationMs": 10000 }"""), Tap, CancellationToken.None);
+        clock.Advance(TimeSpan.FromMilliseconds(9999));
+        bool early = await Task.WhenAny(running, Task.Delay(TimeSpan.FromMilliseconds(200))) == running;
         clock.Advance(TimeSpan.FromMilliseconds(1));
         StepResult result = await running.WaitAsync(TimeSpan.FromSeconds(5));
 
         Assert.False(early);
         Assert.Null(result.Failure);
+    }
+
+    [Fact]
+    public async Task Cancelling_the_step_while_it_waits_comes_out_as_cancellation()
+    {
+        // La de abajo pasa por el Executor, que corta igual con su WaitAsync: esta mira que la espera del paso reciba el token.
+        using var cancel = new CancellationTokenSource();
+        Task<StepResult> running = new WaitTime(new FakeTimeProvider()).RunAsync(Parse("""{ "type": "wait.time", "durationMs": 10000 }"""), Tap, cancel.Token);
+
+        await cancel.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => running.WaitAsync(TimeSpan.FromSeconds(5)));
     }
 
     [Fact]
