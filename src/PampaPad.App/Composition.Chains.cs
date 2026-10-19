@@ -21,14 +21,24 @@ internal sealed partial class Composition
         return (catalog, conditions, new Executor(catalog, conditions, clock));
     }
 
-    /// <summary>Los dos ítems de la bandeja de la etapa 5 (05 §3). Cancelar sale del hilo de la interfaz: puede seguir la cadena ahí mismo.</summary>
+    /// <summary>
+    /// Los dos ítems de la bandeja de la etapa 5 (05 §3). Cancelar sale del hilo de la interfaz: puede seguir la cadena ahí mismo. Como
+    /// los demás manejadores del menú, ninguno deja escapar una excepción sin anotarla.
+    /// </summary>
     private void HookChains(Tray tray, Preflight preflight, Notifier notifier, Dispatcher dispatcher)
     {
         tray.PreflightRequested += () => _ = RunPreflightAsync(preflight, notifier);
         tray.CancelAllRequested += () => _ = Task.Run(() =>
         {
-            Log.Info("app", "Cancelar todo, desde la bandeja.");
-            dispatcher.CancelAll();
+            try
+            {
+                Log.Info("app", "Cancelar todo, desde la bandeja.");
+                dispatcher.CancelAll();
+            }
+            catch (Exception ex)
+            {
+                Log.Error("app", "Falló cancelar todo: " + ex.Message, ErrorCodes.InternalError);
+            }
         });
     }
 
