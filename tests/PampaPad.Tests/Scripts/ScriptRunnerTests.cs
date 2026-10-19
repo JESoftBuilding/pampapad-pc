@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using Microsoft.Extensions.Time.Testing;
 using PampaPad.Core;
@@ -67,38 +68,32 @@ public class ScriptRunnerTests
     {
         var clock = new FakeTimeProvider();
         await using var rig = new ScriptRig(clock);
-        string folder = rig.AddPs1(
-            "lento",
-            "$p = Start-Process -PassThru -NoNewWindow ping.exe -ArgumentList '-n','60','127.0.0.1'\nSet-Content -Path (Join-Path $PSScriptRoot 'hijo.txt') -Value $p.Id\nWait-Process -Id $p.Id\n",
-            """, "timeoutSec": 5""");
+        string folder = rig.AddPs1("lento", ScriptRig.LaunchesPing, """, "timeoutSec": 5""");
 
         Task<Result<ScriptResult>> running = rig.RunAsync("lento");
-        int child = await ChildAsync(folder);
+        int child = await ScriptRig.ChildAsync(folder);
         clock.Advance(TimeSpan.FromSeconds(5));
         Result<ScriptResult> result = await running.WaitAsync(TimeSpan.FromSeconds(20));
 
         Assert.Equal(ErrorCodes.ScriptTimeout, result.Failure?.Code);
         Assert.Equal("El script \"lento\" pasó el tope de 5 s: se cortó, con lo que había lanzado.", result.Failure?.Message);
-        Assert.True(Gone(child));
+        Assert.True(ScriptRig.Gone(child));
     }
 
     [Fact]
     public async Task Cancelling_the_chain_kills_the_script_too()
     {
         await using var rig = new ScriptRig();
-        string folder = rig.AddPs1(
-            "lento",
-            "$p = Start-Process -PassThru -NoNewWindow ping.exe -ArgumentList '-n','60','127.0.0.1'\nSet-Content -Path (Join-Path $PSScriptRoot 'hijo.txt') -Value $p.Id\nWait-Process -Id $p.Id\n",
-            """, "timeoutSec": 60""");
+        string folder = rig.AddPs1("lento", ScriptRig.LaunchesPing, """, "timeoutSec": 60""");
         using var cancel = new CancellationTokenSource();
 
         Task<Result<ScriptResult>> running = rig.RunAsync("lento", cancel.Token);
-        int child = await ChildAsync(folder);
+        int child = await ScriptRig.ChildAsync(folder);
         await cancel.CancelAsync();
         Result<ScriptResult> result = await running.WaitAsync(TimeSpan.FromSeconds(20));
 
         Assert.Equal(ErrorCodes.Cancelled, result.Failure?.Code);
-        Assert.True(Gone(child));
+        Assert.True(ScriptRig.Gone(child));
     }
 
     [Fact]
@@ -144,16 +139,25 @@ public class ScriptRunnerTests
     [Fact]
     public async Task A_child_that_keeps_the_output_open_does_not_hold_the_step()
     {
+        // El hijo escribe "tarde" unos 3 s después, con el paso ya terminado. Antes deja un archivo al lado del script, para avisar que ya
+        // va: con la salida cerrada, el echo falla y cmd no sigue.
         await using var rig = new ScriptRig();
-        rig.AddCmd("lanzador", "@echo off\nstart /b cmd /c \"ping -n 8 127.0.0.1 >nul\"\necho listo\n");
+        string folder = rig.AddCmd("lanzador", "@echo off\nstart /b cmd /c \"ping -n 4 127.0.0.1 >nul & echo x> lanzador\\tarde.txt & echo tarde\"\necho listo\n");
+        var lines = new ConcurrentQueue<string>();
         var watch = Stopwatch.StartNew();
 
-        Result<ScriptResult> result = await rig.RunAsync("lanzador");
+        Result<ScriptResult> result = await rig.RunAsync("lanzador", onLine: lines.Enqueue);
+        TimeSpan took = watch.Elapsed;
+        await Poll.Until(() => File.Exists(Path.Combine(folder, "tarde.txt")), 15_000);
+        await Task.Delay(500);
 
         Assert.True(result.Ok, result.Failure?.Message);
         Assert.Equal("listo", result.Value!.Message);
-        Assert.True(watch.Elapsed < TimeSpan.FromSeconds(5), $"tardó {watch.Elapsed}");
+        Assert.True(took < TimeSpan.FromSeconds(5), $"tardó {took}");
         Assert.Contains(rig.Log.Recent(), entry => entry.Message.StartsWith("La salida siguió abierta", StringComparison.Ordinal));
+
+        // Se dejó de leer de verdad: lo que el hijo escribió después no le llegó a nadie.
+        Assert.Equal(new[] { "listo" }, lines);
     }
 
     [Theory]
@@ -168,39 +172,5 @@ public class ScriptRunnerTests
 
         Assert.Equal(code, result.Failure?.Code);
         Assert.DoesNotContain(rig.Log.Recent(), entry => entry.Message.Contains("arrancó", StringComparison.Ordinal));
-    }
-
-    // El número del proceso que lanzó el script, cuando lo termina de escribir: mientras PowerShell lo escribe, el archivo está tomado.
-    private static async Task<int> ChildAsync(string folder)
-    {
-        int? child = null;
-        await Poll.Until(() => (child = ReadChild(Path.Combine(folder, "hijo.txt"))) is not null, 20_000);
-        return child!.Value;
-    }
-
-    private static int? ReadChild(string file)
-    {
-        try
-        {
-            return File.Exists(file) && int.TryParse(File.ReadAllText(file).Trim(), System.Globalization.CultureInfo.InvariantCulture, out int id) ? id : null;
-        }
-        catch (IOException)
-        {
-            return null;
-        }
-    }
-
-    // El proceso terminó o ya no existe. Un número de proceso reusado en estos segundos daría un falso "vivo": no un falso "muerto".
-    private static bool Gone(int id)
-    {
-        try
-        {
-            using Process process = Process.GetProcessById(id);
-            return process.WaitForExit(5000);
-        }
-        catch (ArgumentException)
-        {
-            return true;
-        }
     }
 }

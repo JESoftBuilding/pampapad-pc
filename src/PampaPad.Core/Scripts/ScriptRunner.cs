@@ -26,6 +26,10 @@ public sealed class ScriptRunner(Library library, Log log, TimeProvider clock, s
 
     private const string Module = "scripts";
 
+    // El tope más largo que acepta un CancellationTokenSource, unos 49,7 días. El de la ficha no tiene máximo (lo corta igual el de la
+    // acción), pero uno más largo hacía tirar al armar el tope, con el script ya lanzado y sin nada que lo cortara.
+    private static readonly TimeSpan LongestLimit = TimeSpan.FromMilliseconds(uint.MaxValue - 1);
+
     public async Task<Result<ScriptResult>> RunAsync(ScriptRequest request, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -37,10 +41,17 @@ public sealed class ScriptRunner(Library library, Log log, TimeProvider clock, s
 
         ScriptInfo script = found.Value!;
         bool wait = request.Wait ?? script.Manifest.Wait ?? true;
-        TimeSpan limit = request.Timeout ?? (script.Manifest.TimeoutSec is int seconds and > 0 ? TimeSpan.FromSeconds(seconds) : DefaultTimeout);
+        TimeSpan asked = request.Timeout ?? (script.Manifest.TimeoutSec is int seconds and > 0 ? TimeSpan.FromSeconds(seconds) : DefaultTimeout);
+        TimeSpan limit = asked > LongestLimit ? LongestLimit : asked;
         Invocation invocation = request.Invocation;
-        long started = clock.GetTimestamp();
 
+        // Una cadena ya cancelada no lanza el script: lo que hace pasaría antes de que se lo pudiera cortar.
+        if (ct.IsCancellationRequested)
+        {
+            return Note(LogLevel.Info, invocation, ErrorCodes.Cancelled, $"Se canceló el script \"{script.Id}\" antes de arrancar.");
+        }
+
+        long started = clock.GetTimestamp();
         var process = new Process { StartInfo = ScriptLaunch.StartInfo(script, library.Folder, invocation, root) };
         try
         {
@@ -53,19 +64,18 @@ public sealed class ScriptRunner(Library library, Log log, TimeProvider clock, s
         }
 
         process.StandardInput.Close();
-        var output = new ScriptOutput(request.OnLine);
-        var errors = new ScriptOutput(null);
-        Task reading = Task.WhenAll(output.ReadAsync(process.StandardOutput), errors.ReadAsync(process.StandardError));
+        var streams = new Streams(process, request.OnLine);
         log.Write(LogLevel.Info, Module, $"{script.Id}: arrancó ({Path.GetFileName(script.EntryPath)}, tope {limit.TotalSeconds:0} s).", null, invocation.RequestedBy, invocation.RunId);
 
         if (!wait)
         {
             // Termina bien apenas arranca; el tope sigue corriendo y el código de salida queda en el registro (punto 11).
-            _ = WatchAsync(process, reading, script.Id, limit, invocation);
+            _ = WatchAsync(process, streams, script.Id, limit, invocation);
             return new ScriptResult(null, null, clock.GetElapsedTime(started));
         }
 
         using (process)
+        using (streams)
         {
             using var timeout = new CancellationTokenSource(limit, clock);
             using var both = CancellationTokenSource.CreateLinkedTokenSource(ct, timeout.Token);
@@ -76,15 +86,15 @@ public sealed class ScriptRunner(Library library, Log log, TimeProvider clock, s
             catch (OperationCanceledException)
             {
                 KillTree(process, script.Id, invocation);
-                await DrainAsync(process, reading).ConfigureAwait(false);
+                await DrainAsync(process, streams, script.Id, invocation).ConfigureAwait(false);
                 return timeout.IsCancellationRequested && !ct.IsCancellationRequested
                     ? Note(LogLevel.Warning, invocation, ErrorCodes.ScriptTimeout, $"El script \"{script.Id}\" pasó el tope de {limit.TotalSeconds:0} s: se cortó, con lo que había lanzado.")
                     : Note(LogLevel.Info, invocation, ErrorCodes.Cancelled, $"Se canceló el script \"{script.Id}\": se cortó, con lo que había lanzado.");
             }
 
-            await DrainAsync(process, reading).ConfigureAwait(false);
+            await DrainAsync(process, streams, script.Id, invocation).ConfigureAwait(false);
             int exit = process.ExitCode;
-            string? message = output.Last ?? errors.Last;
+            string? message = streams.Output.Last ?? streams.Errors.Last;
             TimeSpan took = clock.GetElapsedTime(started);
             if (exit != 0)
             {
@@ -98,50 +108,69 @@ public sealed class ScriptRunner(Library library, Log log, TimeProvider clock, s
     }
 
     // Sin esperar: el script corre solo hasta que sale o hasta el tope. Lo que pase queda en el registro y no corta ninguna cadena.
-    private async Task WatchAsync(Process process, Task reading, string id, TimeSpan limit, Invocation invocation)
-    {
-        using (process)
-        {
-            using var timeout = new CancellationTokenSource(limit, clock);
-            try
-            {
-                await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
-                log.Write(LogLevel.Info, Module, $"{id} (sin esperar) salió con {process.ExitCode}.", null, invocation.RequestedBy, invocation.RunId);
-            }
-            catch (OperationCanceledException)
-            {
-                KillTree(process, id, invocation);
-                log.Write(LogLevel.Warning, Module, $"{id} (sin esperar) pasó el tope de {limit.TotalSeconds:0} s: se cortó.", ErrorCodes.ScriptTimeout, invocation.RequestedBy, invocation.RunId);
-            }
-
-            await DrainAsync(process, reading).ConfigureAwait(false);
-        }
-    }
-
-    // Lo que siga escribiendo un hijo vivo que heredó la salida no traba el paso: pasado DrainLimit se deja de leer y se cierran los flujos,
-    // que Process no cierra solo cuando se leen de a bloques (02, Incierto: "la lectura puede no terminar aunque el script haya salido").
-    private async Task DrainAsync(Process process, Task reading)
+    private async Task WatchAsync(Process process, Streams streams, string id, TimeSpan limit, Invocation invocation)
     {
         try
         {
-            await reading.WaitAsync(DrainLimit, clock).ConfigureAwait(false);
+            using (process)
+            using (streams)
+            {
+                using var timeout = new CancellationTokenSource(limit, clock);
+                try
+                {
+                    await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
+                    log.Write(LogLevel.Info, Module, $"{id} (sin esperar) salió con {process.ExitCode}.", null, invocation.RequestedBy, invocation.RunId);
+                }
+                catch (OperationCanceledException)
+                {
+                    KillTree(process, id, invocation);
+                    log.Write(LogLevel.Warning, Module, $"{id} (sin esperar) pasó el tope de {limit.TotalSeconds:0} s: se cortó.", ErrorCodes.ScriptTimeout, invocation.RequestedBy, invocation.RunId);
+                }
+
+                await DrainAsync(process, streams, id, invocation).ConfigureAwait(false);
+            }
         }
-        catch (TimeoutException)
+        catch (Exception error)
         {
-            log.Info(Module, $"La salida siguió abierta {DrainLimit.TotalSeconds:0} s después de que el script salió: un proceso que lanzó la tiene. Se deja de leer.");
-            process.StandardOutput.Close();
-            process.StandardError.Close();
+            // Nadie espera esta tarea (RunAsync la suelta): lo que tire queda en el registro y no se pierde callado.
+            log.Write(LogLevel.Error, Module, $"{id} (sin esperar): no se lo pudo seguir: {error.Message}", ErrorCodes.InternalError, invocation.RequestedBy, invocation.RunId);
         }
     }
 
-    // Mata el script y lo que lanzó y todavía es hijo suyo (01 §4.5). Lo ya desprendido, como un scrcpy de un script que ya salió, no.
+    // Lo que siga escribiendo un hijo vivo que heredó la salida no traba el paso: pasado DrainLimit se deja de leer. Cancelar la lectura
+    // la corta en el acto y suelta su hilo; cerrar el flujo solo no alcanzaba: la lectura pendiente lo tenía tomado y seguía hasta que el
+    // hijo soltaba la salida, y le pasaba a OnLine renglones de un paso ya terminado (revisión de E5-6, 2026-10-19). Después se cierran
+    // los flujos, que Process no cierra solo cuando se leen de a bloques: un hijo que siga escribiendo no se traba con la salida llena.
+    private async Task DrainAsync(Process process, Streams streams, string id, Invocation invocation)
+    {
+        try
+        {
+            await streams.Reading.WaitAsync(DrainLimit, clock).ConfigureAwait(false);
+        }
+        catch (TimeoutException)
+        {
+            streams.Stop();
+            log.Info(Module, $"La salida siguió abierta {DrainLimit.TotalSeconds:0} s después de que el script salió: un proceso que lanzó la tiene. Se deja de leer.");
+            await streams.Reading.WaitAsync(DrainLimit, clock).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+            process.StandardOutput.Close();
+            process.StandardError.Close();
+        }
+
+        if (streams.Output.ListenerError is { } error)
+        {
+            log.Write(LogLevel.Error, Module, $"{id}: quien escuchaba su salida tiró ({error.Message}): se lo dejó de llamar y se siguió leyendo.", ErrorCodes.InternalError, invocation.RequestedBy, invocation.RunId);
+        }
+    }
+
+    // Mata el script y lo que lanzó y todavía es hijo suyo (01 §4.5). Lo ya desprendido, como un scrcpy de un script que ya salió, no. Un
+    // descendiente que no se deja matar (uno elevado, por ejemplo) llega como AggregateException.
     private void KillTree(Process process, string id, Invocation invocation)
     {
         try
         {
             process.Kill(entireProcessTree: true);
         }
-        catch (Exception error) when (error is InvalidOperationException or Win32Exception or NotSupportedException)
+        catch (Exception error) when (error is InvalidOperationException or Win32Exception or NotSupportedException or AggregateException)
         {
             log.Write(LogLevel.Warning, Module, $"No se pudo cortar el script \"{id}\": {error.Message}", ErrorCodes.ScriptTimeout, invocation.RequestedBy, invocation.RunId);
         }
@@ -151,5 +180,35 @@ public sealed class ScriptRunner(Library library, Log log, TimeProvider clock, s
     {
         log.Write(level, Module, message, code, invocation.RequestedBy, invocation.RunId);
         return new Failure(code, message);
+    }
+
+    // Las dos salidas de un script mientras se leen, y cómo dejar de leerlas.
+    private sealed class Streams : IDisposable
+    {
+        private readonly CancellationTokenSource _stop = new();
+
+        public Streams(Process process, System.Action<string>? onLine)
+        {
+            Output = new ScriptOutput(onLine);
+            Errors = new ScriptOutput(null);
+            Reading = Task.WhenAll(Output.ReadAsync(process.StandardOutput, _stop.Token), Errors.ReadAsync(process.StandardError, _stop.Token));
+        }
+
+        public ScriptOutput Output { get; }
+
+        public ScriptOutput Errors { get; }
+
+        public Task Reading { get; }
+
+        // Desde acá no llega nada más, ni a Last ni a OnLine, y la lectura pendiente se corta (Medido el 2026-10-19: sale enseguida y el
+        // hilo que leía queda libre, aunque el hijo siga vivo).
+        public void Stop()
+        {
+            Output.Stop();
+            Errors.Stop();
+            _stop.Cancel();
+        }
+
+        public void Dispose() => _stop.Dispose();
     }
 }

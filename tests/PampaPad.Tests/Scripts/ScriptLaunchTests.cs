@@ -16,7 +16,7 @@ public class ScriptLaunchTests
     [Fact]
     public void A_cmd_runs_with_cmd_without_autorun_and_reads_in_the_oem_page()
     {
-        ProcessStartInfo info = ScriptLaunch.StartInfo(Script("bancocam.cmd"), Library, Hotkey, @"D:\Conocimiento");
+        ProcessStartInfo info = ScriptLaunch.StartInfo(Script("bancocam.cmd"), Library, Hotkey, ScriptRig.Root);
 
         Assert.Equal("cmd.exe", info.FileName);
         Assert.Equal(new[] { "/d", "/c", Path.Combine(Library, "scripts", "bancocam", "bancocam.cmd") }, info.ArgumentList);
@@ -69,14 +69,14 @@ public class ScriptLaunchTests
     [Fact]
     public void The_variables_say_what_ran_it_and_from_where()
     {
-        ProcessStartInfo info = ScriptLaunch.StartInfo(Script("bancocam.cmd"), Library, Hotkey, @"D:\Conocimiento");
+        ProcessStartInfo info = ScriptLaunch.StartInfo(Script("bancocam.cmd"), Library, Hotkey, ScriptRig.Root);
 
         Assert.Equal(Library, info.Environment["PAMPAPAD_LIBRARY"]);
         Assert.Equal(Path.Combine(Library, "scripts", "bancocam"), info.Environment["PAMPAPAD_SCRIPT_DIR"]);
         Assert.Equal("ir-al-banco", info.Environment["PAMPAPAD_ACTION"]);
         Assert.Equal("hotkey", info.Environment["PAMPAPAD_TRIGGER"]);
         Assert.Equal("hotkeys", info.Environment["PAMPAPAD_SOURCE"]);
-        Assert.Equal(@"D:\Conocimiento", info.Environment["CONOCIMIENTO"]);
+        Assert.Equal(ScriptRig.Root, info.Environment["CONOCIMIENTO"]);
     }
 
     [Fact]
