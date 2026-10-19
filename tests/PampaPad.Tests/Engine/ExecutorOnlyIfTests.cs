@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Time.Testing;
 using PampaPad.Core;
 using PadAction = PampaPad.Core.Action;
 
@@ -140,10 +141,12 @@ public class ExecutorOnlyIfTests
     {
         var a = new FakeStep("a");
         using var cancel = new CancellationTokenSource();
+        CancellationToken seen = default;
         var slow = new FakeCondition("obs.cameraNotCovered")
         {
             Answer = async (_, ct) =>
             {
+                seen = ct;
                 cancel.Cancel();
                 await Task.Delay(Timeout.Infinite, ct);
                 return new Verdict(true, "");
@@ -154,6 +157,52 @@ public class ExecutorOnlyIfTests
         ActionResult result = await executor.RunAsync(Chain("""[ { "type": "a", "onlyIf": { "type": "obs.cameraNotCovered" } } ]"""), Tap, cancel.Token);
 
         Assert.Equal(ErrorCodes.Cancelled, result.Failure?.Code);
+        Assert.Empty(a.Runs);
+
+        // La condición se entera del corte: una de OBS deja de preguntar en vez de seguir sola (revisión de E5-4).
+        Assert.True(seen.IsCancellationRequested);
+    }
+
+    [Fact]
+    public async Task A_condition_that_ignores_cancellation_does_not_hold_the_action()
+    {
+        var clock = new FakeTimeProvider();
+        var a = new FakeStep("a");
+        var never = new TaskCompletionSource<Result<Verdict>>();
+        var deaf = new FakeCondition("obs.micNotMuted") { Answer = (_, _) => never.Task };
+        var executor = new Executor([a], [deaf.Type], clock);
+
+        Task<ActionResult> running = executor.RunAsync(Chain("""[ { "type": "a", "onlyIf": { "type": "obs.micNotMuted" } } ]"""), Tap, CancellationToken.None);
+        clock.Advance(Executor.ActionTimeout);
+        ActionResult result = await running.WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.Equal(ErrorCodes.Cancelled, result.Failure?.Code);
+        Assert.Equal("Pasó el tope de 60 s de la acción.", result.Failure?.Message);
+        Assert.Empty(a.Runs);
+    }
+
+    [Fact]
+    public async Task A_condition_that_returns_cancelled_after_the_cap_fired_gets_the_cap_text_and_keeps_its_own()
+    {
+        var clock = new FakeTimeProvider();
+        var a = new FakeStep("a");
+        var polite = new FakeCondition("obs.micNotMuted")
+        {
+            Answer = (_, _) =>
+            {
+                clock.Advance(Executor.ActionTimeout);
+                return Task.FromResult<Result<Verdict>>(new Failure(ErrorCodes.Cancelled, "Se canceló esperando la respuesta de OBS."));
+            },
+        };
+        var executor = new Executor([a], [polite.Type], clock);
+
+        ActionResult result = await executor.RunAsync(Chain("""[ { "type": "a", "onlyIf": { "type": "obs.micNotMuted" } } ]"""), Tap, CancellationToken.None);
+
+        Assert.Equal(ErrorCodes.Cancelled, result.Failure?.Code);
+        Assert.Equal(
+            "No se pudo saber si correr el paso (obs.micNotMuted): Pasó el tope de 60 s de la acción. Se canceló esperando la respuesta de OBS.",
+            result.Failure?.Message);
+        Assert.Equal("steps[0].onlyIf", result.Failure?.Where);
         Assert.Empty(a.Runs);
     }
 

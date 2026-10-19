@@ -132,11 +132,15 @@ public sealed class Executor(IReadOnlyList<IStepType> catalog, IReadOnlyList<Con
 
                     if (guard.Failure is { } unknown)
                     {
-                        // skipped corta la cadena con el código de lo que no dejó evaluar (02 §4.6; pregunta abierta 43, escrito (a)).
+                        // skipped corta la cadena con el código de lo que no dejó evaluar (02 §4.6; pregunta abierta 43, escrito (a)). Una
+                        // condición que devuelve cancelled por su cuenta tampoco sabe quién cortó: el tope se antepone, como con un paso.
+                        string why = unknown.Code == ErrorCodes.Cancelled && timeout.IsCancellationRequested && unknown.Message != TimeoutText
+                            ? $"{TimeoutText} {unknown.Message}"
+                            : unknown.Message;
                         reports[i] = new StepReport(StepOutcome.Failed, guard.Detail);
                         return Finish(i, unknown with
                         {
-                            Message = $"No se pudo saber si correr el paso ({condition.Type}): {unknown.Message}",
+                            Message = $"No se pudo saber si correr el paso ({condition.Type}): {why}",
                             Where = $"steps[{steps[i].Index}].onlyIf",
                         });
                     }

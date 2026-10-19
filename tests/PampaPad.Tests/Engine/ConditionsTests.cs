@@ -84,6 +84,7 @@ public sealed class ConditionsTests : IAsyncLifetime
 
         Assert.Equal(ConditionOutcome.Pass, any.Outcome);
         Assert.Equal(ConditionOutcome.Fail, scrcpy.Outcome);
+        Assert.Empty(ConditionRules.Validate(Type("window.exists"), Parse("""{ "type": "window.exists", "title": "bancocam", "process": "scrcpy" }""")));
     }
 
     [Fact]
@@ -110,6 +111,8 @@ public sealed class ConditionsTests : IAsyncLifetime
     [InlineData("""{ "type": "window.sizeIs", "title": "bancocam", "width": 1823, "height": "850" }""", "height")]
     [InlineData("""{ "type": "window.sizeIs", "title": "", "width": 1823, "height": 850 }""", "title")]
     [InlineData("""{ "type": "window.exists", "title": 5 }""", "title")]
+    [InlineData("""{ "type": "window.exists", "title": "bancocam", "process": 5 }""", "process")]
+    [InlineData("""{ "type": "window.sizeIs", "title": "bancocam", "width": 1823, "height": 850, "process": ["scrcpy"] }""", "process")]
     [InlineData("""{ "type": "recording.is", "state": "grabando" }""", "state")]
     public void A_bad_parameter_is_a_problem_of_the_condition(string json, string where)
     {

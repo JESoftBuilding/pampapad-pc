@@ -34,7 +34,7 @@ public static partial class Conditions
             return Task.FromResult<Result<Verdict>>(new Verdict(found.Count > 0, WindowMatch.Describe(found, title, process, null, null)));
         })
     {
-        Check = CheckTitle,
+        Check = p => [.. CheckTitle(p), .. CheckProcess(p)],
     };
 
     /// <summary>La ventana existe y mide eso, comparado como en wait.window: exacto, en las unidades de SetWindowPos (02 §5).</summary>
@@ -58,7 +58,7 @@ public static partial class Conditions
             return Task.FromResult<Result<Verdict>>(new Verdict(met, WindowMatch.Describe(found, title, process, width, height)));
         })
     {
-        Check = p => [.. CheckTitle(p), .. CheckPositive(p, "width"), .. CheckPositive(p, "height")],
+        Check = p => [.. CheckTitle(p), .. CheckProcess(p), .. CheckPositive(p, "width"), .. CheckPositive(p, "height")],
     };
 
     /// <summary>
@@ -92,6 +92,16 @@ public static partial class Conditions
         if (string.IsNullOrWhiteSpace(ConditionRules.Text(p, "title")))
         {
             yield return ConditionRules.Invalid("title", "Falta el título de la ventana, como texto.");
+        }
+    }
+
+    // Un process que no es texto se leería como si no estuviera, y la condición contaría la ventana de cualquier programa: con el
+    // negate de "ir al banco", una carpeta que se llame bancocam saltearía el script. Es un problema, como en un paso (StepType.Read).
+    private static IEnumerable<Problem> CheckProcess(JsonElement p)
+    {
+        if (ObsMessages.Has(p, "process", out JsonElement value) && value.ValueKind is not (JsonValueKind.String or JsonValueKind.Null))
+        {
+            yield return ConditionRules.Invalid("process", "process va como texto: el programa sin .exe, por ejemplo scrcpy.");
         }
     }
 
