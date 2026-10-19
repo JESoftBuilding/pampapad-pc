@@ -71,6 +71,7 @@ internal sealed partial class Composition : IAsyncDisposable
         Dispatcher? dispatcher = null;
         (IReadOnlyList<IStepType> catalog, IReadOnlyList<ConditionType> conditions, Executor executor) =
             ComposeChains(library, state, obs, windows, log, clock, target => dispatcher!.Go(target));
+        var preflight = new Preflight(conditions, library, state, log, clock);
 
         // El umbral de mantener sale de console.holdMs de la biblioteca; si no está, es un segundo (02 §4.10).
         // Se lee una sola vez, ahora: "Recargar biblioteca" no lo toma y cambiarlo pide reiniciar el programa.
@@ -87,7 +88,7 @@ internal sealed partial class Composition : IAsyncDisposable
             library,
             log,
             playSound: notice => ui.Post(_ => composition.Tray?.PlayFailed(), null),
-            showBalloon: notice => ui.Post(_ => composition.Tray?.ShowBalloon(notice.Title, notice.Text), null));
+            showBalloon: notice => ui.Post(_ => composition.Tray?.ShowBalloon(notice.Title, notice.Text, notice.Warning), null));
         dispatcher.Finished += notifier.OnFinished;
         if (!headless && (settings.Current.HotkeysEnabled ?? !AppIdentity.Dev))
         {
@@ -128,6 +129,7 @@ internal sealed partial class Composition : IAsyncDisposable
             var tray = new Tray($"{AppIdentity.Title} {AppIdentity.Version}", onCheck, onInstall);
             composition.Tray = tray;
             tray.MenuOpened += notifier.Dismiss;
+            composition.HookChains(tray, preflight, notifier, dispatcher);
             tray.ReconnectRequested += (_, _) => obs.Reconnect();
             tray.ConsoleToggleRequested += () =>
                 composition._console?.Release(state.Current.Console.State != ConsoleLinkState.Released);

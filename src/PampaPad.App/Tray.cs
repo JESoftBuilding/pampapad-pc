@@ -14,6 +14,8 @@ internal sealed class Tray : ApplicationContext
     private readonly ContextMenuStrip _menu = new();
     private readonly NotifyIcon _icon;
     private readonly ToolStripMenuItem _reconnect = new("Reconectar con OBS") { Visible = false };
+    private readonly ToolStripMenuItem _preflight = new("Chequeo previo") { Visible = false };
+    private readonly ToolStripMenuItem _cancelAll = new("Cancelar todo") { Visible = false };
     private readonly ToolStripMenuItem _console = new() { Visible = false };
     private readonly ToolStripMenuItem? _check;
     private readonly ToolStripMenuItem? _install;
@@ -46,6 +48,12 @@ internal sealed class Tray : ApplicationContext
         // Arriba de todo, y sólo visible en auth_failed y kicked (05 §3).
         _reconnect.Click += (_, _) => ReconnectRequested?.Invoke(this, EventArgs.Empty);
         _menu.Items.Insert(0, _reconnect);
+
+        // En el orden de 05 §3: "Chequeo previo" antes de "Reconectar con OBS" y "Cancelar todo" después. Los dos se ven según el estado.
+        _preflight.Click += (_, _) => PreflightRequested?.Invoke();
+        _menu.Items.Insert(0, _preflight);
+        _cancelAll.Click += (_, _) => CancelAllRequested?.Invoke();
+        _menu.Items.Insert(2, _cancelAll);
         _menu.Opening += (_, _) => MenuOpened?.Invoke();
 
         _icon = new NotifyIcon
@@ -69,12 +77,21 @@ internal sealed class Tray : ApplicationContext
     /// <summary>Se abrió el menú: es una de las dos cosas que sacan el ícono de "falló una acción" (05 §3).</summary>
     public event System.Action? MenuOpened;
 
+    /// <summary>Se eligió "Chequeo previo": hasta la pantalla Estado, el resultado va al registro y a un globo (01 §8, fila 5).</summary>
+    public event System.Action? PreflightRequested;
+
+    /// <summary>Se eligió "Cancelar todo": cancela las acciones en curso (01 §4.5).</summary>
+    public event System.Action? CancelAllRequested;
+
     /// <summary>El sonido "falló". Sólo desde el hilo de la interfaz. Si suena o no lo decidió el Notifier.</summary>
     public void PlayFailed() => Failed?.Play();
 
-    /// <summary>El cartel de Windows. Sólo desde el hilo de la interfaz, y sólo con OBS detenido: lo decidió el Notifier.</summary>
-    public void ShowBalloon(string title, string text) =>
-        _icon.ShowBalloonTip(5000, Shorten(title, 63), Shorten(text.Length == 0 ? title : text, 255), ToolTipIcon.Warning);
+    /// <summary>
+    /// El cartel de Windows. Sólo desde el hilo de la interfaz, y sólo con OBS detenido: lo decidió el Notifier. Un aviso que no es una
+    /// advertencia, como un chequeo previo que dio bien, sale con el ícono de información.
+    /// </summary>
+    public void ShowBalloon(string title, string text, bool warning = true) =>
+        _icon.ShowBalloonTip(5000, Shorten(title, 63), Shorten(text.Length == 0 ? title : text, 255), warning ? ToolTipIcon.Warning : ToolTipIcon.Info);
 
     /// <summary>Pinta lo que calculó TraySummary. Sólo desde el hilo de la interfaz. Lo ya pintado se saltea.</summary>
     public void Paint(TraySummary summary)
@@ -88,6 +105,8 @@ internal sealed class Tray : ApplicationContext
         _icon.Icon = TrayIcons.For(summary.Icon);
         _icon.Text = Clip(summary.Tooltip);
         _reconnect.Visible = summary.CanReconnect;
+        _preflight.Visible = summary.CanRunPreflight;
+        _cancelAll.Visible = summary.CanCancel;
         _console.Visible = summary.ConsoleItem is not null;
         _console.Text = summary.ConsoleItem ?? string.Empty;
     }

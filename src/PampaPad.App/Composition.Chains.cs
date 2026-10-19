@@ -20,4 +20,29 @@ internal sealed partial class Composition
         IReadOnlyList<IStepType> catalog = Catalog.Build(obs, state, log, clock, new Chains(library, windows, scripts, goToPage));
         return (catalog, conditions, new Executor(catalog, conditions, clock));
     }
+
+    /// <summary>Los dos ítems de la bandeja de la etapa 5 (05 §3). Cancelar sale del hilo de la interfaz: puede seguir la cadena ahí mismo.</summary>
+    private void HookChains(Tray tray, Preflight preflight, Notifier notifier, Dispatcher dispatcher)
+    {
+        tray.PreflightRequested += () => _ = RunPreflightAsync(preflight, notifier);
+        tray.CancelAllRequested += () => _ = Task.Run(() =>
+        {
+            Log.Info("app", "Cancelar todo, desde la bandeja.");
+            dispatcher.CancelAll();
+        });
+    }
+
+    // "Chequeo previo" de la bandeja: una línea por comprobación en el registro y el globo con el resumen (01 §8, fila 5).
+    private async Task RunPreflightAsync(Preflight preflight, Notifier notifier)
+    {
+        try
+        {
+            PreflightReport report = await preflight.RunAsync(Trigger.Tray, _life.Token).ConfigureAwait(false);
+            notifier.OnPreflight(report);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("app", "Falló el chequeo previo: " + ex, ErrorCodes.InternalError);
+        }
+    }
 }
