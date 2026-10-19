@@ -46,11 +46,12 @@ public sealed class RunRecordEdgeTests : IDisposable
     }
 
     [Fact]
-    public void The_tray_does_not_change_for_the_running_actions_alone()
+    public void The_running_actions_alone_only_turn_on_cancel_all()
     {
-        AppState idle = new();
+        // Desde la etapa 5 la bandeja ofrece "Cancelar todo" si hay alguna en curso (05 §3); el ícono y el texto no cambian.
+        AppState idle = new() { BasePage = "grabacion", MainPage = "grabacion" };
 
-        Assert.Equal(TraySummary.From(idle), TraySummary.From(idle with { Running = [Running], BasePage = "grabacion", ActivePage = "grabacion" }));
+        Assert.Equal(TraySummary.From(idle) with { CanCancel = true }, TraySummary.From(idle with { Running = [Running], ActivePage = "grabacion" }));
     }
 
     [Fact]
