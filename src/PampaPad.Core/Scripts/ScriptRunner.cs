@@ -139,8 +139,9 @@ public sealed class ScriptRunner(Library library, Log log, TimeProvider clock, s
 
     // Lo que siga escribiendo un hijo vivo que heredó la salida no traba el paso: pasado DrainLimit se deja de leer. Cancelar la lectura
     // la corta en el acto y suelta su hilo; cerrar el flujo solo no alcanzaba: la lectura pendiente lo tenía tomado y seguía hasta que el
-    // hijo soltaba la salida, y le pasaba a OnLine renglones de un paso ya terminado (revisión de E5-6, 2026-10-19). Después se cierran
-    // los flujos, que Process no cierra solo cuando se leen de a bloques: un hijo que siga escribiendo no se traba con la salida llena.
+    // hijo soltaba la salida, y le pasaba a OnLine renglones de un paso ya terminado (revisión de E5-6, 2026-10-19). Si ni cancelada se
+    // corta en DrainLimit, queda en el registro: el renglón tarde ya se descarta y no se notaría. Después se cierran los flujos, que
+    // Process no cierra solo cuando se leen de a bloques: un hijo que siga escribiendo no se traba con la salida llena.
     private async Task DrainAsync(Process process, Streams streams, string id, Invocation invocation)
     {
         try
@@ -152,6 +153,11 @@ public sealed class ScriptRunner(Library library, Log log, TimeProvider clock, s
             streams.Stop();
             log.Info(Module, $"La salida siguió abierta {DrainLimit.TotalSeconds:0} s después de que el script salió: un proceso que lanzó la tiene. Se deja de leer.");
             await streams.Reading.WaitAsync(DrainLimit, clock).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+            if (!streams.Reading.IsCompleted)
+            {
+                log.Write(LogLevel.Warning, Module, $"{id}: la lectura de su salida no se cortó al cancelarla: un hilo queda tomado hasta que el proceso que la tiene la suelte.", ErrorCodes.InternalError, invocation.RequestedBy, invocation.RunId);
+            }
+
             process.StandardOutput.Close();
             process.StandardError.Close();
         }

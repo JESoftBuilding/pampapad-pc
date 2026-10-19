@@ -156,8 +156,9 @@ public class ScriptRunnerTests
         Assert.True(took < TimeSpan.FromSeconds(5), $"tardó {took}");
         Assert.Contains(rig.Log.Recent(), entry => entry.Message.StartsWith("La salida siguió abierta", StringComparison.Ordinal));
 
-        // Se dejó de leer de verdad: lo que el hijo escribió después no le llegó a nadie.
+        // Se dejó de leer de verdad: lo que el hijo escribió después no le llegó a nadie, y la lectura se cortó y soltó su hilo.
         Assert.Equal(new[] { "listo" }, lines);
+        Assert.DoesNotContain(rig.Log.Recent(), entry => entry.Message.Contains("no se cortó", StringComparison.Ordinal));
     }
 
     [Theory]
