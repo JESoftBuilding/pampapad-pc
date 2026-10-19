@@ -169,7 +169,15 @@ public class ExecutorOnlyIfTests
         var clock = new FakeTimeProvider();
         var a = new FakeStep("a");
         var never = new TaskCompletionSource<Result<Verdict>>();
-        var deaf = new FakeCondition("obs.micNotMuted") { Answer = (_, _) => never.Task };
+        CancellationToken seen = default;
+        var deaf = new FakeCondition("obs.micNotMuted")
+        {
+            Answer = (_, ct) =>
+            {
+                seen = ct;
+                return never.Task;
+            },
+        };
         var executor = new Executor([a], [deaf.Type], clock);
 
         Task<ActionResult> running = executor.RunAsync(Chain("""[ { "type": "a", "onlyIf": { "type": "obs.micNotMuted" } } ]"""), Tap, CancellationToken.None);
@@ -179,6 +187,9 @@ public class ExecutorOnlyIfTests
         Assert.Equal(ErrorCodes.Cancelled, result.Failure?.Code);
         Assert.Equal("Pasó el tope de 60 s de la acción.", result.Failure?.Message);
         Assert.Empty(a.Runs);
+
+        // La condición se entera del tope, no sólo del corte de afuera: con ct en vez de linked.Token esto da rojo.
+        Assert.True(seen.IsCancellationRequested);
     }
 
     [Fact]
