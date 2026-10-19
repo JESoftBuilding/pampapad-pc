@@ -44,6 +44,19 @@ public class NotifierPreflightTests
     }
 
     [Fact]
+    public async Task Recording_with_sound_allowed_still_has_no_balloon()
+    {
+        // El ajuste de la tarjeta Avisos (05 §4.5) sólo deja sonar: el globo saldría en el video igual.
+        await using var rig = new NotifierRig(
+            $$"""{ "version": 1, "actions": [ {{NotifierRig.ShortAction}} ], "console": { "muteSoundWhileRecording": false } }""",
+            RecordingState.Recording);
+
+        rig.Notifier.OnPreflight(Report(Canvas));
+
+        Assert.Empty(rig.Balloons);
+    }
+
+    [Fact]
     public async Task All_fine_is_a_balloon_that_is_not_a_warning()
     {
         await using var rig = new NotifierRig();
@@ -63,6 +76,18 @@ public class NotifierPreflightTests
 
         Assert.Equal("Chequeo previo: 1 sin comprobar", notice.Title);
         Assert.Equal("Sin OBS: no se pudo leer el micrófono.", notice.Text);
+        Assert.True(notice.Warning);
+    }
+
+    [Fact]
+    public void Failures_win_over_what_could_not_be_checked()
+    {
+        // Con fallas y algo sin comprobar a la vez, como con un OBS que se cae a mitad del chequeo, manda la primera falla (01 §8), en
+        // singular y sin "y 0 más".
+        Notice notice = Notifier.Summarize(Report(NoObs, Canvas));
+
+        Assert.Equal("Chequeo previo: 1 falla", notice.Title);
+        Assert.Equal("La escena no llena el lienzo. \"Vertical SolidWorks\" llena el 31,8 % del lienzo de 1920 x 1080; se pide 90 %.", notice.Text);
         Assert.True(notice.Warning);
     }
 
