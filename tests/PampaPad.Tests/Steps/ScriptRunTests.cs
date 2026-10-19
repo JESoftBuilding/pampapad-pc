@@ -77,10 +77,48 @@ public class ScriptRunTests
     }
 
     [Fact]
+    public async Task The_wait_of_the_step_wins_over_the_one_of_the_manifest()
+    {
+        // Esperándolo, saldría con 4 y el paso fallaría. Sin esperar termina bien enseguida y el 4 queda en el registro (02 §9, punto 11).
+        await using var rig = new ScriptRig();
+        rig.AddCmd("suelto", "@echo off\nping -n 2 127.0.0.1 >nul\nexit /b 4\n", """, "wait": true""");
+
+        StepResult result = await new ScriptRun(rig.Runner, rig.Library).RunAsync(
+            Parse("""{ "type": "script.run", "script": "suelto", "wait": false }"""), ScriptRig.Key, CancellationToken.None);
+
+        Assert.Null(result.Failure);
+        Assert.Null(result.Message);
+        await Poll.Until(() => rig.Log.Recent().Any(entry => entry.Message == "suelto (sin esperar) salió con 4."), 15_000);
+    }
+
+    [Fact]
+    public async Task Cancelling_the_chain_kills_the_script_of_the_step_and_what_it_launched()
+    {
+        // El Executor corta la cadena igual con su WaitAsync: esta mira que el token llegue al script y que no quede vivo lo que lanzó,
+        // como el scrcpy de bancocam (01 §4.5).
+        await using var rig = new ScriptRig();
+        string folder = rig.AddPs1("lento", ScriptRig.LaunchesPing, """, "timeoutSec": 60""");
+        var executor = new Executor([new ScriptRun(rig.Runner, rig.Library)], TimeProvider.System);
+        using var cancel = new CancellationTokenSource();
+
+        Task<ActionResult> running = executor.RunAsync(Chain("""[ { "type": "script.run", "script": "lento" } ]"""), ScriptRig.Key, cancel.Token);
+        int child = await ScriptRig.ChildAsync(folder);
+        await cancel.CancelAsync();
+        ActionResult result = await running.WaitAsync(TimeSpan.FromSeconds(20));
+
+        Assert.Equal(ErrorCodes.Cancelled, result.Failure?.Code);
+        Assert.True(ScriptRig.Gone(child));
+        await Poll.Until(() => rig.Log.Recent().Any(entry => entry.Message == "Se canceló el script \"lento\": se cortó, con lo que había lanzado."), 15_000);
+    }
+
+    [Fact]
     public async Task A_missing_script_is_a_problem_of_the_step_and_the_action_does_not_run_even_with_an_onlyIf()
     {
+        // El espejo ya abierto, como en ir al banco: la ventana está y el onlyIf negado saltearía el paso. Igual no corre nada, ni se
+        // pregunta la condición. Con NotMet el paso iba a correr y la prueba no miraba el salteo (revisión de E5-10).
         await using var rig = new ScriptRig();
-        var executor = new Executor([new ScriptRun(rig.Runner, rig.Library)], [FakeCondition.NotMet("window.exists").Type], TimeProvider.System);
+        var open = FakeCondition.Met("window.exists");
+        var executor = new Executor([new ScriptRun(rig.Runner, rig.Library)], [open.Type], TimeProvider.System);
         PadAction action = Chain("""[ { "type": "script.run", "script": "bancocam", "onlyIf": { "type": "window.exists", "negate": true } } ]""");
 
         Problem problem = Assert.Single(executor.Check(action));
@@ -90,6 +128,8 @@ public class ScriptRunTests
         Assert.Equal(ErrorCodes.ScriptNotFound, problem.Code);
         Assert.Equal(Severity.Warning, problem.Severity);
         Assert.Equal(ErrorCodes.ConfigInvalid, result.Failure?.Code);
+        Assert.Equal(StepOutcome.NotRun, result.Steps[0].Outcome);
+        Assert.Equal(0, open.Evaluations);
     }
 
     [Fact]
@@ -117,5 +157,17 @@ public class ScriptRunTests
         Problem problem = Assert.Single(new ScriptRun(rig.Runner, rig.Library).Validate(Parse(json)));
 
         Assert.Equal(where, problem.Where);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(60)]
+    public async Task The_limit_of_the_step_goes_from_1_s_to_the_limit_of_the_action(int timeoutSec)
+    {
+        // 02 §5: de 1 a 60. La de arriba prueba sólo lo que se rechaza: un borde corrido no la haría fallar (revisión de E5-10).
+        await using var rig = new ScriptRig();
+        rig.AddCmd("hola", "@echo off\n");
+
+        Assert.Empty(new ScriptRun(rig.Runner, rig.Library).Validate(Parse($$"""{ "type": "script.run", "script": "hola", "timeoutSec": {{timeoutSec}} }""")));
     }
 }
