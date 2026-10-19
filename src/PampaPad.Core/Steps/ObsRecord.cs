@@ -87,6 +87,13 @@ public sealed class ObsRecord(ObsClient obs, StateStore state, Log log, TimeProv
 
             Note(invocation, $"{Verb(command)}: OBS avisó un cambio de la grabación hace menos de {Settle.TotalSeconds:0} s; se espera {early.TotalMilliseconds:0} ms antes de mandar (E4-11).");
             await Task.Delay(early, clock, ct).ConfigureAwait(false);
+
+            // Un corte en el segundo es obs_disconnected (03 §3): con closed el estado ya dice stopped y parar terminaría bien.
+            if (ObsStep.Unready(state.Current.Obs, what) is { } lost)
+            {
+                return new StepResult(lost);
+            }
+
             waitedFor = changedAt;
             known = state.Current.Obs.Recording;
         }
