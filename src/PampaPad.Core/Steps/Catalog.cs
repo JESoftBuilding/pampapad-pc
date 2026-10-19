@@ -23,6 +23,7 @@ public static class Catalog
             new ObsMute(obs, state),
             new ObsRequestStep(obs, state),
             new WaitTime(clock),
+            new WaitWindow(chains.Windows, clock),
         ];
     }
 }
