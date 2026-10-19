@@ -233,11 +233,11 @@ public sealed partial class FakeObs
         return Reply.Ok(new JsonObject { ["videoActive"] = active, ["videoShowing"] = active });
     }
 
-    // Medido (03 §7): lo que no está al aire sale negro; "Celu (scrcpy)" sin ventana da 702.
+    // Medido (03 §7 y §9): lo que no está al aire sale negro; "Celu (scrcpy)" sin ventana y las entradas de sólo audio dan 702.
     private Reply Screenshot(JsonObject? data)
     {
         string? uuid = (string?)data?["sourceUuid"] ?? FindInput(data)?.Uuid;
-        if (uuid == CeluUuid && !MirrorOpen)
+        if ((uuid == CeluUuid && !MirrorOpen) || NoVideo(uuid))
         {
             return Reply.Fail(702, NoScreenshot);
         }

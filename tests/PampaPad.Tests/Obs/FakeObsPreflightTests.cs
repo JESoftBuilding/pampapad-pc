@@ -90,9 +90,13 @@ public class FakeObsPreflightTests
 
         var camera = await raw.AskAsync("1", "GetSourceActive", new { sourceUuid = FakeObs.CameraInputUuid });
         var phone = await raw.AskAsync("2", "GetSourceActive", new { sourceUuid = FakeObs.CeluUuid });
+        var hidden = await raw.AskAsync("3", "GetSourceActive", new { sourceUuid = "cd627aa1-7d7b-4ae4-9c9e-0a4973b38d0d" });     // "Marca de agua", oculta en Pantalla
+        var frame = await raw.AskAsync("4", "GetSourceActive", new { sourceUuid = "2a919cb4-c22d-4f5d-a196-3b53fdd4e22d" });      // "Marco cámara chica", oculto en Pantalla y visible en Cámara chica
 
         Assert.True((bool)camera["responseData"]!["videoActive"]!);
         Assert.False((bool)phone["responseData"]!["videoActive"]!);
+        Assert.False((bool)hidden["responseData"]!["videoActive"]!);
+        Assert.True((bool)frame["responseData"]!["videoActive"]!);
     }
 
     [Fact]
@@ -110,6 +114,22 @@ public class FakeObsPreflightTests
         Assert.Equal(FakeObs.NoScreenshot, (string?)shot["requestStatus"]!["comment"]);
         Assert.Equal(0.0, (double)closed["responseData"]!["sceneItems"]![0]!["sceneItemTransform"]!["sourceWidth"]!);
         Assert.Equal(1823.0, (double)open["responseData"]!["sceneItems"]![0]!["sceneItemTransform"]!["sourceWidth"]!);
+    }
+
+    // Medido el 2026-10-13: el micrófono, el audio del escritorio y los stings dan 702 (03 §9, "Rechazos medidos").
+    [Theory]
+    [InlineData(FakeObs.MicUuid)]
+    [InlineData("364259ab-1ec2-4e92-9a4e-5faca2f47d6f")]
+    [InlineData(FakeObs.StingUuid)]
+    public async Task An_input_with_only_audio_has_no_screenshot(string uuid)
+    {
+        await using var fake = FakeObs.Start();
+        await using RawObs raw = await OpenAsync(fake);
+
+        var shot = await raw.AskAsync("1", "GetSourceScreenshot", new { sourceUuid = uuid, imageFormat = "bmp", imageWidth = 160 });
+
+        Assert.Equal(702, (int)shot["requestStatus"]!["code"]!);
+        Assert.Equal(FakeObs.NoScreenshot, (string?)shot["requestStatus"]!["comment"]);
     }
 
     [Fact]

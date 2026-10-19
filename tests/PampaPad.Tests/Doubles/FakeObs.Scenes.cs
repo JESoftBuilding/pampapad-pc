@@ -228,5 +228,9 @@ public sealed partial class FakeObs
         return _inputs.FirstOrDefault(input => uuid is not null ? input.Uuid == uuid : input.Name == name);
     }
 
+    // Las de sólo audio: el micrófono, el audio del escritorio y los stings (medido el 2026-10-13).
+    private bool NoVideo(string? uuid) =>
+        _inputs.Any(input => input.Uuid == uuid && input.Kind is "wasapi_input_capture" or "wasapi_output_capture" or "ffmpeg_source");
+
     private sealed record FakeInput(string Name, string Uuid, string Kind, bool HasAudio);
 }
