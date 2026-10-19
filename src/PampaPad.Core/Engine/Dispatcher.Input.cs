@@ -106,7 +106,8 @@ public sealed partial class Dispatcher
         else if (Controls.TryKey(e.Control, out int position))
         {
             // Base vacía es "no hay página" (Refresh no la toma ni para una página con el id vacío): no hay tecla a la que llevar el gesto.
-            string basePage = _state.Current.BasePage;
+            // Grabando rige la principal aunque el estado todavía no lo diga (02 §7, regla 1).
+            string basePage = KeysPage(config);
             Key? key = basePage.Length == 0
                 ? null
                 : config.FindPage(basePage)?.Keys.Indexed().Select(item => item.Item).FirstOrDefault(candidate => candidate.Position == position);

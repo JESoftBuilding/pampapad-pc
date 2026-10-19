@@ -26,6 +26,9 @@ public sealed partial class Dispatcher
         _log = log;
         _library.Changed += _ => Refresh();
         Refresh();
+
+        // La regla 2 de navegación necesita un disparador: la grabación que arranca en otra página (02 §7; Dispatcher.Pages.cs).
+        _state.Subscribe(OnStateChanged);
     }
 
     /// <summary>Terminó una acción, bien o mal. Una pulsación ignorada porque la acción ya estaba en curso no avisa.</summary>
@@ -42,46 +45,21 @@ public sealed partial class Dispatcher
         Refresh();
     }
 
-    /// <summary>Vuelve a calcular lo que depende de la biblioteca: página base, problemas y lo que cada fuente escucha.</summary>
+    /// <summary>Vuelve a calcular lo que depende de la biblioteca: problemas, página base y lo que cada fuente escucha.</summary>
     public void Refresh()
     {
         lock (_refreshing)
         {
             Config config = _library.Current;
-            string main = config.ResolveMainPage() ?? "";
-            IReadOnlyList<string> cycle = [.. config.Pages.Indexed().Where(page => page.Item.Show != false && page.Item.Id is not null).Select(page => page.Item.Id!)];
-
-            // En esta etapa no hay page.go ni capa: la base es siempre la principal. La regla de grabación ya pasa por acá.
-            NavigationResult navigation = Navigation.Resolve(new NavigationInput(main, null, _state.Current.Obs.Recording, main, null, cycle));
-
             var problems = new List<Problem>(_library.Problems);
             foreach ((int index, Action action) in config.Actions.Indexed())
             {
                 problems.AddRange(CheckAction(action, index));
             }
 
-            (int pageIndex, Page? page) = config.Pages.Indexed().FirstOrDefault(candidate => navigation.BasePage.Length > 0 && candidate.Item.Id == navigation.BasePage);
-            IInputSource[] sources;
-            lock (_gate)
-            {
-                sources = [.. _sources];
-            }
-
-            // Sin biblioteca la configuración está vacía: la página vacía hace que cada fuente suelte todo.
-            foreach (IInputSource source in sources)
-            {
-                problems.AddRange(ApplyTo(source, page ?? new Page(), config.Hotkeys ?? [], pageIndex));
-            }
-
-            // El validador y el ejecutor informan los dos un paso sin "type": queda una vez.
-            IReadOnlyList<Problem> all = [.. problems.DistinctBy(problem => (problem.Where, problem.Code))];
-            _state.Update(s => s with
-            {
-                Library = new LibraryState(_library.Status, _library.Folder),
-                Problems = all,
-                BasePage = navigation.BasePage,
-                ActivePage = navigation.ActivePage,
-            });
+            // Los de la configuración se guardan aparte: cambiar de página vuelve a aplicar las fuentes sin volver a revisar cada acción.
+            _configProblems = problems;
+            ApplyPage(config);
         }
     }
 

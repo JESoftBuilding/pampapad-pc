@@ -45,6 +45,9 @@ public sealed record AppState
     /// <summary>La página base, de la que salen los atajos de tecla. Vacía si no hay páginas.</summary>
     public string BasePage { get; init; } = "";
 
+    /// <summary>La página principal (mainPage, o la primera): el texto de ayuda nombra la base cuando no es esta (05 §3).</summary>
+    public string MainPage { get; init; } = "";
+
     /// <summary>La página que rige: la base o, con la consola, la capa de la tecla del módulo mientras se la mantiene.</summary>
     public string ActivePage { get; init; } = "";
 
