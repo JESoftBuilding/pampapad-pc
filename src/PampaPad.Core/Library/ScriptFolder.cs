@@ -53,7 +53,14 @@ public static partial class ScriptFolder
             int skip = bytes.AsSpan().StartsWith(Encoding.UTF8.Preamble) ? Encoding.UTF8.Preamble.Length : 0;
             manifest = JsonSerializer.Deserialize<ScriptManifest>(bytes.AsSpan(skip), Json.Options);
         }
-        catch (Exception error) when (error is JsonException or IOException or UnauthorizedAccessException)
+        catch (JsonException error)
+        {
+            // Como config.json (Library.Read): la línea y la columna contadas desde 1, y el campo cuando lo que falla es el tipo de un valor.
+            string field = error.Path is { Length: > 1 } where ? $" ({where})" : "";
+            return Fail(ErrorCodes.ScriptWithoutManifest,
+                $"La ficha del script \"{id}\" no se puede leer: error en la línea {(error.LineNumber ?? 0) + 1}, columna {(error.BytePositionInLine ?? 0) + 1}{field}.");
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
             return Fail(ErrorCodes.ScriptWithoutManifest, $"La ficha del script \"{id}\" no se puede leer: {error.Message}");
         }
@@ -68,8 +75,26 @@ public static partial class ScriptFolder
             return Fail(ErrorCodes.ScriptNotFound, $"El entry \"{entry}\" del script \"{id}\" sale de su carpeta: va el nombre de un archivo de scripts\\{id}.");
         }
 
-        string path = Path.GetFullPath(Path.Combine(folder, entry));
-        if (!path.StartsWith(Path.GetFullPath(folder) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) || !File.Exists(path))
+        string path;
+        string inside;
+        try
+        {
+            path = Path.GetFullPath(Path.Combine(folder, entry));
+            inside = Path.GetFullPath(folder) + Path.DirectorySeparatorChar;
+        }
+        catch (Exception error) when (error is ArgumentException or IOException or NotSupportedException)
+        {
+            // Un carácter nulo o decenas de miles de caracteres son texto válido en JSON y no una ruta: es otra ficha rota (02 §10, problema 6).
+            return Fail(ErrorCodes.ScriptNotFound, $"El entry del script \"{id}\" no es una ruta de archivo: va el nombre de un archivo de scripts\\{id}.");
+        }
+
+        // La segunda defensa mira la ruta ya resuelta: un nombre de dispositivo como NUL pasa la de arriba y Windows lo lleva a \\.\NUL.
+        if (!path.StartsWith(inside, StringComparison.OrdinalIgnoreCase))
+        {
+            return Fail(ErrorCodes.ScriptNotFound, $"El entry \"{entry}\" del script \"{id}\" no queda dentro de scripts\\{id}: va el nombre de un archivo de esa carpeta.");
+        }
+
+        if (!File.Exists(path))
         {
             return Fail(ErrorCodes.ScriptNotFound, $"No existe el archivo \"{entry}\" del script \"{id}\".");
         }

@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using PampaPad.Core;
 using CoreLibrary = PampaPad.Core.Library;
 
@@ -6,6 +7,9 @@ namespace PampaPad.Tests;
 
 public sealed class ScriptFolderTests : IDisposable
 {
+    // El entry que apunta, con una ruta absoluta, a un .cmd de la carpeta temporal, que no se conoce hasta correr la prueba.
+    private const string Absolute = "(absoluta)";
+
     private readonly TempFolder _temp = new();
 
     public void Dispose() => _temp.Dispose();
@@ -50,13 +54,15 @@ public sealed class ScriptFolderTests : IDisposable
     [Fact]
     public void A_manifest_with_a_bom_and_unknown_fields_is_read_and_keeps_them()
     {
+        // contract 1 es el que conoce el programa, el del ejemplo de 02 §9 y el de bancocam: se corre.
         string folder = Script("hola", null, "hola.ps1");
-        File.WriteAllBytes(Path.Combine(folder, "script.json"), [.. Encoding.UTF8.Preamble, .. Encoding.UTF8.GetBytes("""{ "entry": "hola.ps1", "inventado": 1 }""")]);
+        File.WriteAllBytes(Path.Combine(folder, "script.json"), [.. Encoding.UTF8.Preamble, .. Encoding.UTF8.GetBytes("""{ "entry": "hola.ps1", "contract": 1, "inventado": 1 }""")]);
 
         Result<ScriptInfo> found = Read("hola");
 
         Assert.True(found.Ok);
-        Assert.True(found.Value!.Manifest.Extra.ContainsKey("inventado"));
+        Assert.Equal(1, found.Value!.Manifest.Contract);
+        Assert.True(found.Value.Manifest.Extra.ContainsKey("inventado"));
     }
 
     [Theory]
@@ -66,9 +72,17 @@ public sealed class ScriptFolderTests : IDisposable
     [InlineData("Bancocam")]
     [InlineData("banco cam")]
     [InlineData("bancocam.cmd")]
+    [InlineData("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")]   // 41: el tope es 40 (02 §4.2)
     public void An_id_that_is_not_an_id_is_not_found_and_never_leaves_the_folder(string id)
     {
-        Assert.Equal(ErrorCodes.ScriptNotFound, Read(id).Failure?.Code);
+        // Lo que encontraría el id si no se lo revisara: ".." es la biblioteca misma, "../config" una carpeta al lado de scripts/ y
+        // "Bancocam" la carpeta bancocam, porque NTFS no distingue mayúsculas.
+        Script(id, """{ "entry": "hola.cmd" }""", "hola.cmd");
+
+        Result<ScriptInfo> found = Read(id);
+
+        Assert.Equal(ErrorCodes.ScriptNotFound, found.Failure?.Code);
+        Assert.StartsWith($"\"{id}\" no es un id de script", found.Failure?.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -83,29 +97,60 @@ public sealed class ScriptFolderTests : IDisposable
     }
 
     [Theory]
-    [InlineData(null)]
-    [InlineData("{ roto")]
-    [InlineData("""{ "name": "Sin entry" }""")]
-    [InlineData("""{ "entry": "" }""")]
-    [InlineData("""{ "entry": 5 }""")]
-    public void Without_a_readable_manifest_with_an_entry_it_is_a_script_without_manifest(string? manifest)
+    [InlineData(null, "no tiene ficha: falta scripts\\bancocam\\script.json.")]
+    [InlineData("{ roto", "no se puede leer: error en la línea 1, columna 3.")]
+    [InlineData("""{ "name": "Sin entry" }""", "falta \"entry\".")]
+    [InlineData("""{ "entry": "" }""", "falta \"entry\".")]
+    [InlineData("""{ "entry": 5 }""", "($.entry).")]
+    public void Without_a_readable_manifest_with_an_entry_it_is_a_script_without_manifest(string? manifest, string says)
     {
         Script("bancocam", manifest, "bancocam.cmd");
 
-        Assert.Equal(ErrorCodes.ScriptWithoutManifest, Read("bancocam").Failure?.Code);
+        Result<ScriptInfo> found = Read("bancocam");
+
+        // Lo que no se puede leer dice dónde, como config.json: la línea y la columna contadas desde 1, o el campo del tipo equivocado.
+        Assert.Equal(ErrorCodes.ScriptWithoutManifest, found.Failure?.Code);
+        Assert.EndsWith(says, found.Failure?.Message, StringComparison.Ordinal);
     }
 
     [Theory]
-    [InlineData("..\\\\config.json")]
-    [InlineData("../config.json")]
-    [InlineData("C:\\\\Windows\\\\System32\\\\cmd.exe")]
-    [InlineData("otro.cmd")]
-    public void An_entry_outside_the_folder_or_that_does_not_exist_is_not_found(string entry)
+    [InlineData(@"..\afuera.cmd", "sale de su carpeta")]
+    [InlineData("../afuera.cmd", "sale de su carpeta")]
+    [InlineData(@"..\otro\otro.cmd", "sale de su carpeta")]
+    [InlineData(@"..\..\afuera.cmd", "sale de su carpeta")]
+    [InlineData(Absolute, "sale de su carpeta")]
+    [InlineData("NUL", "no queda dentro de scripts\\bancocam")]   // Windows lo resuelve a \\.\NUL: lo ataja la ruta ya resuelta
+    [InlineData("otro.cmd", "No existe el archivo \"otro.cmd\"")]
+    public void An_entry_outside_the_folder_or_that_does_not_exist_is_not_found(string entry, string says)
     {
-        Script("bancocam", $$"""{ "entry": "{{entry}}" }""", "bancocam.cmd");
-        File.WriteAllText(_temp.Combine("biblioteca", "config.json"), "{}");
+        // Cada salida apunta a un .cmd que existe: si no se la rechazara, el script se encontraría y se podría correr.
+        Script("bancocam", null, "bancocam.cmd");
+        Script("otro", null, "otro.cmd");
+        File.WriteAllText(_temp.Combine("biblioteca", "scripts", "afuera.cmd"), "@echo off\n");
+        File.WriteAllText(_temp.Combine("biblioteca", "afuera.cmd"), "@echo off\n");
+        File.WriteAllText(_temp.Combine("afuera.cmd"), "@echo off\n");
+        string written = entry == Absolute ? _temp.Combine("afuera.cmd") : entry;
+        File.WriteAllText(_temp.Combine("biblioteca", "scripts", "bancocam", "script.json"), JsonSerializer.Serialize(new { entry = written }));
 
-        Assert.Equal(ErrorCodes.ScriptNotFound, Read("bancocam").Failure?.Code);
+        Result<ScriptInfo> found = Read("bancocam");
+
+        Assert.Equal(ErrorCodes.ScriptNotFound, found.Failure?.Code);
+        Assert.Contains(says, found.Failure?.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void An_entry_that_is_not_a_path_is_not_found()
+    {
+        // Un carácter nulo y 40.000 caracteres son texto válido en JSON, pero no una ruta: Path.GetFullPath tira con los dos.
+        foreach (string entry in new[] { "hola\0.cmd", new string('a', 40_000) + ".cmd" })
+        {
+            Script("hola", JsonSerializer.Serialize(new { entry }), "hola.cmd");
+
+            Result<ScriptInfo> found = Read("hola");
+
+            Assert.Equal(ErrorCodes.ScriptNotFound, found.Failure?.Code);
+            Assert.Equal("El entry del script \"hola\" no es una ruta de archivo: va el nombre de un archivo de scripts\\hola.", found.Failure?.Message);
+        }
     }
 
     [Fact]
@@ -130,8 +175,11 @@ public sealed class ScriptFolderTests : IDisposable
     [Fact]
     public void Without_a_library_nothing_is_searched()
     {
-        Assert.Equal(ErrorCodes.ScriptNotFound, ScriptFolder.Read("", "bancocam").Failure?.Code);
-        Assert.Equal(ErrorCodes.ScriptNotFound, new CoreLibrary("", _temp.Combine("backup")).ReadScript("bancocam").Failure?.Code);
+        // Sin la guarda se buscaría scripts\bancocam en la carpeta desde la que se lanzó el programa (Composition, sin CONOCIMIENTO).
+        const string Message = "No hay biblioteca: el script \"bancocam\" no se puede buscar.";
+
+        Assert.Equal(Message, ScriptFolder.Read("", "bancocam").Failure?.Message);
+        Assert.Equal(Message, new CoreLibrary("", _temp.Combine("backup")).ReadScript("bancocam").Failure?.Message);
     }
 
     [Fact]
