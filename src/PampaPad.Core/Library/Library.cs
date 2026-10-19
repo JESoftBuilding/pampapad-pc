@@ -41,6 +41,12 @@ public sealed class Library(string folder, string backupFolder)
     /// <summary>Los problemas de la última carga: los de lectura o, si cargó, los del validador.</summary>
     public IReadOnlyList<Problem> Problems => _loaded.Problems;
 
+    /// <summary>
+    /// El script con ese id, de scripts/&lt;id&gt;/, con su ficha (02 §9). Lee el disco en cada llamada: un script copiado a mano se ve
+    /// sin recargar. La lista y la ruta suelta de 01 §3.1 entran con su segundo uso, la pantalla Scripts (etapa 8).
+    /// </summary>
+    public Result<ScriptInfo> ReadScript(string id) => ScriptFolder.Read(Folder, id);
+
     /// <summary>Lee config.json de nuevo. Si no se puede leer o es de un esquema más nuevo, la configuración queda vacía: no hay teclas activas.</summary>
     public IReadOnlyList<Problem> Load()
     {
