@@ -9,7 +9,8 @@ public readonly record struct CanvasRect(double Left, double Top, double Right, 
 /// Cuánto del lienzo llena una escena (03 §7, obs.canvasFilled): la unión, no el rectángulo envolvente, del área real de cada elemento
 /// visible. Área real (Verificado: obs-websocket utils/Obs_ObjectHelper.cpp:47-89): con boundsType distinto de OBS_BOUNDS_NONE, bounds;
 /// si no, el tamaño de la fuente menos el recorte, por la escala. Un elemento cuya fuente mide 0 no llena nada y se descarta (Propuesto:
-/// el espejo cerrado tiene bounds y no tiene imagen). La rotación no se cuenta (Incierto: plan de la etapa 5). Es pura.
+/// el espejo cerrado tiene bounds y no tiene imagen). Un elemento volteado cuenta igual. La rotación no se cuenta (Incierto: plan de la
+/// etapa 5). Es pura.
 /// </summary>
 public static class CanvasCoverage
 {
@@ -31,6 +32,7 @@ public static class CanvasCoverage
 
         double width;
         double height;
+        int alignment = (int)ObsMessages.Number(transform, "alignment");
         if (ObsMessages.Text(transform, "boundsType") is { } bounds && bounds != "OBS_BOUNDS_NONE")
         {
             width = ObsMessages.Number(transform, "boundsWidth");
@@ -38,8 +40,14 @@ public static class CanvasCoverage
         }
         else
         {
-            width = (sourceWidth - ObsMessages.Number(transform, "cropLeft") - ObsMessages.Number(transform, "cropRight")) * ObsMessages.Number(transform, "scaleX");
-            height = (sourceHeight - ObsMessages.Number(transform, "cropTop") - ObsMessages.Number(transform, "cropBottom")) * ObsMessages.Number(transform, "scaleY");
+            // Voltear en OBS deja la escala negativa: mide lo mismo y crece hacia el otro lado del punto de alineación (libobs, obs-scene.c,
+            // update_item_transform; revisión de E5-14). Volteado y con bounds no se miró (Incierto: plan de la etapa 5).
+            double scaleX = ObsMessages.Number(transform, "scaleX");
+            double scaleY = ObsMessages.Number(transform, "scaleY");
+            width = (sourceWidth - ObsMessages.Number(transform, "cropLeft") - ObsMessages.Number(transform, "cropRight")) * Math.Abs(scaleX);
+            height = (sourceHeight - ObsMessages.Number(transform, "cropTop") - ObsMessages.Number(transform, "cropBottom")) * Math.Abs(scaleY);
+            alignment = Mirrored(alignment, scaleX < 0, AlignLeft | AlignRight);
+            alignment = Mirrored(alignment, scaleY < 0, AlignTop | AlignBottom);
         }
 
         if (width <= 0 || height <= 0)
@@ -48,7 +56,6 @@ public static class CanvasCoverage
         }
 
         // La posición es la del punto de alineación del elemento.
-        int alignment = (int)ObsMessages.Number(transform, "alignment");
         double x = ObsMessages.Number(transform, "positionX");
         double y = ObsMessages.Number(transform, "positionY");
         double left = (alignment & AlignLeft) != 0 ? x : (alignment & AlignRight) != 0 ? x - width : x - (width / 2);
@@ -87,4 +94,7 @@ public static class CanvasCoverage
 
         return area / (canvasWidth * canvasHeight);
     }
+
+    // Volteado sobre un eje, izquierda pasa a derecha (o arriba a abajo) y al revés; centrado queda igual.
+    private static int Mirrored(int alignment, bool flipped, int axis) => flipped && (alignment & axis) != 0 ? alignment ^ axis : alignment;
 }

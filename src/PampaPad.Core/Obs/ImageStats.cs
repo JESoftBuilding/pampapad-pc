@@ -38,16 +38,19 @@ public static class ImageStats
 
         int offset = BitConverter.ToInt32(bmp[10..14]);
         int width = BitConverter.ToInt32(bmp[18..22]);
-        int height = Math.Abs(BitConverter.ToInt32(bmp[22..26]));
+        int rows = BitConverter.ToInt32(bmp[22..26]);      // negativo si las filas van de arriba abajo
         int bits = BitConverter.ToInt16(bmp[28..30]);
-        if (width <= 0 || height <= 0 || bits is not (24 or 32))
+        if (width <= 0 || rows is 0 or int.MinValue || bits is not (24 or 32))
         {
             return null;
         }
 
+        // En long: con una cabecera rota, el ancho por los bytes de un pixel no entra en un int y daría una fila negativa (revisión de E5-14).
+        int height = Math.Abs(rows);
         int pixel = bits / 8;
-        int stride = ((width * pixel) + 3) / 4 * 4;
-        if (offset < 54 || (long)offset + ((long)stride * height) > bmp.Length)
+        long rowBytes = (long)width * pixel;
+        long stride = (rowBytes + 3) / 4 * 4;
+        if (offset < 54 || stride > bmp.Length || offset + (stride * height) > bmp.Length)
         {
             return null;
         }
@@ -56,7 +59,7 @@ public static class ImageStats
         double squares = 0;
         for (int y = 0; y < height; y++)
         {
-            ReadOnlySpan<byte> row = bmp.Slice(offset + (y * stride), width * pixel);
+            ReadOnlySpan<byte> row = bmp.Slice(offset + (y * (int)stride), (int)rowBytes);
             for (int x = 0; x < width; x++)
             {
                 // En un bmp los colores van al revés: azul, verde, rojo.

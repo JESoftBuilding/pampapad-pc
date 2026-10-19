@@ -22,6 +22,12 @@ public sealed class ObsQueries(ObsClient obs, StateStore state)
             return offline;
         }
 
+        // Con el token ya cancelado no se manda: ObsConnection lo mandaría igual y contestaría que no se sabe si OBS lo hizo (hallazgo E2-3).
+        if (ct.IsCancellationRequested)
+        {
+            return new Failure(ErrorCodes.Cancelled, $"Se canceló antes de leer {what}.");
+        }
+
         ObsResponse response = await obs.RequestAsync(requestType, data, ct).ConfigureAwait(false);
         return response.Ok ? response.Data : ObsStep.Rejected(response, $"la lectura de {what}");
     }

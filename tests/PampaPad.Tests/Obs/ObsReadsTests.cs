@@ -32,20 +32,28 @@ public class ObsReadsTests
         Assert.Contains(sources.Value!, source => source.Uuid == FakeObs.CameraInputUuid && source.InputKind == "dshow_input");
         Assert.Contains(sources.Value!, source => source.Name == "Captura de pantalla" && source.Width == 1920);
         Assert.DoesNotContain(sources.Value!, source => source.Name == "Logo marca de agua");     // "Marca de agua" está oculta en Pantalla
-        Assert.Single(sources.Value!, source => source.Uuid == FakeObs.CameraInputUuid);
     }
 
     [Fact]
-    public async Task A_group_is_walked_and_a_scene_inside_itself_does_not_hang()
+    public async Task A_group_is_walked_each_scene_is_asked_once_and_a_scene_inside_itself_does_not_hang()
     {
+        // La cámara se ve por dos caminos: el grupo y Cámara chica (recorte). Pantalla también está adentro de Cámara chica: el ciclo.
         await using ObsSession session = await ObsSession.StartAsync(before: obs =>
         {
-            obs.AddGroup(obs.SceneUuid, "Grupo", "aaaaaaaa-0000-0000-0000-000000000000", [new JsonObject
-            {
-                ["sceneItemId"] = 1, ["sceneItemEnabled"] = true, ["sourceName"] = "Celu (scrcpy)", ["sourceUuid"] = FakeObs.CeluUuid,
-                ["sourceType"] = "OBS_SOURCE_TYPE_INPUT", ["inputKind"] = "window_capture", ["isGroup"] = null,
-                ["sceneItemTransform"] = new JsonObject { ["sourceWidth"] = 0.0, ["sourceHeight"] = 0.0 },
-            }]);
+            obs.AddGroup(obs.SceneUuid, "Grupo", "aaaaaaaa-0000-0000-0000-000000000000", [
+                new JsonObject
+                {
+                    ["sceneItemId"] = 1, ["sceneItemEnabled"] = true, ["sourceName"] = "Celu (scrcpy)", ["sourceUuid"] = FakeObs.CeluUuid,
+                    ["sourceType"] = "OBS_SOURCE_TYPE_INPUT", ["inputKind"] = "window_capture", ["isGroup"] = null,
+                    ["sceneItemTransform"] = new JsonObject { ["sourceWidth"] = 0.0, ["sourceHeight"] = 0.0 },
+                },
+                new JsonObject
+                {
+                    ["sceneItemId"] = 2, ["sceneItemEnabled"] = true, ["sourceName"] = "Dispositivo de captura de video", ["sourceUuid"] = FakeObs.CameraInputUuid,
+                    ["sourceType"] = "OBS_SOURCE_TYPE_INPUT", ["inputKind"] = "dshow_input", ["isGroup"] = null,
+                    ["sceneItemTransform"] = new JsonObject { ["sourceWidth"] = 1920.0, ["sourceHeight"] = 1080.0 },
+                },
+            ]);
             obs.ItemsOf("7e0319cb-a8d6-4b9b-a7ef-c68559e85d12").Add(new JsonObject
             {
                 ["sceneItemId"] = 50,
@@ -59,11 +67,32 @@ public class ObsReadsTests
             });
         });
         var queries = new ObsQueries(session.Client, session.State);
+        int scenesBefore = session.Obs.Times("GetSceneItemList");
+        int groupsBefore = session.Obs.Times("GetGroupSceneItemList");
 
         Result<IReadOnlyList<SceneSource>> sources = await queries.VisibleSourcesAsync(CancellationToken.None);
 
         Assert.True(sources.Ok, sources.Failure?.Message);
         Assert.Contains(sources.Value!, source => source.Uuid == FakeObs.CeluUuid && source.Width == 0);
+        Assert.Single(sources.Value!, source => source.Uuid == FakeObs.CameraInputUuid);
+        Assert.Equal(3, session.Obs.Times("GetSceneItemList") - scenesBefore);         // Pantalla, Cámara chica y su recorte
+        Assert.Equal(1, session.Obs.Times("GetGroupSceneItemList") - groupsBefore);
+    }
+
+    [Fact]
+    public async Task A_read_with_the_token_already_cancelled_is_not_sent()
+    {
+        await using ObsSession session = await ObsSession.StartAsync();
+        var queries = new ObsQueries(session.Client, session.State);
+        int before = session.Obs.Times("GetVideoSettings");
+
+        Result<JsonElement> cancelled = await queries.AskAsync("GetVideoSettings", null, "el lienzo", new CancellationToken(true));
+        Result<JsonElement> next = await queries.AskAsync("GetVideoSettings", null, "el lienzo", CancellationToken.None);
+
+        Assert.Equal(ErrorCodes.Cancelled, cancelled.Failure?.Code);
+        Assert.Equal("Se canceló antes de leer el lienzo.", cancelled.Failure?.Message);
+        Assert.True(next.Ok, next.Failure?.Message);
+        Assert.Equal(before + 1, session.Obs.Times("GetVideoSettings"));      // el socket va en orden: si el cancelado salía, llegaba antes
     }
 
     [Fact]
@@ -100,6 +129,18 @@ public class ObsReadsTests
     public void What_is_not_a_bmp_of_obs_gives_nothing(string? imageData)
     {
         Assert.Null(ImageStats.FromImageData(imageData));
+    }
+
+    [Fact]
+    public void A_header_with_sizes_that_do_not_fit_gives_nothing_instead_of_throwing()
+    {
+        byte[] wide = Bmp(1, 1, (_, _) => 0);
+        BitConverter.GetBytes(1_000_000_000).CopyTo(wide, 18);      // por 3 bytes no entra en un int
+        byte[] tall = Bmp(1, 1, (_, _) => 0);
+        BitConverter.GetBytes(int.MinValue).CopyTo(tall, 22);       // no tiene valor absoluto en un int
+
+        Assert.Null(ImageStats.FromBmp(wide));
+        Assert.Null(ImageStats.FromBmp(tall));
     }
 
     [Fact]
@@ -144,6 +185,15 @@ public class ObsReadsTests
         CanvasRect? rect = CanvasCoverage.RectOf(Transform($$"""{ "sourceWidth": 100, "sourceHeight": 50, "scaleX": 1, "scaleY": 1, "boundsType": "OBS_BOUNDS_NONE", "positionX": 100, "positionY": 100, "alignment": {{alignment}} }"""));
 
         Assert.Equal(new CanvasRect(left, top, left + 100, top + 50), rect);
+    }
+
+    [Fact]
+    public void A_flipped_item_counts_the_same_and_grows_to_the_other_side_of_its_alignment_point()
+    {
+        // Volteado en OBS, horizontal y vertical: la escala da -1 y, arriba a la izquierda en 1920 x 1080, el elemento termina ahí.
+        CanvasRect? rect = CanvasCoverage.RectOf(Transform("""{ "sourceWidth": 100, "sourceHeight": 50, "scaleX": -1, "scaleY": -1, "boundsType": "OBS_BOUNDS_NONE", "positionX": 1920, "positionY": 1080, "alignment": 5 }"""));
+
+        Assert.Equal(new CanvasRect(1820, 1030, 1920, 1080), rect);
     }
 
     [Fact]
