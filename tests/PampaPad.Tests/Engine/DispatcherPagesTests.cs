@@ -248,4 +248,21 @@ public class DispatcherPagesTests
         Assert.Equal("escenas", kept);
         Assert.Equal("grabacion", rig.State.Current.BasePage);
     }
+
+    [Fact]
+    public async Task With_escenas_as_the_base_record_stop_and_the_five_marks_still_answer_by_keyboard()
+    {
+        // Decisión 32 (pregunta 7 del plan de la etapa 5): "necesito que el cambio de escenas y los shortcuts para marcar de alguna manera
+        // puedan convivir". Grabar y las marcas van en la lista general; el micrófono e ir al banco siguen en sus teclas de grabacion.
+        await using var rig = new DispatcherRig(DispatcherRig.Example);
+        rig.Dispatcher.Go("escenas");
+
+        string[] general = ["Ctrl+Shift+Alt+D", "Ctrl+Shift+Alt+G", "Ctrl+Shift+Alt+F5", "Ctrl+Shift+Alt+F6", "Ctrl+Shift+Alt+F7", "Ctrl+Shift+Alt+F8", "Ctrl+Shift+Alt+F9"];
+
+        Assert.Equal("escenas", rig.State.Current.BasePage);
+        Assert.All(general, hotkey => Assert.True(rig.Windows.Press(hotkey), hotkey));
+        Assert.False(rig.Windows.Press(Mic));
+        Assert.False(rig.Windows.Press("Ctrl+Shift+Alt+B"));
+        Assert.Equal(general.Length, rig.Windows.Registered.Count);
+    }
 }

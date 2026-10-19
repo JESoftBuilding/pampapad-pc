@@ -11,13 +11,13 @@ public class ObsKeysEndToEndTests
     private static string Example => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Data", "example-library", "config.json"));
 
     [Fact]
-    public async Task The_example_loads_clean_with_the_real_catalog_and_takes_its_eight_hotkeys()
+    public async Task The_example_loads_clean_with_the_real_catalog_and_takes_its_nine_hotkeys()
     {
         await using ObsSession session = await ObsSession.StartAsync();
         await using var rig = new Rig(session, Example);
 
         Assert.Empty(session.State.Current.Problems);
-        Assert.Equal(new HotkeysState(8, 0), session.State.Current.Hotkeys);
+        Assert.Equal(new HotkeysState(9, 0), session.State.Current.Hotkeys);      // B y M en sus teclas; parar, grabar y las cinco marcas en hotkeys
         Assert.Equal("grabacion", session.State.Current.BasePage);
     }
 
@@ -98,11 +98,18 @@ public class ObsKeysEndToEndTests
         {
             Directory.CreateDirectory(_temp.Combine("biblioteca"));
             File.WriteAllText(_temp.Combine("biblioteca", "config.json"), config);
+            TestChains.CopyExampleScripts(_temp.Combine("biblioteca"));
             var library = new CoreLibrary(_temp.Combine("biblioteca"), _temp.Combine("backup"));
             library.Load();
-            var executor = new Executor(Catalog.Build(session.Client, session.State, session.Log, TimeProvider.System, TestChains.For(library, session.Log)), TimeProvider.System);
+            Dispatcher? dispatcher = null;
+            Chains chains = TestChains.For(library, session.Log, goToPage: target => dispatcher!.Go(target));
+            var executor = new Executor(
+                Catalog.Build(session.Client, session.State, session.Log, TimeProvider.System, chains),
+                Conditions.Build(chains.Windows, session.State, session.Client),
+                TimeProvider.System);
             var gestures = new Gestures(clock ?? TimeProvider.System, Gestures.HoldFrom(null), Gestures.DefaultFreshness);
-            Dispatcher = new Dispatcher(library, session.State, executor, gestures, session.Log);
+            dispatcher = new Dispatcher(library, session.State, executor, gestures, session.Log);
+            Dispatcher = dispatcher;
             Dispatcher.Finished += Finished.Enqueue;
             _hotkeys = new HotkeySource(Windows, session.State, session.Log);
             _ = _hotkeys.StartAsync(CancellationToken.None);

@@ -21,7 +21,7 @@ public class DispatcherTests
           ] } ],
           "actions": [
             { "id": "escena", "name": "Escena", "steps": [ { "type": "obs.filter", "filter": "Ruido" } ] },
-            { "id": "cuidada", "name": "Cuidada", "steps": [ { "type": "obs.marker", "marker": "short", "onlyIf": { "type": "recording.is", "state": "recording" } } ] },
+            { "id": "cuidada", "name": "Cuidada", "steps": [ { "type": "obs.marker", "marker": "short", "onlyIf": { "type": "obs.inventada", "state": "recording" } } ] },
             { "id": "marca-short", "name": "Marca: short", "steps": [ { "type": "obs.marker", "marker": "short" } ] },
             { "id": "marca-largo", "name": "Marca: largo", "steps": [ { "type": "obs.marker", "marker": "largo" } ] }
           ],
@@ -143,7 +143,7 @@ public class DispatcherTests
     }
 
     [Fact]
-    public async Task An_unknown_step_type_and_an_onlyIf_are_problems_of_the_load_and_do_not_run()
+    public async Task An_unknown_step_type_and_an_unknown_condition_are_problems_of_the_load_and_do_not_run()
     {
         await using var rig = new Rig(WithOtherSteps);
 
@@ -180,9 +180,9 @@ public class DispatcherTests
 
         Problem problem = Assert.Single(rig.State.Current.Problems);
 
-        Assert.Equal("pages[0].keys[1].hotkey", problem.Where);
+        Assert.Equal("hotkeys[3].hotkey", problem.Where);      // F6 (inicio) pasó a la lista general: parar, grabar, short, inicio (pregunta 7)
         Assert.Equal(ErrorCodes.HotkeyTaken, problem.Code);
-        Assert.Equal(new HotkeysState(7, 1), rig.State.Current.Hotkeys);
+        Assert.Equal(new HotkeysState(8, 1), rig.State.Current.Hotkeys);
     }
 
     [Fact]
@@ -225,7 +225,7 @@ public class DispatcherTests
         rig.Dispatcher.Refresh();
 
         Assert.Equal("grabacion", rig.State.Current.BasePage);
-        Assert.Equal(8, rig.Windows.Registered.Count);
+        Assert.Equal(9, rig.Windows.Registered.Count);
     }
 
     [Fact]
@@ -280,7 +280,9 @@ public class DispatcherTests
             Library = new CoreLibrary(_temp.Combine("biblioteca"), _temp.Combine("backup"));
             Library.Load();
             before?.Invoke(Windows);
-            Dispatcher = new Dispatcher(Library, State, new Executor([Marker, new FakeStep("obs.scene"), new FakeStep("obs.record"), new FakeStep("obs.mute"), new FakeStep("obs.request")], TimeProvider.System), new Gestures(TimeProvider.System, Gestures.HoldFrom(null), Gestures.DefaultFreshness), Log);
+            IStepType[] steps = [Marker, new FakeStep("obs.scene"), new FakeStep("obs.record"), new FakeStep("obs.mute"), new FakeStep("obs.request"), new FakeStep("script.run"), new FakeStep("wait.window"), new FakeStep("page.go")];
+            ConditionType[] conditions = [FakeCondition.Met(Conditions.WindowExists).Type, FakeCondition.Met(Conditions.RecordingIs).Type];
+            Dispatcher = new Dispatcher(Library, State, new Executor(steps, conditions, TimeProvider.System), new Gestures(TimeProvider.System, Gestures.HoldFrom(null), Gestures.DefaultFreshness), Log);
             Dispatcher.Finished += Finished.Enqueue;
             Hotkeys = new HotkeySource(Windows, State, Log);
             _ = Hotkeys.StartAsync(CancellationToken.None);
