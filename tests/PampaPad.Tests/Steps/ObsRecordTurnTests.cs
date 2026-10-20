@@ -7,7 +7,7 @@ namespace PampaPad.Tests;
 /// <summary>
 /// Los pedidos de obs.record se atienden en orden, uno por vez (decisión 35), con el mismo reloj falso que las pruebas de la guarda: el
 /// que llega mientras otro espera su segundo o su evento espera su turno, con el turno lee el estado de nuevo, y cancelado en la espera no
-/// manda nada.
+/// manda nada. El que tiene el turno lo suelta si su cadena se cancela antes de mandar, y no antes del aviso si ya mandó.
 /// </summary>
 public class ObsRecordTurnTests
 {
@@ -131,5 +131,90 @@ public class ObsRecordTurnTests
         Assert.Equal(0, sentEarly);
         Assert.Null((await pause).Failure);
         Assert.Null((await stop).Failure);
+    }
+
+    // Cancelado en su segundo, antes de mandar, el que tiene el turno lo suelta: si no, cada obs.record esperaría su turno hasta el tope
+    // de la acción y grabar y parar quedarían muertos hasta reiniciar (revisión de E5-23). La cancelación sale de Task.Delay y la traduce
+    // el Executor.
+    [Fact]
+    public async Task Cancelled_while_it_holds_the_turn_before_sending_it_leaves_it_for_the_next()
+    {
+        var clock = new FakeTimeProvider();
+        await using ObsSession session = await StartAsync(RecordingState.Stopped, clock);
+        await session.Obs.StartRecordingAsync();
+        await Poll.Until(() => session.State.Current.Obs.Recording == RecordingState.Recording);
+        ObsRecord record = StepOf(session, clock);
+        using var cancel = new CancellationTokenSource();
+
+        Task<StepResult> first = record.RunAsync(Do("stop"), Chain, cancel.Token);
+        await Poll.Until(() => Logged(session, ASecond) == 1);
+        await cancel.CancelAsync();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => first.WaitAsync(TimeSpan.FromSeconds(10)));
+        clock.Advance(ObsRecord.Settle);
+        StepResult next = await record.RunAsync(Do("stop"), Chain, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.Null(next.Failure);
+        Assert.Equal(0, Logged(session, ItsTurn));
+        Assert.Equal(1, session.Obs.Times("StopRecord"));
+    }
+
+    // Ya mandado, el turno no mira el token: dura hasta el aviso de OBS aunque la cadena se cancele, que el Executor corta igual con su
+    // WaitAsync. Acá OBS contesta 100 al grabar y avisa tarde que arranca. Antes el turno se soltaba al cancelar, el parar que esperaba
+    // leía detenido, no mandaba nada y la toma quedaba grabando: la fila 11 del repaso al revés (revisión de E5-23).
+    [Fact]
+    public async Task A_start_cancelled_before_obs_announces_it_keeps_the_turn_and_the_stop_after_it_goes_out()
+    {
+        var clock = new FakeTimeProvider();
+        await using ObsSession session = await ObsSession.StartAsync(RecordingState.Stopped, obs =>
+        {
+            obs.Clock = clock;
+            obs.IgnoreNextStart = true;
+        }, clock);
+        ObsRecord record = StepOf(session, clock);
+        using var cancel = new CancellationTokenSource();
+
+        Task<StepResult> start = record.RunAsync(Do("start"), Chain, cancel.Token);
+        await Poll.Until(() => session.Obs.Times("StartRecord") == 1);
+        Task<StepResult> stop = record.RunAsync(Do("stop"), Chain, CancellationToken.None);
+        await Poll.Until(() => Logged(session, ItsTurn) == 1);
+        await cancel.CancelAsync();
+        bool early = await Task.WhenAny(stop, Task.Delay(TimeSpan.FromMilliseconds(200))) == stop;
+        await session.Obs.StartRecordingAsync();                          // OBS avisa tarde que arranca
+        await Poll.Until(() => Logged(session, ASecond) == 1);            // el parar, con su segundo desde el aviso
+        clock.Advance(ObsRecord.Settle);
+        StepResult stopped = await stop.WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.False(early);
+        Assert.Null((await start).Failure);
+        Assert.Null(stopped.Failure);
+        Assert.Equal(1, session.Obs.Times("StopRecord"));
+        Assert.NotEqual(RecordingState.Recording, session.State.Current.Obs.Recording);
+    }
+
+    // Lo mismo con el pedido en viaje: OBS no contesta el grabar y arranca igual. El turno espera la respuesta hasta el tope de un pedido
+    // y recién después el parar lee el estado. Antes, cancelar devolvía cancelled enseguida y el parar leía detenido (revisión de E5-23).
+    [Fact]
+    public async Task A_start_cancelled_while_obs_has_not_answered_keeps_the_turn_until_the_limit_of_a_request()
+    {
+        var clock = new FakeTimeProvider();
+        await using ObsSession session = await StartAsync(RecordingState.Stopped, clock);
+        session.Obs.DoNotAnswer("StartRecord");
+        ObsRecord record = StepOf(session, clock);
+        using var cancel = new CancellationTokenSource();
+
+        Task<StepResult> start = record.RunAsync(Do("start"), Chain, cancel.Token);
+        await Poll.Until(() => session.Obs.Times("StartRecord") == 1);
+        Task<StepResult> stop = record.RunAsync(Do("stop"), Chain, CancellationToken.None);
+        await Poll.Until(() => Logged(session, ItsTurn) == 1);
+        await cancel.CancelAsync();
+        bool early = await Task.WhenAny(stop, Task.Delay(TimeSpan.FromMilliseconds(200))) == stop;
+        await session.Obs.StartRecordingAsync();                          // OBS arrancó, pero la respuesta no llega
+        await Poll.Until(() => session.State.Current.Obs.Recording == RecordingState.Recording);
+        await Eventually.AdvancingAsync(clock, TimeSpan.FromMilliseconds(250), () => stop.IsCompleted, "el parar termina");
+
+        Assert.False(early);
+        Assert.Equal(ErrorCodes.ObsTimeout, (await start).Failure?.Code);
+        Assert.Null((await stop).Failure);
+        Assert.Equal(1, session.Obs.Times("StopRecord"));
     }
 }

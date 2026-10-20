@@ -81,4 +81,13 @@ public class WaitTimeTests
     {
         Assert.Empty(new WaitTime(TimeProvider.System).Validate(Parse("""{ "type": "wait.time", "durationMs": 59999 }""")));
     }
+
+    [Fact]
+    public void The_problem_at_the_limit_says_up_to_where_it_goes_and_why()
+    {
+        // Es lo que se lee en el editor con la tecla rota, y el número es el de la decisión 35 (revisión de E5-23).
+        Problem problem = Assert.Single(new WaitTime(TimeProvider.System).Validate(Parse("""{ "type": "wait.time", "durationMs": 60000 }""")));
+
+        Assert.Equal("durationMs va en milisegundos, de 1 a 59999: con 60000 vence antes el tope de la acción.", problem.Message);
+    }
 }

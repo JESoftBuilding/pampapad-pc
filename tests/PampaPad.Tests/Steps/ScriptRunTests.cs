@@ -171,4 +171,16 @@ public class ScriptRunTests
 
         Assert.Empty(new ScriptRun(rig.Runner, rig.Library).Validate(Parse($$"""{ "type": "script.run", "script": "hola", "timeoutSec": {{timeoutSec}} }""")));
     }
+
+    [Fact]
+    public async Task The_problem_at_the_limit_says_up_to_where_it_goes_and_why()
+    {
+        // Es lo que se lee en el editor con la tecla rota, y el número es el de la decisión 35 (revisión de E5-23).
+        await using var rig = new ScriptRig();
+        rig.AddCmd("hola", "@echo off\n");
+
+        Problem problem = Assert.Single(new ScriptRun(rig.Runner, rig.Library).Validate(Parse("""{ "type": "script.run", "script": "hola", "timeoutSec": 60 }""")));
+
+        Assert.Equal("timeoutSec va en segundos, de 1 a 59: con 60 vence antes el tope de la acción.", problem.Message);
+    }
 }

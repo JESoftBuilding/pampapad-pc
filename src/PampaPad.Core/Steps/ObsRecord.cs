@@ -135,20 +135,16 @@ public sealed class ObsRecord(ObsClient obs, StateStore state, Log log, TimeProv
             return new StepResult(cancelled);
         }
 
+        // Ya mandado, el paso no mira el token: el turno dura hasta que OBS contesta y avisa el cambio, a lo sumo el tope de un pedido para
+        // cada cosa (Propuesto en E5-23, sin el sí de Emmanuel: 03 §3). La respuesta llega antes que la acción (03 §5; el OBS falso la
+        // manda siempre antes que el evento, §9) y el que sigue leería el estado de antes. Una cadena cancelada no espera esto: el Executor
+        // la corta con su WaitAsync y el paso termina solo.
         RecordingState sent = known;
-        ObsResponse response = await obs.RequestAsync(RecordRules.RequestType(command), null, ct).ConfigureAwait(false);
+        ObsResponse response = await obs.RequestAsync(RecordRules.RequestType(command), null, CancellationToken.None).ConfigureAwait(false);
         if (response.Ok)
         {
-            if (command == RecordCommand.Start)
-            {
-                return await ConfirmStartAsync(ct).ConfigureAwait(false);
-            }
-
-            // El turno dura hasta que OBS avisa el cambio (decisión 35): la respuesta llega antes que la acción (03 §5; el OBS falso la
-            // manda siempre antes que el evento, §9) y el que sigue leería el estado de antes. Grabar ya lo espera al confirmar. Hasta el
-            // tope de un pedido y sin el token: OBS ya aceptó, y lo que devuelve el paso no depende del aviso.
-            await WaitForAsync(now => now != sent, CancellationToken.None).ConfigureAwait(false);
-            return new StepResult(null);
+            Result<RecordingState> changed = await WaitForAsync(now => now != sent, CancellationToken.None).ConfigureAwait(false);
+            return command == RecordCommand.Start ? Confirmed(changed) : new StepResult(null);
         }
 
         if (response.Code == RecordRules.RaceCode(command))
@@ -190,15 +186,12 @@ public sealed class ObsRecord(ObsClient obs, StateStore state, Log log, TimeProv
     };
 
     // Un StartRecord que OBS contesta con 100 y no arranca no deja evento (E4-11): sin ..._STARTING en el tope de un pedido, falla. Así la
-    // cadena no sigue con una marca que no va a entrar.
-    private async Task<StepResult> ConfirmStartAsync(CancellationToken ct)
-    {
-        Result<RecordingState> started = await WaitForAsync(now => now != RecordingState.Stopped, ct).ConfigureAwait(false);
-        return started.Ok || started.Failure.Code != ErrorCodes.ObsTimeout
+    // cadena no sigue con una marca que no va a entrar. Parar, pausar y seguir no dependen del aviso: OBS ya aceptó.
+    private static StepResult Confirmed(Result<RecordingState> started) =>
+        started.Ok || started.Failure.Code != ErrorCodes.ObsTimeout
             ? new StepResult(started.Ok ? null : started.Failure)
             : new StepResult(new Failure(ErrorCodes.ObsTimeout,
                 $"OBS aceptó el pedido de grabar pero no avisó que arrancaba en {ObsClient.RequestTimeout.TotalSeconds:0} s: puede que no esté grabando."));
-    }
 
     // Espera a que la grabación salga de starting o stopping, hasta el tope de un pedido (03 §3).
     private Task<Result<RecordingState>> SettledAsync(CancellationToken ct) => WaitForAsync(now => !InTransition(now), ct);
