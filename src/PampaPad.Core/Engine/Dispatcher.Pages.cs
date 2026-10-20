@@ -132,6 +132,7 @@ public sealed partial class Dispatcher
             .Where(page => page.Item.Show != false && page.Item.Id is not null && IsKeys(page.Item))
             .Select(page => page.Item.Id!)];
 
-    // Una página de teclas: type ausente o keys (02 §4.2). Las únicas que pueden ser la base.
-    private static bool IsKeys(Page page) => page.Type is null or KeysPageType;
+    // Una página de teclas: type ausente o keys (02 §4.2). Las únicas que pueden ser la base. PageGo.Check marca, al cargar, un target que no
+    // lo es (Decidido 35).
+    internal static bool IsKeys(Page page) => page.Type is null or KeysPageType;
 }
