@@ -26,6 +26,10 @@ internal sealed class EditorWindow : Form
     // El fondo de la página (ui/src/index.css, --color-background): igual acá, para que no haya destello al mostrarla (01 §9).
     private static readonly Color Background = Color.FromArgb(0x0E, 0x0D, 0x17);
 
+    // Los lentes, como el ejecutable (ApplicationIcon): un Form no toma solo el ícono del .exe y sin esto lleva el de WinForms. Va como
+    // recurso, con sus siete tamaños; Icon.ExtractAssociatedIcon da sólo el de 32 px. Uno para todas las ventanas: el Form no lo libera.
+    private static readonly Icon? WindowIcon = LoadIcon("PampaPad.App.Resources.pampapad.ico");
+
     private readonly Bridge _bridge;
     private readonly Log _log;
     private readonly SynchronizationContext _ui;
@@ -48,6 +52,15 @@ internal sealed class EditorWindow : Form
         _fromDevServer = devServer is not null;
         _origin = devServer ?? new Uri($"https://{Host}/");
         Text = AppIdentity.Title;
+        if (WindowIcon is not null)
+        {
+            Icon = WindowIcon;
+        }
+        else
+        {
+            _log.Warning("window", "Falta el recurso del ícono: la ventana lleva el de WinForms");
+        }
+
         BackColor = Background;
         ClientSize = new Size(1180, 760);
         MinimumSize = new Size(760, 480);
@@ -207,6 +220,13 @@ internal sealed class EditorWindow : Form
             // La página no se recupera sola: se cierra, y la próxima apertura arma un entorno nuevo (01 §9).
             BeginInvoke(new MethodInvoker(Close));
         }
+    }
+
+    // El nombre es el espacio de nombres del proyecto más la ruta, como el de failed.wav en Tray. Icon copia el contenido: el flujo se cierra.
+    private static Icon? LoadIcon(string resource)
+    {
+        using Stream? stream = typeof(EditorWindow).Assembly.GetManifestResourceStream(resource);
+        return stream is null ? null : new Icon(stream);
     }
 
     private bool IsOwnOrigin(string address) =>

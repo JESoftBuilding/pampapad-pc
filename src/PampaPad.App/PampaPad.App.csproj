@@ -31,6 +31,8 @@
     <!-- La página armada (pnpm -C ui build) va a ui\ al lado del ejecutable: es la carpeta que mapea el host virtual (01 §5). Sin armar, no copia nada. -->
     <Content Include="..\..\ui\dist\**" Link="ui\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <EmbeddedResource Include="Resources\failed.wav" />
+    <!-- El mismo de ApplicationIcon, para la ventana de edición: un Form no toma solo el ícono del ejecutable (EditorWindow.cs). -->
+    <EmbeddedResource Include="Resources\pampapad.ico" />
   </ItemGroup>
 
 </Project>
