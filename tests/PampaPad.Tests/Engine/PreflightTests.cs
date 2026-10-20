@@ -40,7 +40,7 @@ public sealed class PreflightTests : IDisposable
 
         Assert.True(report.Defaults);
         Assert.Equal(
-            new[] { "obs.captureHasMonitor", "obs.sourceHasImage", "obs.cameraAudioOff", "obs.cameraNotCovered", "obs.recordFormatIs", "obs.micNotMuted", "obs.canvasFilled" },
+            new[] { "obs.sourceHasImage", "obs.cameraAudioOff", "obs.cameraNotCovered", "obs.recordFormatIs", "obs.micNotMuted", "obs.canvasFilled", "obs.captureHasMonitor" },
             report.Checks.Select(check => check.Type));
         Assert.All(report.Checks, check => Assert.Equal(ConditionOutcome.Pass, check.Outcome));
         Assert.Equal(7, session.Log.Recent().Count(entry => entry.Module == "preflight" && entry.RunId == report.RunId && entry.Message.Contains(": bien.", StringComparison.Ordinal)));
@@ -60,10 +60,41 @@ public sealed class PreflightTests : IDisposable
 
         PreflightReport report = await preflight.RunAsync(Trigger.Tray, CancellationToken.None);
 
-        Assert.Equal(new[] { "obs.captureHasMonitor", "obs.cameraNotCovered", "obs.canvasFilled" }, report.Failures.Select(check => check.Type));
-        Assert.Equal("La escena no llena el lienzo", report.Failures[2].Message);
+        Assert.Equal(new[] { "obs.cameraNotCovered", "obs.canvasFilled", "obs.captureHasMonitor" }, report.Failures.Select(check => check.Type));
+        Assert.Equal("La escena no llena el lienzo", report.Failures[1].Message);
         Assert.Contains(session.Log.Recent(), entry => entry.Level == LogLevel.Warning
             && entry.Message == "obs.canvasFilled: falla. La escena no llena el lienzo: \"Vertical SolidWorks\" llena el 31,8 % del lienzo de 1920 x 1080; se pide 90 %.");
+    }
+
+    // Repaso de E5-22 (2026-10-19): pedir la lista de monitores reinicia la captura y la lectura siguiente la da en 0 x 0. Con la del monitor
+    // primera, obs.sourceHasImage daba una falla falsa en "Vertical SolidWorks" y obs.canvasFilled bajaba a 31,6 % (decisión 34).
+    [Fact]
+    public async Task The_monitor_is_asked_last_and_does_not_leave_a_false_failure_in_the_others()
+    {
+        await using ObsSession session = await ObsSession.StartAsync();
+        await ConditionProbe.OnAirAsync(session, "Vertical SolidWorks", FakeObs.VerticalSolidWorksUuid);
+        Preflight preflight = Build(session.Client, session.State, session.Log);
+
+        PreflightReport report = await preflight.RunAsync(Trigger.Tray, CancellationToken.None);
+
+        CheckResult canvas = Assert.Single(report.Failures);
+        Assert.Equal("\"Vertical SolidWorks\" llena el 31,8 % del lienzo de 1920 x 1080; se pide 90 %.", canvas.Detail);
+        Assert.Equal(1, session.Obs.Times("GetInputPropertiesListPropertyItems"));
+    }
+
+    // Fila 9 del repaso: el chequeo grabando dejó un cuadro negro de la captura en la toma. Con una toma en curso no se pregunta.
+    [Fact]
+    public async Task With_a_take_in_progress_the_check_does_not_ask_for_the_monitor()
+    {
+        await using ObsSession session = await ObsSession.StartAsync(RecordingState.Recording);
+        await ConditionProbe.OnAirAsync(session, "Vertical SolidWorks", FakeObs.VerticalSolidWorksUuid);
+        Preflight preflight = Build(session.Client, session.State, session.Log);
+
+        PreflightReport report = await preflight.RunAsync(Trigger.Tray, CancellationToken.None);
+
+        Assert.Equal("obs.canvasFilled", Assert.Single(report.Failures).Type);
+        Assert.StartsWith("No aplica: con una toma en curso", report.Checks.Single(check => check.Type == "obs.captureHasMonitor").Detail, StringComparison.Ordinal);
+        Assert.Equal(0, session.Obs.Times("GetInputPropertiesListPropertyItems"));
     }
 
     [Fact]

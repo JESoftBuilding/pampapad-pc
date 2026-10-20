@@ -110,22 +110,6 @@ public sealed partial class FakeObs
         return items;
     }
 
-    // Una copia de los elementos, con el espejo del celular medido como esté.
-    private JsonArray Answered(JsonArray items)
-    {
-        var copy = items.DeepClone().AsArray();
-        foreach (JsonNode? item in copy)
-        {
-            if ((string?)item?["sourceUuid"] == CeluUuid && MirrorOpen)
-            {
-                item!["sceneItemTransform"]!["sourceWidth"] = 1823.0;
-                item["sceneItemTransform"]!["sourceHeight"] = 850.0;
-            }
-        }
-
-        return copy;
-    }
-
     private Reply SceneItemList(JsonObject? data)
     {
         var uuid = (string?)data?["sceneUuid"];
@@ -194,11 +178,12 @@ public sealed partial class FakeObs
 
     private Reply PropertyItems(JsonObject? data)
     {
-        if (FindInput(data) is not { Kind: "monitor_capture" } || (string?)data?["propertyName"] != "monitor_id")
+        if (FindInput(data) is not { Kind: "monitor_capture" } capture || (string?)data?["propertyName"] != "monitor_id")
         {
             return Reply.Fail(600, "No source was found.");
         }
 
+        _restarting.Add(capture.Uuid);           // como OBS, la reinicia: la lectura siguiente la da en 0 x 0 (FakeObs.Capture.cs)
         var items = new JsonArray();
         foreach (string monitor in Monitors)
         {

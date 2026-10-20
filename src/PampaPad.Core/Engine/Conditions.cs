@@ -26,7 +26,7 @@ public static partial class Conditions
             Profile(queries),
             RecordFormat(queries),
             Image(queries),
-            Monitor(queries),
+            Monitor(queries, state),
             CameraAudio(queries),
             Covered(queries, state),
             Mic(queries, state),

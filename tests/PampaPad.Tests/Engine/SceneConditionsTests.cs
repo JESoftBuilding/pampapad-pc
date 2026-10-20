@@ -70,6 +70,36 @@ public class SceneConditionsTests
         Assert.Equal("\"Captura de pantalla\" apunta a un monitor que OBS no lista: ¿está apagado o en otra PC?", gone.Detail);
     }
 
+    // Medido en el repaso de E5-22 (2026-10-19): después de pedir la lista de monitor_id, la lectura siguiente da la captura en 0 x 0 (a los
+    // 3 a 6 ms) y vuelve a 1920 x 1080 antes de 150 ms. El OBS falso lo imita en una sola lectura.
+    [Fact]
+    public async Task Asking_for_the_monitors_leaves_the_capture_without_image_for_the_next_read()
+    {
+        await using ObsSession session = await ObsSession.StartAsync();
+
+        await ConditionProbe.EvaluateAsync(session, """{ "type": "obs.captureHasMonitor" }""");
+        ConditionResult next = await ConditionProbe.EvaluateAsync(session, """{ "type": "obs.sourceHasImage" }""");
+        ConditionResult after = await ConditionProbe.EvaluateAsync(session, """{ "type": "obs.sourceHasImage" }""");
+
+        Assert.Equal("\"Captura de pantalla\" mide 0 x 0: no tiene imagen.", next.Detail);
+        Assert.Equal(ConditionOutcome.Pass, after.Outcome);
+    }
+
+    // Ese reinicio, grabando, deja un cuadro negro en la toma (repaso de E5-22): con una toma en curso no se pregunta (decisión 34).
+    [Theory]
+    [InlineData(RecordingState.Recording)]
+    [InlineData(RecordingState.Paused)]
+    public async Task With_a_take_in_progress_the_monitor_is_not_asked(RecordingState recording)
+    {
+        await using ObsSession session = await ObsSession.StartAsync(recording, obs => obs.Monitors.Clear());
+
+        ConditionResult result = await ConditionProbe.EvaluateAsync(session, """{ "type": "obs.captureHasMonitor" }""");
+
+        Assert.Equal(ConditionOutcome.Pass, result.Outcome);
+        Assert.Equal("No aplica: con una toma en curso no se pregunta por el monitor, que haría parpadear la captura.", result.Detail);
+        Assert.Equal(0, session.Obs.Times("GetInputPropertiesListPropertyItems"));
+    }
+
     [Fact]
     public async Task The_camera_with_its_cover_has_no_deviation()
     {

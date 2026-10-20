@@ -50,14 +50,20 @@ public static partial class Conditions
 
     /// <summary>
     /// La captura de pantalla apunta a un monitor que OBS todavía lista (03 §7): monitor_id de GetInputSettings contra los itemValue de
-    /// GetInputPropertiesListPropertyItems. Sin probar con un monitor ausente: va como falla común.
+    /// GetInputPropertiesListPropertyItems. Sin probar con un monitor ausente: va como falla común. Ese pedido reinicia la captura un
+    /// instante (repaso de E5-22): con una toma en curso no se manda y no aplica, porque deja un cuadro negro en la toma (decisión 34).
     /// </summary>
-    public static ConditionType Monitor(ObsQueries obs) => new(
+    public static ConditionType Monitor(ObsQueries obs, StateStore state) => new(
         CaptureHasMonitor,
         "La captura tiene monitor",
         [Source],
         async (p, ct) =>
         {
+            if (state.Current.Obs.Link == ObsLinkState.Ready && state.Current.Obs.TakeInProgress)
+            {
+                return Verdict.NotApplicable("con una toma en curso no se pregunta por el monitor, que haría parpadear la captura.");
+            }
+
             Result<IReadOnlyList<SceneSource>> captures = await SourcesAsync(obs, p, ["monitor_capture"], ct).ConfigureAwait(false);
             if (!captures.Ok)
             {

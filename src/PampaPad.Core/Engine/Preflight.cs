@@ -17,8 +17,9 @@ public sealed record PreflightReport(Guid RunId, DateTimeOffset At, Trigger Requ
 /// <summary>
 /// El chequeo previo (02 §4.9; 03 §7): evalúa todas las comprobaciones, no corta en la primera, y junta lo que no pasa. Sin la lista
 /// preflight en config.json corren las siete de 03 §7 sobre la escena al aire con mensajes del programa, sin escribirlas en el archivo; si
-/// la lista está, corre exactamente esa (pregunta abierta 14, escrito (a)). Sólo lee. Deja una línea por comprobación en el registro y el
-/// último resultado en el estado. Un chequeo nunca frena GRABAR: nadie lo consulta antes de grabar (Propuesto).
+/// la lista está, corre exactamente esa y en su orden (pregunta abierta 14, escrito (a)): ahí una obs.captureHasMonitor antes de otra que
+/// mida la imagen la puede engañar (decisión 34, Incierto). Sólo lee. Deja una línea por comprobación en el registro y el último
+/// resultado en el estado. Un chequeo nunca frena GRABAR: nadie lo consulta antes de grabar (Propuesto).
 /// </summary>
 public sealed class Preflight(IReadOnlyList<ConditionType> conditions, Library library, StateStore state, Log log, TimeProvider clock)
 {
@@ -27,16 +28,19 @@ public sealed class Preflight(IReadOnlyList<ConditionType> conditions, Library l
 
     private const string Module = "preflight";
 
-    /// <summary>Las siete de 03 §7, en el orden de su tabla, con los mensajes del programa.</summary>
+    /// <summary>
+    /// Las siete de 03 §7, con los mensajes del programa, en el orden de su tabla salvo obs.captureHasMonitor, que va última: su pedido
+    /// reinicia la captura y la lectura siguiente la da en 0 x 0, lo que engañaba a obs.sourceHasImage y a obs.canvasFilled (decisión 34).
+    /// </summary>
     public static IReadOnlyList<PreflightCheck> Defaults { get; } =
     [
-        Default("""{ "type": "obs.captureHasMonitor" }""", "La captura de pantalla no tiene monitor"),
         Default("""{ "type": "obs.sourceHasImage" }""", "Una fuente de la escena no tiene imagen"),
         Default("""{ "type": "obs.cameraAudioOff" }""", "La cámara manda su propio audio"),
         Default("""{ "type": "obs.cameraNotCovered" }""", "La cámara está tapada o en negro"),
         Default("""{ "type": "obs.recordFormatIs", "format": "hybrid_mp4" }""", "El formato de grabación no admite marcas"),
         Default("""{ "type": "obs.micNotMuted" }""", "El micrófono está silenciado"),
         Default("""{ "type": "obs.canvasFilled" }""", "La escena no llena el lienzo"),
+        Default("""{ "type": "obs.captureHasMonitor" }""", "La captura de pantalla no tiene monitor"),
     ];
 
     public async Task<PreflightReport> RunAsync(Trigger requestedBy, CancellationToken ct)
