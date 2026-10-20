@@ -81,6 +81,8 @@ internal sealed partial class Composition : IAsyncDisposable
         var composition = new Composition(log, state, obs, updater);
         composition.Library = library;
         composition._dispatcher = dispatcher;
+        composition.StepTypes = catalog;
+        composition.ConditionTypes = conditions;
 
         // Va acá y no en su lugar exacto de 01 §4.3, entre las fuentes de entrada y el Updater: sus dos canales necesitan la bandeja, que cuelga de composition.
         var notifier = new Notifier(

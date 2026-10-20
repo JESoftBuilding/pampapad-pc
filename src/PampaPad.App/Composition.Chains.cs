@@ -5,6 +5,12 @@ namespace PampaPad.App;
 // Las cadenas de la etapa 5, aparte por el tope de 300 líneas (01 §1).
 internal sealed partial class Composition
 {
+    /// <summary>Los tipos de paso que corre el Executor. La prueba de humo los busca en la foto que manda el puente (SnapshotCheck).</summary>
+    public IReadOnlyList<IStepType> StepTypes { get; private set; } = [];
+
+    /// <summary>Los tipos de condición que corre el Executor, para el mismo control de la prueba de humo.</summary>
+    public IReadOnlyList<ConditionType> ConditionTypes { get; private set; } = [];
+
     /// <summary>
     /// ScriptRunner, condiciones, Catalog y Executor, en el orden de 01 §4.3. page.go cambia la página con el Dispatcher, que se arma
     /// después: lo recibe como función. A los scripts se les pasa la raíz de Conocimiento aunque el entorno del programa no la tenga

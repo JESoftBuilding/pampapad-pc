@@ -4,8 +4,8 @@ namespace PampaPad.App;
 
 /// <summary>
 /// --smoke-test: arma todo sin bandeja con la biblioteca de ejemplo y comprueba, en este orden, que cargue limpia (si no, sale con 2), que
-/// cada nombre de pedido tenga manejador (3; 01 §3.2), que la página esté al lado del ejecutable (4) y que el registro llegue al disco (1).
-/// Si todo está, sale con 0 (05 §9).
+/// cada nombre de pedido tenga manejador (3; 01 §3.2), que app.snapshot traiga los tipos de paso y de condición que corre el programa (5),
+/// que la página esté al lado del ejecutable (4) y que el registro llegue al disco (1). Si todo está, sale con 0 (05 §9).
 /// </summary>
 internal static class SmokeTest
 {
@@ -22,6 +22,14 @@ internal static class SmokeTest
             // la biblioteca de ejemplo cargaría limpia y ninguna de sus acciones correría.
             IReadOnlyList<Problem> problems = composition.Snapshot.Problems;
             IReadOnlyCollection<string> registered = composition.Bridge.Registered;
+
+            // La foto por el puente del programa real, como la pide la ventana: Contract.cs arma la suya sin pasar por Composition, y un
+            // ComposeBridge con [] en lugar de las condiciones compilaba con la suite entera en verde (revisión de E5-23a).
+            string? snapshot = SnapshotCheck.ProblemAsync(
+                composition.Bridge,
+                composition.StepTypes.Select(type => type.Id),
+                composition.ConditionTypes.Select(type => type.Id),
+                CancellationToken.None).GetAwaiter().GetResult();
             composition.Log.Info("smoke", $"Biblioteca de ejemplo: {exampleFolder}. Estado: {library.Status}; problemas: {problems.Count}; pedidos: {registered.Count}");
             composition.DisposeAsync().AsTask().GetAwaiter().GetResult();
             if (library.Status != LibraryStatus.Loaded || library.Problems.Count > 0 || problems.Count > 0)
@@ -40,6 +48,12 @@ internal static class SmokeTest
             {
                 Console.Error.WriteLine("Pedidos sin manejador: " + string.Join(", ", missing));
                 return 3;
+            }
+
+            if (snapshot is not null)
+            {
+                Console.Error.WriteLine(snapshot);
+                return 5;
             }
 
             string page = Path.Combine(AppContext.BaseDirectory, "ui", "index.html");
