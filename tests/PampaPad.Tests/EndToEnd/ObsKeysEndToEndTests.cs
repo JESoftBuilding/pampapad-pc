@@ -101,7 +101,8 @@ public class ObsKeysEndToEndTests
         ActionResult result = Assert.Single(rig.Finished);
         Assert.True(result.Ok, result.Failure?.Message);
         Assert.Equal(new[] { StepOutcome.Ok, StepOutcome.Ok }, result.Steps.Select(step => step.Outcome));
-        Assert.Equal("ed2f1482-848c-4500-840d-807aee465d1f", session.State.Current.Obs.SceneUuid);
+        // La escena del estado la pone el aviso de OBS, que puede llegar después de que la acción terminó.
+        await Poll.Until(() => session.State.Current.Obs.SceneUuid == "ed2f1482-848c-4500-840d-807aee465d1f");
         Assert.Equal("grabacion", session.State.Current.BasePage);
         Assert.Equal(new HotkeysState(9, 0), session.State.Current.Hotkeys);
     }
@@ -118,7 +119,8 @@ public class ObsKeysEndToEndTests
 
         Assert.True(result.Ok, result.Failure?.Message);
         Assert.Equal(new[] { StepOutcome.Omitted, StepOutcome.Ok }, result.Steps.Select(step => step.Outcome));
-        Assert.Equal("ed2f1482-848c-4500-840d-807aee465d1f", session.State.Current.Obs.SceneUuid);
+        // La escena del estado la pone el aviso de OBS, que puede llegar después de que la acción terminó.
+        await Poll.Until(() => session.State.Current.Obs.SceneUuid == "ed2f1482-848c-4500-840d-807aee465d1f");
         Assert.Equal("grabacion", session.State.Current.BasePage);
     }
 
