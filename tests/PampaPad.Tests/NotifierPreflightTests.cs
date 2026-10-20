@@ -80,15 +80,25 @@ public class NotifierPreflightTests
     }
 
     [Fact]
-    public void Failures_win_over_what_could_not_be_checked()
+    public void Failures_win_over_what_could_not_be_checked_and_the_title_adds_how_many_were_not()
     {
         // Con fallas y algo sin comprobar a la vez, como con un OBS que se cae a mitad del chequeo, manda la primera falla (01 §8), en
-        // singular y sin "y 0 más".
+        // singular y sin "y 0 más"; el título suma cuántas quedaron sin comprobar, que antes no se veían (decisión 35).
         Notice notice = Notifier.Summarize(Report(NoObs, Canvas));
 
-        Assert.Equal("Chequeo previo: 1 falla", notice.Title);
+        Assert.Equal("Chequeo previo: 1 falla y 1 sin comprobar", notice.Title);
         Assert.Equal("La escena no llena el lienzo. \"Vertical SolidWorks\" llena el 31,8 % del lienzo de 1920 x 1080; se pide 90 %.", notice.Text);
         Assert.True(notice.Warning);
+    }
+
+    [Fact]
+    public void Several_failures_and_several_unchecked_count_both_and_the_text_counts_only_the_other_failures()
+    {
+        // "y 1 más en el registro" son las otras fallas: lo sin comprobar ya va contado en el título (decisión 35).
+        Notice notice = Notifier.Summarize(Report(NoObs, Canvas, NoObs, Pass("obs.captureHasMonitor"), Camera, NoObs));
+
+        Assert.Equal("Chequeo previo: 2 fallas y 3 sin comprobar", notice.Title);
+        Assert.EndsWith("se pide 90 %. (y 1 más en el registro)", notice.Text, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -94,7 +94,10 @@ public sealed class Notifier(StateStore state, Library library, Log log, Action<
         log.Write(LogLevel.Info, "notifier", $"Aviso {PreflightResult}: {notice.Title}. {notice.Text} Cartel: {(balloon ? "sí" : "no")}.", null, report.RequestedBy, report.RunId);
     }
 
-    /// <summary>El resumen del globo: cuántas fallas y la primera; si no hay, lo que no se pudo comprobar; si no, que dio todo bien.</summary>
+    /// <summary>
+    /// El resumen del globo: cuántas fallas y la primera, y cuántas quedaron sin comprobar si hubo alguna (decisión 35); si no hay
+    /// fallas, lo que no se pudo comprobar; si no, que dio todo bien.
+    /// </summary>
     public static Notice Summarize(PreflightReport report)
     {
         ArgumentNullException.ThrowIfNull(report);
@@ -102,8 +105,13 @@ public sealed class Notifier(StateStore state, Library library, Log log, Action<
         IReadOnlyList<CheckResult> skipped = report.Unchecked;
         if (failures.Count > 0)
         {
+            // "y N más" son las otras fallas: lo sin comprobar va contado en el título.
+            string notChecked = skipped.Count > 0 ? $" y {skipped.Count} sin comprobar" : "";
             string more = failures.Count > 1 ? $" (y {failures.Count - 1} más en el registro)" : "";
-            return new Notice(PreflightResult, $"Chequeo previo: {failures.Count} {(failures.Count == 1 ? "falla" : "fallas")}", $"{failures[0].Message}. {failures[0].Detail}{more}");
+            return new Notice(
+                PreflightResult,
+                $"Chequeo previo: {failures.Count} {(failures.Count == 1 ? "falla" : "fallas")}{notChecked}",
+                $"{failures[0].Message}. {failures[0].Detail}{more}");
         }
 
         if (skipped.Count > 0)
