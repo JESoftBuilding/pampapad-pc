@@ -49,6 +49,27 @@ public class Architecture
         Assert.Empty(tooLong);
     }
 
+    [Fact]
+    public void Page_files_stay_within_300_lines()
+    {
+        var root = RepoRoot();
+        var ui = Path.Combine(root, "ui");
+        Assert.True(Directory.Exists(Path.Combine(ui, "src")), "Falta ui/src");
+
+        string[] extensions = [".ts", ".tsx", ".mjs"];
+        var tooLong = new[] { "src", "tests", "scripts" }
+            .Select(folder => Path.Combine(ui, folder))
+            .Where(Directory.Exists)
+            .SelectMany(folder => Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories))
+            .Where(file => extensions.Contains(Path.GetExtension(file), StringComparer.Ordinal))
+            .Select(file => (Name: Path.GetRelativePath(root, file), Lines: File.ReadLines(file).Count()))
+            .Where(entry => entry.Lines > MaxLines)
+            .Select(entry => $"{entry.Name}: {entry.Lines}")
+            .ToArray();
+
+        Assert.Empty(tooLong);
+    }
+
     private static bool IsForbiddenInCore(string name) =>
         ForbiddenInCore.Any(forbidden =>
             name.Equals(forbidden, StringComparison.Ordinal) ||

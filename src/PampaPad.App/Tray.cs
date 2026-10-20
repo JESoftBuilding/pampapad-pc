@@ -24,8 +24,15 @@ internal sealed class Tray : ApplicationContext
     /// <summary>Sin los dos manejadores, la bandeja no ofrece nada de actualización: es la copia sin instalar.</summary>
     public Tray(string title, System.Action? onCheckUpdate, System.Action? onInstallUpdate)
     {
-        // Fuera del if de las actualizaciones: la copia de desarrollo también los necesita. "Reconectar con OBS" se inserta
-        // más abajo en el lugar 0 y queda arriba de todo (05 §3).
+        // El orden de la tabla de 05 §3: la ventana, "Chequeo previo", "Reconectar con OBS" (visible sólo en auth_failed y kicked),
+        // "Cancelar todo" y después lo demás. Los tres del medio se ven según el estado (Paint).
+        // Fuera del if de las actualizaciones: la copia de desarrollo también los necesita.
+        _menu.Items.Add("Abrir PampaPad", null, (_, _) => OpenWindowRequested?.Invoke());
+        _menu.Items.Add("Estado", null, (_, _) => StatusRequested?.Invoke());
+        _menu.Items.Add(_preflight);
+        _menu.Items.Add(_reconnect);
+        _menu.Items.Add(_cancelAll);
+        _menu.Items.Add(new ToolStripSeparator());
         _menu.Items.Add("Recargar biblioteca", null, (_, _) => ReloadRequested?.Invoke());
         _menu.Items.Add("Elegir carpeta de datos", null, (_, _) => ChooseFolderRequested?.Invoke());
 
@@ -45,15 +52,9 @@ internal sealed class Tray : ApplicationContext
 
         _menu.Items.Add("Salir", null, (_, _) => ExitThread());
 
-        // Arriba de todo, y sólo visible en auth_failed y kicked (05 §3).
         _reconnect.Click += (_, _) => ReconnectRequested?.Invoke(this, EventArgs.Empty);
-        _menu.Items.Insert(0, _reconnect);
-
-        // En el orden de 05 §3: "Chequeo previo" antes de "Reconectar con OBS" y "Cancelar todo" después. Los dos se ven según el estado.
         _preflight.Click += (_, _) => PreflightRequested?.Invoke();
-        _menu.Items.Insert(0, _preflight);
         _cancelAll.Click += (_, _) => CancelAllRequested?.Invoke();
-        _menu.Items.Insert(2, _cancelAll);
         _menu.Opening += (_, _) => MenuOpened?.Invoke();
 
         _icon = new NotifyIcon
@@ -67,6 +68,12 @@ internal sealed class Tray : ApplicationContext
 
     public event EventHandler? ReconnectRequested;
 
+    /// <summary>Se eligió "Abrir PampaPad" (05 §3).</summary>
+    public event System.Action? OpenWindowRequested;
+
+    /// <summary>Se eligió "Estado" (05 §3).</summary>
+    public event System.Action? StatusRequested;
+
     public event System.Action? ReloadRequested;
 
     public event System.Action? ChooseFolderRequested;
@@ -77,7 +84,10 @@ internal sealed class Tray : ApplicationContext
     /// <summary>Se abrió el menú: es una de las dos cosas que sacan el ícono de "falló una acción" (05 §3).</summary>
     public event System.Action? MenuOpened;
 
-    /// <summary>Se eligió "Chequeo previo": hasta la pantalla Estado, el resultado va al registro y a un globo (01 §8, fila 5).</summary>
+    /// <summary>
+    /// Se eligió "Chequeo previo": el resultado va al registro y a un globo (01 §8, fila 5). Que abra Estado con el resultado queda para
+    /// la tarea de la pregunta 14 de la etapa 5, aunque la ventana ya exista.
+    /// </summary>
     public event System.Action? PreflightRequested;
 
     /// <summary>Se eligió "Cancelar todo": cancela las acciones en curso (01 §4.5).</summary>

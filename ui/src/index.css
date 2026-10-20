@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+/* La paleta del canal (Areas/marca-personal/CLAUDE.md), Propuesta para PampaPad: Estado no tuvo boceto (pregunta abierta 37).
+   El fondo es el mismo DefaultBackgroundColor de src/PampaPad.App/EditorWindow.cs: si cambia uno, cambia el otro (01 §9).
+   muted, border, danger y ok no salen de ninguna nota. Las letras se piden por nombre y caen a las del sistema: la página no baja nada. */
+@theme {
+  --color-background: #0e0d17;
+  --color-card: #16142a;
+  --color-foreground: #f2f1fa;
+  --color-muted: #a09cc0;
+  --color-border: #2a2745;
+  --color-primary: #6d5df6;
+  --color-accent: #f5a623;
+  --color-danger: #ef4444;
+  --color-ok: #22c55e;
+  --font-sans: "Archivo", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Kode Mono", "Cascadia Mono", ui-monospace, monospace;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", ui-monospace, monospace;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+}

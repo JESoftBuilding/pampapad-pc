@@ -18,16 +18,12 @@ public sealed class StateStore : IAsyncDisposable
         _dispatcher = Task.Run(DispatchAsync);
     }
 
-    public AppState Current
-    {
-        get
-        {
-            lock (_gate)
-            {
-                return _current;
-            }
-        }
-    }
+    /// <summary>
+    /// Sin lock: AppState es inmutable (01 §4.4) y la referencia se lee entera. Quien publica un evento puede tener un lock propio tomado
+    /// mientras Update espera ese mismo lock (el Dispatcher escribe en el registro con su _gate tomado y PublishRunning lo pide adentro de
+    /// Update): si leer el estado pidiera el lock del estado, los dos se trabarían.
+    /// </summary>
+    public AppState Current => Volatile.Read(ref _current);
 
     /// <summary>Aplica el cambio. Si no cambia nada, no numera ni avisa.</summary>
     public void Update(Func<AppState, AppState> change)
@@ -42,7 +38,7 @@ public sealed class StateStore : IAsyncDisposable
             }
 
             next = next with { Seq = previous.Seq + 1 };
-            _current = next;
+            Volatile.Write(ref _current, next);
             _changes.Writer.TryWrite(new Change(previous, next));
         }
     }

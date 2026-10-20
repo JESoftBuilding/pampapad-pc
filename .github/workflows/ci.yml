@@ -22,11 +22,21 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
+      # La página (01 §7): pnpm con la versión de packageManager de ui/package.json, Node 24 y la caché del almacén de pnpm.
+      # Playwright usa el Edge que trae la imagen: no se baja ningún navegador.
+      - uses: pnpm/action-setup@v6.1.0
+        with:
+          package_json_file: ui/package.json
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: ui/pnpm-lock.yaml
       - name: Verificar
         shell: powershell
         run: ./build/verify.ps1
 
-  # Lo mismo que hace el workflow publish, sin subir nada: publicar, revisar las rutas, la prueba de humo y empaquetar.
+  # Lo mismo que hace el workflow publish, sin subir nada: la página, publicar, revisar las rutas, la prueba de humo y empaquetar.
   # Así un paquete que no se puede armar se ve en la rama y no el día de la etiqueta. Corre aparte de verify, en paralelo.
   # La versión es 999.0.0 a propósito: tiene que ser mayor que cualquier versión publicada. publish.ps1 baja la última
   # con vpk download y vpk pack rechaza una versión menor o igual (FTL "There is a release in channel win which is
@@ -43,6 +53,14 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
+      - uses: pnpm/action-setup@v6.1.0
+        with:
+          package_json_file: ui/package.json
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: ui/pnpm-lock.yaml
       - name: Empaquetar sin subir
         shell: powershell
         run: ./build/publish.ps1 -Version 999.0.0

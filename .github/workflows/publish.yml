@@ -18,6 +18,15 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
+      # La página: verify.ps1 la prueba y publish.ps1 la arma y la mete en el paquete (01 §2 y §7).
+      - uses: pnpm/action-setup@v6.1.0
+        with:
+          package_json_file: ui/package.json
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: ui/pnpm-lock.yaml
       - name: Verificar
         shell: powershell
         run: ./build/verify.ps1
