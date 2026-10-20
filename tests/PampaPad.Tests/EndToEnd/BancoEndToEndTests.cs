@@ -24,7 +24,7 @@ public class BancoEndToEndTests
         await using var rig = new Rig(session, Harmless);
         Assert.NotEqual(FakeObs.BancoUuid, session.State.Current.Obs.SceneUuid);
 
-        Assert.True(rig.Hotkeys.Press("Ctrl+Shift+Alt+B"));
+        Assert.True(await rig.Hotkeys.PressWhenRegisteredAsync("Ctrl+Shift+Alt+B"));
         ActionResult result = await rig.NextAsync();
 
         Assert.True(result.Ok, result.Failure?.Message);
@@ -61,7 +61,7 @@ public class BancoEndToEndTests
         await using var rig = new Rig(session, Harmless);
         rig.Windows.Open(Mirror);
 
-        Assert.True(rig.Hotkeys.Press("Ctrl+Shift+Alt+B"));
+        Assert.True(await rig.Hotkeys.PressWhenRegisteredAsync("Ctrl+Shift+Alt+B"));
         ActionResult result = await rig.NextAsync();
 
         Assert.True(result.Ok, result.Failure?.Message);
@@ -77,7 +77,7 @@ public class BancoEndToEndTests
         await using var rig = new Rig(session, "@echo off\r\necho scrcpy no abrio la ventana (celu conectado?)\r\nexit /b 1\r\n");
         string? before = session.State.Current.Obs.SceneUuid;
 
-        Assert.True(rig.Hotkeys.Press("Ctrl+Shift+Alt+B"));
+        Assert.True(await rig.Hotkeys.PressWhenRegisteredAsync("Ctrl+Shift+Alt+B"));
         ActionResult result = await rig.NextAsync();
 
         Assert.False(result.Ok);

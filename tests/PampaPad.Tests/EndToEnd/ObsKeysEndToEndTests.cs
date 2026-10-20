@@ -27,9 +27,9 @@ public class ObsKeysEndToEndTests
         await using ObsSession session = await ObsSession.StartAsync();
         await using var rig = new Rig(session, Example);
 
-        Assert.True(rig.Windows.Press("Ctrl+Shift+Alt+G"));
+        Assert.True(await rig.Windows.PressWhenRegisteredAsync("Ctrl+Shift+Alt+G"));
         await Poll.Until(() => session.State.Current.Obs.Recording == RecordingState.Recording && rig.Finished.Count == 1);
-        Assert.True(rig.Windows.Press("Ctrl+Shift+Alt+D"));
+        Assert.True(await rig.Windows.PressWhenRegisteredAsync("Ctrl+Shift+Alt+D"));
         await Poll.Until(() => session.State.Current.Obs.Recording == RecordingState.Stopped && rig.Finished.Count == 2);
 
         Assert.All(rig.Finished, result => Assert.True(result.Ok));
@@ -43,9 +43,9 @@ public class ObsKeysEndToEndTests
         await using ObsSession session = await ObsSession.StartAsync();
         await using var rig = new Rig(session, Example);
 
-        Assert.True(rig.Windows.Press("Ctrl+Shift+Alt+M"));
+        Assert.True(await rig.Windows.PressWhenRegisteredAsync("Ctrl+Shift+Alt+M"));
         await Poll.Until(() => session.State.Current.Obs.MicMuted && rig.Finished.Count == 1);
-        Assert.True(rig.Windows.Press("Ctrl+Shift+Alt+M"));
+        Assert.True(await rig.Windows.PressWhenRegisteredAsync("Ctrl+Shift+Alt+M"));
         await Poll.Until(() => !session.State.Current.Obs.MicMuted && rig.Finished.Count == 2);
 
         Assert.False(session.Obs.MicMuted);
@@ -112,7 +112,7 @@ public class ObsKeysEndToEndTests
     {
         await using ObsSession session = await ObsSession.StartAsync();
         await using var rig = new Rig(session, Example);
-        Assert.True(rig.Windows.Press("Ctrl+Shift+Alt+G"));
+        Assert.True(await rig.Windows.PressWhenRegisteredAsync("Ctrl+Shift+Alt+G"));
         await Poll.Until(() => session.State.Current.Obs.Recording == RecordingState.Recording && rig.Finished.Count == 1);
 
         ActionResult result = await rig.Dispatcher.Launch("escena-fin", new Invocation(Guid.NewGuid(), Trigger.Window, null, null, null, null));

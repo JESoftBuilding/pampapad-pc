@@ -38,7 +38,7 @@ public class MarkersEndToEndTests
         foreach (string hotkey in new[] { "Ctrl+Shift+Alt+F5", "Ctrl+Shift+Alt+F6", "Ctrl+Shift+Alt+F7", "Ctrl+Shift+Alt+F8", "Ctrl+Shift+Alt+F9" })
         {
             int before = rig.Finished.Count;
-            rig.Windows.Press(hotkey);
+            Assert.True(await rig.Windows.PressWhenRegisteredAsync(hotkey));
             await Poll.Until(() => rig.Finished.Count == before + 1);
         }
 
@@ -51,7 +51,7 @@ public class MarkersEndToEndTests
         await using ObsSession session = await ObsSession.StartAsync(RecordingState.Paused);
         await using var rig = new Rig(session);
 
-        rig.Windows.Press("Ctrl+Shift+Alt+F7");
+        Assert.True(await rig.Windows.PressWhenRegisteredAsync("Ctrl+Shift+Alt+F7"));
         await Poll.Until(() => rig.Finished.Count == 1);
 
         ActionResult result = Assert.Single(rig.Finished);
@@ -72,7 +72,7 @@ public class MarkersEndToEndTests
         await using ObsSession session = await ObsSession.StartAsync(RecordingState.Stopped);
         await using var rig = new Rig(session);
 
-        rig.Windows.Press("Ctrl+Shift+Alt+F9");
+        Assert.True(await rig.Windows.PressWhenRegisteredAsync("Ctrl+Shift+Alt+F9"));
         await Poll.Until(() => rig.Finished.Count == 1);
 
         Assert.Equal(ErrorCodes.MarkerNotRecording, Assert.Single(rig.Finished).Failure?.Code);
