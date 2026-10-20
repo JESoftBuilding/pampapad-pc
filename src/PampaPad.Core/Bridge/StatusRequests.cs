@@ -8,6 +8,7 @@ public sealed record StatusSources(
     Dispatcher Dispatcher,
     Log Log,
     IReadOnlyList<IStepType> Catalog,
+    IReadOnlyList<ConditionType> Conditions,
     Func<SettingsView> Settings);
 
 /// <summary>
@@ -63,7 +64,7 @@ public static class StatusRequests
             sources.Library.Current,
             StateView.From(sources.State.Current),
             [.. sources.Catalog.Select(StepTypeView.From)],
-            [],
+            [.. sources.Conditions.Select(ConditionTypeView.From)],
             sources.Settings());
     }
 

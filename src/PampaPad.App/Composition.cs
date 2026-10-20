@@ -115,7 +115,7 @@ internal sealed partial class Composition : IAsyncDisposable
 
         // El puente con todos sus pedidos, después de las fuentes de entrada y el Notifier (01 §4.3). Fuera del if de la bandeja:
         // la prueba de humo comprueba que cada pedido tenga manejador (01 §3.2).
-        composition.ComposeBridge(state, library, dispatcher, catalog, settings, ui, localFolder);
+        composition.ComposeBridge(state, library, dispatcher, catalog, conditions, settings, ui, localFolder);
 
         if (!headless)
         {

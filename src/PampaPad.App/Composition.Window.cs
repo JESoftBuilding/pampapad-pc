@@ -62,7 +62,8 @@ internal sealed partial class Composition
 
     // Los new del puente, en su lugar de 01 §4.3. Los pedidos de la cáscara (AppRequests) van acá también: el humo los cuenta.
     private void ComposeBridge(
-        StateStore state, Library library, Dispatcher dispatcher, IReadOnlyList<IStepType> catalog, LocalSettings settings, SynchronizationContext ui, string localFolder)
+        StateStore state, Library library, Dispatcher dispatcher, IReadOnlyList<IStepType> catalog, IReadOnlyList<ConditionType> conditions,
+        LocalSettings settings, SynchronizationContext ui, string localFolder)
     {
         var bridge = new Bridge(state, Log);
         bool hotkeysOn = _hotkeys is not null;
@@ -73,6 +74,7 @@ internal sealed partial class Composition
             dispatcher,
             Log,
             catalog,
+            conditions,
             () => new SettingsView(hotkeysOn, settings.Current.ConsolePort, settings.Current.SkippedVersion)));
         AppRequests.Register(bridge, onWindowReady: () => ui.Post(_ => _window?.PageReady(), null));
         _bridge = bridge;

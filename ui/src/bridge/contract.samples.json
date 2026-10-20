@@ -114,9 +114,327 @@
                   "optional": true
                 }
               ]
+            },
+            {
+              "id": "obs.scene",
+              "name": "Cambiar de escena",
+              "group": "OBS",
+              "fields": [
+                {
+                  "name": "scene",
+                  "label": "Escena",
+                  "kind": "obsScene",
+                  "optional": false
+                }
+              ]
+            },
+            {
+              "id": "obs.record",
+              "name": "Grabar, parar o pausar",
+              "group": "OBS",
+              "fields": [
+                {
+                  "name": "do",
+                  "label": "Qué hace",
+                  "kind": "option",
+                  "optional": false,
+                  "options": [
+                    "start",
+                    "stop",
+                    "pause",
+                    "resume"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "obs.mute",
+              "name": "Silenciar o abrir el audio",
+              "group": "OBS",
+              "fields": [
+                {
+                  "name": "input",
+                  "label": "Entrada de audio",
+                  "kind": "obsInput",
+                  "optional": true
+                },
+                {
+                  "name": "do",
+                  "label": "Qué hace",
+                  "kind": "option",
+                  "optional": true,
+                  "options": [
+                    "toggle",
+                    "mute",
+                    "unmute"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "obs.request",
+              "name": "Pedido a OBS",
+              "group": "OBS",
+              "fields": [
+                {
+                  "name": "requestType",
+                  "label": "Pedido",
+                  "kind": "text",
+                  "optional": false
+                },
+                {
+                  "name": "requestData",
+                  "label": "Datos del pedido",
+                  "kind": "json",
+                  "optional": true
+                }
+              ]
+            },
+            {
+              "id": "wait.time",
+              "name": "Esperar un rato",
+              "group": "Cadenas",
+              "fields": [
+                {
+                  "name": "durationMs",
+                  "label": "Cuánto, en milisegundos",
+                  "kind": "duration",
+                  "optional": false
+                }
+              ]
+            },
+            {
+              "id": "wait.window",
+              "name": "Esperar una ventana",
+              "group": "Cadenas",
+              "fields": [
+                {
+                  "name": "title",
+                  "label": "Título de la ventana",
+                  "kind": "window",
+                  "optional": false
+                },
+                {
+                  "name": "width",
+                  "label": "Ancho",
+                  "kind": "number",
+                  "optional": true
+                },
+                {
+                  "name": "height",
+                  "label": "Alto",
+                  "kind": "number",
+                  "optional": true
+                },
+                {
+                  "name": "timeoutSec",
+                  "label": "Cuánto esperar, en segundos",
+                  "kind": "number",
+                  "optional": false
+                },
+                {
+                  "name": "process",
+                  "label": "Programa",
+                  "kind": "text",
+                  "optional": true
+                }
+              ]
+            },
+            {
+              "id": "script.run",
+              "name": "Correr un script",
+              "group": "Cadenas",
+              "fields": [
+                {
+                  "name": "script",
+                  "label": "Script",
+                  "kind": "script",
+                  "optional": false
+                },
+                {
+                  "name": "wait",
+                  "label": "Esperar a que termine",
+                  "kind": "boolean",
+                  "optional": true
+                },
+                {
+                  "name": "timeoutSec",
+                  "label": "Tope, en segundos",
+                  "kind": "number",
+                  "optional": true
+                }
+              ]
+            },
+            {
+              "id": "page.go",
+              "name": "Ir a otra página",
+              "group": "Cadenas",
+              "fields": [
+                {
+                  "name": "target",
+                  "label": "Página",
+                  "kind": "page",
+                  "optional": false
+                }
+              ]
             }
           ],
-          "conditionTypes": [],
+          "conditionTypes": [
+            {
+              "id": "window.exists",
+              "name": "Hay una ventana",
+              "fields": [
+                {
+                  "name": "title",
+                  "label": "Título de la ventana",
+                  "kind": "window",
+                  "optional": false
+                },
+                {
+                  "name": "process",
+                  "label": "Programa",
+                  "kind": "text",
+                  "optional": true
+                }
+              ]
+            },
+            {
+              "id": "window.sizeIs",
+              "name": "Una ventana mide",
+              "fields": [
+                {
+                  "name": "title",
+                  "label": "Título de la ventana",
+                  "kind": "window",
+                  "optional": false
+                },
+                {
+                  "name": "width",
+                  "label": "Ancho",
+                  "kind": "number",
+                  "optional": false
+                },
+                {
+                  "name": "height",
+                  "label": "Alto",
+                  "kind": "number",
+                  "optional": false
+                },
+                {
+                  "name": "process",
+                  "label": "Programa",
+                  "kind": "text",
+                  "optional": true
+                }
+              ]
+            },
+            {
+              "id": "recording.is",
+              "name": "Estado de la grabación",
+              "fields": [
+                {
+                  "name": "state",
+                  "label": "Estado",
+                  "kind": "option",
+                  "optional": false,
+                  "options": [
+                    "stopped",
+                    "recording",
+                    "paused"
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "obs.profileIs",
+              "name": "OBS está en el perfil",
+              "fields": [
+                {
+                  "name": "profile",
+                  "label": "Perfil",
+                  "kind": "text",
+                  "optional": false
+                }
+              ]
+            },
+            {
+              "id": "obs.recordFormatIs",
+              "name": "OBS graba en el formato",
+              "fields": [
+                {
+                  "name": "format",
+                  "label": "Formato",
+                  "kind": "text",
+                  "optional": false
+                }
+              ]
+            },
+            {
+              "id": "obs.sourceHasImage",
+              "name": "Las fuentes tienen imagen",
+              "fields": [
+                {
+                  "name": "source",
+                  "label": "Fuente de OBS",
+                  "kind": "obsInput",
+                  "optional": true
+                }
+              ]
+            },
+            {
+              "id": "obs.captureHasMonitor",
+              "name": "La captura tiene monitor",
+              "fields": [
+                {
+                  "name": "source",
+                  "label": "Fuente de OBS",
+                  "kind": "obsInput",
+                  "optional": true
+                }
+              ]
+            },
+            {
+              "id": "obs.cameraAudioOff",
+              "name": "La cámara no manda audio",
+              "fields": [
+                {
+                  "name": "source",
+                  "label": "Fuente de OBS",
+                  "kind": "obsInput",
+                  "optional": true
+                }
+              ]
+            },
+            {
+              "id": "obs.cameraNotCovered",
+              "name": "La cámara no está tapada",
+              "fields": [
+                {
+                  "name": "source",
+                  "label": "Fuente de OBS",
+                  "kind": "obsInput",
+                  "optional": true
+                }
+              ]
+            },
+            {
+              "id": "obs.micNotMuted",
+              "name": "El micrófono está abierto",
+              "fields": [
+                {
+                  "name": "source",
+                  "label": "Fuente de OBS",
+                  "kind": "obsInput",
+                  "optional": true
+                }
+              ]
+            },
+            {
+              "id": "obs.canvasFilled",
+              "name": "La escena llena el lienzo",
+              "fields": []
+            }
+          ],
           "settings": {
             "hotkeysEnabled": true,
             "consolePort": "COM20"

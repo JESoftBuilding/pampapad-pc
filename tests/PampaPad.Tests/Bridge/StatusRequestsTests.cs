@@ -15,7 +15,7 @@ public sealed class StatusRequestsTests : IAsyncLifetime
     {
         _bridge = new Bridge(_rig.State, _rig.Log);
         _hooks = Requests.RegisterAll(_bridge, new StatusSources(
-            "9.9.9", _rig.State, _rig.Library, _rig.Dispatcher, _rig.Log, [_rig.Marker], () => new SettingsView(true, "COM20", null)));
+            "9.9.9", _rig.State, _rig.Library, _rig.Dispatcher, _rig.Log, [_rig.Marker], [FakeCondition.Met(Conditions.WindowExists).Type], () => new SettingsView(true, "COM20", null)));
         _bridge.Subscribe(_events.Enqueue);
     }
 
@@ -39,7 +39,7 @@ public sealed class StatusRequestsTests : IAsyncLifetime
         Assert.Equal("grabacion", data.GetProperty("config").GetProperty("mainPage").GetString());
         Assert.Equal(_rig.State.Current.Seq, data.GetProperty("state").GetProperty("seq").GetInt64());
         Assert.Equal("obs.marker", data.GetProperty("stepTypes")[0].GetProperty("id").GetString());
-        Assert.Equal(0, data.GetProperty("conditionTypes").GetArrayLength());
+        Assert.Equal(Conditions.WindowExists, data.GetProperty("conditionTypes")[0].GetProperty("id").GetString());
         Assert.Equal("COM20", data.GetProperty("settings").GetProperty("consolePort").GetString());
     }
 

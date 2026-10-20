@@ -49,7 +49,7 @@ export const configSchema = z.record(z.string(), z.unknown());
 export const fieldSchema = z.object({
   name: z.string(),
   label: z.string(),
-  kind: z.enum(["text", "option"]),
+  kind: z.enum(["text", "option", "obsScene", "obsInput", "json", "number", "duration", "boolean", "script", "window", "page"]),
   optional: z.boolean(),
   options: z.array(z.string()).optional(),
 });

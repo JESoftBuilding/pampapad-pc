@@ -46,8 +46,15 @@ public sealed record StepTypeView(string Id, string Name, string Group, IReadOnl
     }
 }
 
-/// <summary>Los tipos de condición (02 §5) llegan en la etapa 5: hasta entonces la lista va vacía.</summary>
-public sealed record ConditionTypeView(string Id, string Name, IReadOnlyList<Field> Fields);
+/// <summary>Un tipo de condición con sus campos (02 §5): de acá sale el formulario de un "sólo si" y de una comprobación del chequeo.</summary>
+public sealed record ConditionTypeView(string Id, string Name, IReadOnlyList<Field> Fields)
+{
+    public static ConditionTypeView From(ConditionType type)
+    {
+        ArgumentNullException.ThrowIfNull(type);
+        return new ConditionTypeView(type.Id, type.Name, type.Fields);
+    }
+}
 
 /// <summary>Los ajustes de esta PC que la página muestra. HotkeysEnabled dice si esta copia tomó los atajos (05 §10).</summary>
 public sealed record SettingsView(bool HotkeysEnabled, string? ConsolePort, string? SkippedVersion);

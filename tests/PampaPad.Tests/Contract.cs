@@ -84,7 +84,8 @@ public class Contract
         Config config = SampleConfig();
         StateView state = SampleState();
         LogEntry[] entries = SampleLog();
-        var snapshot = new AppSnapshot("0.2.1", Migrations.CurrentVersion, config, state, [Marker()], [], new SettingsView(true, "COM20", null));
+        (StepTypeView[] stepTypes, ConditionTypeView[] conditionTypes) = Catalogs();
+        var snapshot = new AppSnapshot("0.2.1", Migrations.CurrentVersion, config, state, stepTypes, conditionTypes, new SettingsView(true, "COM20", null));
 
         return new JsonObject
         {
@@ -107,7 +108,7 @@ public class Contract
     }
 
     private static StatusSources Sources(DispatcherRig rig) =>
-        new("0.0.0", rig.State, rig.Library, rig.Dispatcher, rig.Log, [rig.Marker], () => new SettingsView(false, null, null));
+        new("0.0.0", rig.State, rig.Library, rig.Dispatcher, rig.Log, [rig.Marker], [], () => new SettingsView(false, null, null));
 
     private static IEnumerable<string> SampleNames(string section) => Samples()[section]!.AsObject().Select(pair => pair.Key);
 
@@ -163,12 +164,27 @@ public class Contract
         new Failure(ErrorCodes.MarkerPaused, "Estás en pausa: la marca no entró."), 12,
         [new StepReport(StepOutcome.Failed, "Estás en pausa: la marca no entró.")]);
 
-    private static StepTypeView Marker() => new(
-        ObsMarker.TypeId,
-        "Marcar capítulo",
-        "OBS",
-        [
-            new Field("marker", "Tipo de marca", FieldKind.Option, Options: ["short", "inicio", "fin", "sacar", "largo"]),
-            new Field("label", "Etiqueta", FieldKind.Text, Optional: true),
-        ]);
+    // Los tipos de paso y de condición salen de los catálogos reales y no escritos a mano: una clase de campo nueva cambia
+    // contract.samples.json y contract.test.ts la ve (hallazgo E6-7; plan de la etapa 5, E5-23a). El ObsClient no se conecta.
+    private static (StepTypeView[] Steps, ConditionTypeView[] Conditions) Catalogs()
+    {
+        using var temp = new TempFolder();
+        var state = new StateStore();
+        var log = new Log(temp.Combine("log"), TimeProvider.System);
+        var obs = new ObsClient(() => new Uri("ws://127.0.0.1:9"), () => null, state, log, TimeProvider.System);
+        var library = new PampaPad.Core.Library(temp.Combine("biblioteca"), temp.Combine("backup"));
+        try
+        {
+            Chains chains = TestChains.For(library, log);
+            return (
+                [.. Catalog.Build(obs, state, log, TimeProvider.System, chains).Select(StepTypeView.From)],
+                [.. Conditions.Build(chains.Windows, state, obs).Select(ConditionTypeView.From)]);
+        }
+        finally
+        {
+            obs.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            state.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            log.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
+    }
 }
