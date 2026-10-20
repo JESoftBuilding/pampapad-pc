@@ -7,11 +7,15 @@ public sealed record RecordParameters(string? Do);
 /// RecordRules: si OBS ya está ahí no manda nada, termina bien y deja una línea en el registro (03 §3). Arrancando o deteniendo, espera el
 /// evento que cierra la transición hasta el tope de un pedido y decide con lo que quedó. La indicación sale del evento, nunca de la
 /// respuesta (03 §5). La guarda del hallazgo E4-11: no manda nada hasta que pasó Settle desde el último cambio que avisó OBS, y un
-/// grabar que OBS contesta con 100 se confirma con el evento de arranque.
+/// grabar que OBS contesta con 100 se confirma con el evento de arranque. Los pedidos se atienden en orden, uno por vez (decisión 35).
 /// </summary>
 public sealed class ObsRecord(ObsClient obs, StateStore state, Log log, TimeProvider clock) : StepType<RecordParameters>
 {
     public const string TypeId = "obs.record";
+
+    // El turno (decisión 35). El catálogo arma un solo ObsRecord, así que lo comparten todas las cadenas. SemaphoreSlim suelta a los que
+    // esperan con WaitAsync en el orden en que llegaron.
+    private readonly SemaphoreSlim _turn = new(1, 1);
 
     /// <summary>
     /// Cuánto se espera después de un cambio de la grabación antes de mandar otro pedido (Propuesto, sin medir: plan de la etapa 5). Medido
@@ -46,7 +50,35 @@ public sealed class ObsRecord(ObsClient obs, StateStore state, Log log, TimeProv
             return new StepResult(new Failure(ErrorCodes.ConfigInvalid, $"\"{p.Do}\" no es una orden de grabación."));
         }
 
+        // Atender en orden (decisión 35): el que llega mientras otro espera su segundo o su evento espera su turno y, con el turno, lee el
+        // estado de nuevo. Así un grabar apretado mientras un parar espera su segundo sale después del parar, con su propio segundo desde
+        // el STOPPED (repaso del 2026-10-19, fila 11). Cancelado en la espera, o vencido el tope de la acción, no manda nada.
         string what = $"el pedido de {Verb(command)}";
+        if (!_turn.Wait(0))
+        {
+            Note(invocation, $"{Verb(command)}: hay otro pedido de grabación en curso; se espera su turno (decisión 35).");
+            try
+            {
+                await _turn.WaitAsync(ct).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                return new StepResult(new Failure(ErrorCodes.Cancelled, $"Se canceló esperando su turno: no se mandó {what}."));
+            }
+        }
+
+        try
+        {
+            return await RunInTurnAsync(command, what, invocation, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _turn.Release();
+        }
+    }
+
+    private async Task<StepResult> RunInTurnAsync(RecordCommand command, string what, Invocation invocation, CancellationToken ct)
+    {
         if (ObsStep.Unready(state.Current.Obs, what) is { } offline)
         {
             return new StepResult(offline);
@@ -103,10 +135,20 @@ public sealed class ObsRecord(ObsClient obs, StateStore state, Log log, TimeProv
             return new StepResult(cancelled);
         }
 
+        RecordingState sent = known;
         ObsResponse response = await obs.RequestAsync(RecordRules.RequestType(command), null, ct).ConfigureAwait(false);
         if (response.Ok)
         {
-            return command == RecordCommand.Start ? await ConfirmStartAsync(ct).ConfigureAwait(false) : new StepResult(null);
+            if (command == RecordCommand.Start)
+            {
+                return await ConfirmStartAsync(ct).ConfigureAwait(false);
+            }
+
+            // El turno dura hasta que OBS avisa el cambio (decisión 35): la respuesta llega antes que la acción (03 §5; el OBS falso la
+            // manda siempre antes que el evento, §9) y el que sigue leería el estado de antes. Grabar ya lo espera al confirmar. Hasta el
+            // tope de un pedido y sin el token: OBS ya aceptó, y lo que devuelve el paso no depende del aviso.
+            await WaitForAsync(now => now != sent, CancellationToken.None).ConfigureAwait(false);
+            return new StepResult(null);
         }
 
         if (response.Code == RecordRules.RaceCode(command))
