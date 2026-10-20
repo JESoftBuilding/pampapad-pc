@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Microsoft.Win32;
 using PampaPad.Core;
 
@@ -63,17 +62,21 @@ internal sealed partial class Composition : IAsyncDisposable
         var state = new StateStore(log);
 
         // OBS: la dirección y la clave salen del archivo del propio OBS en cada intento (03 §2). El programa no guarda la clave.
+        // "¿Hay proceso obs64?" separa closed, no_websocket, lost y exiting (03 §2): lo contesta IWindows (01 §3.1).
+        var windows = new Win32Windows();
         var obsFiles = new ObsFiles(ObsFiles.DefaultFolder);
-        var obs = new ObsClient(obsFiles.Address, obsFiles.Password, state, log, clock, ObsIsRunning);
+        var obs = new ObsClient(obsFiles.Address, obsFiles.Password, state, log, clock, () => windows.IsProcessRunning("obs64"));
 
         // El Dispatcher publica la biblioteca en el estado al construirse y en cada recarga, junto con los problemas de los pasos y de los atajos.
-        IReadOnlyList<IStepType> catalog = Catalog.Build(obs, state);
-        var executor = new Executor(catalog, clock);
+        Dispatcher? dispatcher = null;
+        (IReadOnlyList<IStepType> catalog, IReadOnlyList<ConditionType> conditions, Executor executor) =
+            ComposeChains(library, state, obs, windows, log, clock, target => dispatcher!.Go(target));
+        var preflight = new Preflight(conditions, library, state, log, clock);
 
         // El umbral de mantener sale de console.holdMs de la biblioteca; si no está, es un segundo (02 §4.10).
         // Se lee una sola vez, ahora: "Recargar biblioteca" no lo toma y cambiarlo pide reiniciar el programa.
         var gestures = new Gestures(clock, Gestures.HoldFrom(library.Current.Console?.HoldMs), Gestures.DefaultFreshness);
-        var dispatcher = new Dispatcher(library, state, executor, gestures, log);
+        dispatcher = new Dispatcher(library, state, executor, gestures, log);
         var updater = new Updater(state, settings, log, clock);
         var composition = new Composition(log, state, obs, updater);
         composition.Library = library;
@@ -85,7 +88,7 @@ internal sealed partial class Composition : IAsyncDisposable
             library,
             log,
             playSound: notice => ui.Post(_ => composition.Tray?.PlayFailed(), null),
-            showBalloon: notice => ui.Post(_ => composition.Tray?.ShowBalloon(notice.Title, notice.Text), null));
+            showBalloon: notice => ui.Post(_ => composition.Tray?.ShowBalloon(notice.Title, notice.Text, notice.Warning), null));
         dispatcher.Finished += notifier.OnFinished;
         if (!headless && (settings.Current.HotkeysEnabled ?? !AppIdentity.Dev))
         {
@@ -139,6 +142,7 @@ internal sealed partial class Composition : IAsyncDisposable
             tray.MenuOpened += notifier.Dismiss;
             tray.OpenWindowRequested += () => composition.OpenWindow(EditorWindow.FirstScreen);
             tray.StatusRequested += () => composition.OpenWindow(EditorWindow.StatusScreen);
+            composition.HookChains(tray, preflight, notifier, dispatcher);
             tray.ReconnectRequested += (_, _) => obs.Reconnect();
             tray.ConsoleToggleRequested += () =>
                 composition._console?.Release(state.Current.Console.State != ConsoleLinkState.Released);
@@ -260,17 +264,5 @@ internal sealed partial class Composition : IAsyncDisposable
 
         Log.Info("app", "la PC volvió de la suspensión: se rearma la conexión con OBS");
         _obs.Reconnect();
-    }
-
-    // "¿Hay proceso obs64?" separa closed, no_websocket, lost y exiting (03 §2). Cuando exista IWindows.IsProcessRunning, se usa esa.
-    private static bool ObsIsRunning()
-    {
-        var found = Process.GetProcessesByName("obs64");
-        foreach (var process in found)
-        {
-            process.Dispose();
-        }
-
-        return found.Length > 0;
     }
 }

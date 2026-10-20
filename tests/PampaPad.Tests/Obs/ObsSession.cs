@@ -10,11 +10,11 @@ internal sealed class ObsSession : IAsyncDisposable
     private readonly CancellationTokenSource _life = new();
     private Task _loop = Task.CompletedTask;
 
-    private ObsSession(FakeObs obs)
+    private ObsSession(FakeObs obs, TimeProvider clock)
     {
         Obs = obs;
         Log = new Log(_temp.Combine("log"), TimeProvider.System);
-        Client = new ObsClient(() => obs.Address, () => null, State, Log, TimeProvider.System);
+        Client = new ObsClient(() => obs.Address, () => null, State, Log, clock);
     }
 
     public FakeObs Obs { get; }
@@ -26,7 +26,8 @@ internal sealed class ObsSession : IAsyncDisposable
     public ObsClient Client { get; }
 
     /// <summary>Arranca el OBS falso en ese estado de grabación (detenido, grabando o en pausa) y espera a que el cliente lo haya leído.</summary>
-    public static async Task<ObsSession> StartAsync(RecordingState recording = RecordingState.Stopped, Action<FakeObs>? before = null)
+    /// <remarks>Con clock, el cliente pone con ese reloj la hora de los cambios de la grabación (la guarda de obs.record la compara).</remarks>
+    public static async Task<ObsSession> StartAsync(RecordingState recording = RecordingState.Stopped, Action<FakeObs>? before = null, TimeProvider? clock = null)
     {
         FakeObs obs = FakeObs.Start();
         before?.Invoke(obs);
@@ -40,7 +41,7 @@ internal sealed class ObsSession : IAsyncDisposable
             await obs.PauseRecordingAsync();
         }
 
-        var session = new ObsSession(obs);
+        var session = new ObsSession(obs, clock ?? TimeProvider.System);
         session._loop = Task.Run(() => session.Client.KeepConnectedAsync(session._life.Token));
         await Poll.Until(() => session.State.Current.Obs is { Link: ObsLinkState.Ready } known && known.Recording == recording);
         return session;

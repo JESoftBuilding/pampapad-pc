@@ -83,8 +83,19 @@ public sealed record TraySummary(TrayIcon Icon, string Tooltip, bool CanReconnec
             texts.Add("micrófono silenciado");
         }
 
+        // De la página base dependen los atajos de las teclas: el texto la nombra cuando no es la principal (05 §3).
+        if (state.BasePage.Length > 0 && state.BasePage != state.MainPage)
+        {
+            texts.Add($"página {state.BasePage}");
+        }
+
         var canReconnect = obs.Link is ObsLinkState.AuthFailed or ObsLinkState.Kicked;
-        return new TraySummary(icons[0], string.Join(Separator, texts), canReconnect) { ConsoleItem = ConsoleText(state) };
+        return new TraySummary(icons[0], string.Join(Separator, texts), canReconnect)
+        {
+            ConsoleItem = ConsoleText(state),
+            CanRunPreflight = obs.Link == ObsLinkState.Ready,
+            CanCancel = state.Running.Count > 0,
+        };
 
         void Add(TrayIcon icon, string text)
         {
@@ -95,6 +106,12 @@ public sealed record TraySummary(TrayIcon Icon, string Tooltip, bool CanReconnec
 
     /// <summary>El texto del ítem de la consola en el menú de la bandeja; null si no hay consola (05 §3).</summary>
     public string? ConsoleItem { get; init; }
+
+    /// <summary>El ítem "Chequeo previo" está con OBS conectado (05 §3).</summary>
+    public bool CanRunPreflight { get; init; }
+
+    /// <summary>El ítem "Cancelar todo" está si hay alguna acción en curso (05 §3).</summary>
+    public bool CanCancel { get; init; }
 
     /// <summary>Dice qué hace el clic y cómo está el enlace: hasta la pantalla Estado, es la única señal de si el puerto abrió.</summary>
     public static string? ConsoleText(AppState state)

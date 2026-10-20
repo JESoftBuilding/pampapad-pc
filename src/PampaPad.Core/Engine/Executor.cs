@@ -6,8 +6,10 @@ public enum StepOutcome
 {
     Ok,
     Failed,
-    /// <summary>Lo salteó su onlyIf. Sin uso hasta la etapa 5.</summary>
+
+    /// <summary>Lo salteó su onlyIf (Decidido 15): no es una falla y no avisa.</summary>
     Omitted,
+
     /// <summary>La cadena se cortó antes de llegar.</summary>
     NotRun,
 }
@@ -28,15 +30,23 @@ public sealed record ActionResult(
     IReadOnlyList<StepReport> Steps);
 
 /// <summary>
-/// Corre los pasos de una acción en serie y corta en la primera falla, diciendo número y tipo de paso (Decidido 8).
-/// Antes de empezar valida la acción entera: con un problema no corre nada (02 §4.4).
+/// Corre los pasos de una acción en serie y corta en la primera falla, diciendo número y tipo de paso (Decidido 8). Antes de empezar
+/// valida la acción entera: con un problema no corre nada (02 §4.4). Un paso con onlyIf corre sólo si su condición se cumple; si no,
+/// queda omitido y la cadena sigue (Decidido 15). Una condición que no se pudo evaluar hace fallar el paso con su código (02 §4.6;
+/// pregunta abierta 43, escrito (a)).
 /// </summary>
-public sealed class Executor(IReadOnlyList<IStepType> catalog, TimeProvider clock)
+public sealed class Executor(IReadOnlyList<IStepType> catalog, IReadOnlyList<ConditionType> conditions, TimeProvider clock)
 {
     /// <summary>Tope global por acción (01 §4.5). Propuesto, sin medir.</summary>
     public static readonly TimeSpan ActionTimeout = TimeSpan.FromSeconds(60);
 
     private static readonly string TimeoutText = $"Pasó el tope de {ActionTimeout.TotalSeconds:0} s de la acción.";
+
+    /// <summary>Sin catálogo de condiciones: todo onlyIf es una condición desconocida y su acción no corre.</summary>
+    public Executor(IReadOnlyList<IStepType> catalog, TimeProvider clock)
+        : this(catalog, [], clock)
+    {
+    }
 
     /// <summary>Los problemas de una acción que dependen del catálogo. Where es relativo a la acción: steps[0].marker.</summary>
     public IReadOnlyList<Problem> Check(Action action)
@@ -53,18 +63,44 @@ public sealed class Executor(IReadOnlyList<IStepType> catalog, TimeProvider cloc
             {
                 found.Add(new Problem($"{where}.type", ProblemCodes.StepTypeUnknown, $"No conozco el tipo de paso \"{step.Type}\": esta acción no corre.", Severity.Warning));
             }
-            else if (step.OnlyIf is { } condition)
+            else if (step.Parameters.ContainsKey("onlyIf"))
             {
-                // Las condiciones entran en la etapa 5. Hasta entonces, saltear en silencio un "sólo si" sería correr lo que el usuario quiso cuidar.
+                // Un onlyIf que no es un objeto queda en Parameters (Step.cs, el lector) y el paso correría sin su "sólo si" (hallazgo E3-1).
+                found.Add(new Problem($"{where}.onlyIf", ProblemCodes.ConditionUnknown, "onlyIf va como un objeto con su type, por ejemplo { \"type\": \"window.exists\", \"title\": \"bancocam\" }. Esta acción no corre.", Severity.Warning));
+            }
+            else if (step.OnlyIf is { } condition && FindCondition(condition.Type) is null)
+            {
+                // Saltear en silencio un "sólo si" que no se entiende sería correr lo que el usuario quiso cuidar.
                 found.Add(new Problem($"{where}.onlyIf", ProblemCodes.ConditionUnknown, $"Condición desconocida: \"{condition.Type}\". Esta acción no corre.", Severity.Warning));
             }
             else
             {
-                found.AddRange(type.Validate(step).Select(problem => problem with { Where = problem.Where.Length == 0 ? where : $"{where}.{problem.Where}" }));
+                found.AddRange(type.Validate(step).Select(problem => problem with { Where = Join(where, problem.Where) }));
+                if (step.OnlyIf is { } guard)
+                {
+                    found.AddRange(ConditionRules.Validate(FindCondition(guard.Type)!, guard).Select(problem => problem with { Where = Join($"{where}.onlyIf", problem.Where) }));
+                }
             }
         }
 
         return found;
+    }
+
+    /// <summary>
+    /// Los problemas de una condición suelta, como las de la lista preflight, que dependen del catálogo de condiciones (02 §10, problemas 7
+    /// y 8). Where es relativo a la condición: type, profile, negate o vacío. Sin "type" no dice nada: eso lo informa el validador.
+    /// </summary>
+    public IReadOnlyList<Problem> CheckCondition(Condition condition)
+    {
+        ArgumentNullException.ThrowIfNull(condition);
+        if (condition.Type.Length == 0)
+        {
+            return [];
+        }
+
+        return FindCondition(condition.Type) is { } type
+            ? ConditionRules.Validate(type, condition)
+            : [new Problem("type", ProblemCodes.ConditionUnknown, $"Condición desconocida: \"{condition.Type}\". El chequeo previo la da por no comprobada.", Severity.Warning)];
     }
 
     public async Task<ActionResult> RunAsync(Action action, Invocation invocation, CancellationToken ct)
@@ -91,6 +127,8 @@ public sealed class Executor(IReadOnlyList<IStepType> catalog, TimeProvider cloc
             return Finish(broken < 0 ? null : broken, new Failure(ErrorCodes.ConfigInvalid, $"La acción tiene un problema y no corre. {first.Message}", first.Where));
         }
 
+        // Los pasos saben de qué acción son: script.run se lo pasa al script (02 §9, punto 3).
+        Invocation running = invocation with { ActionId = action.Id ?? "" };
         using var timeout = new CancellationTokenSource(ActionTimeout, clock);
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeout.Token);
         for (int i = 0; i < steps.Count; i++)
@@ -100,9 +138,33 @@ public sealed class Executor(IReadOnlyList<IStepType> catalog, TimeProvider cloc
             try
             {
                 linked.Token.ThrowIfCancellationRequested();
+                if (step.OnlyIf is { } condition)
+                {
+                    ConditionResult guard = await ConditionRules.EvaluateAsync(FindCondition(condition.Type)!, condition, linked.Token).WaitAsync(linked.Token).ConfigureAwait(false);
+                    if (guard.Outcome == ConditionOutcome.Fail)
+                    {
+                        reports[i] = new StepReport(StepOutcome.Omitted, $"Salteado por su \"sólo si\" ({condition.Type}): {guard.Detail}");
+                        continue;
+                    }
+
+                    if (guard.Failure is { } unknown)
+                    {
+                        // skipped corta la cadena con el código de lo que no dejó evaluar (02 §4.6; pregunta abierta 43, escrito (a)). Una
+                        // condición que devuelve cancelled por su cuenta tampoco sabe quién cortó: el tope se antepone, como con un paso.
+                        string why = unknown.Code == ErrorCodes.Cancelled && timeout.IsCancellationRequested && unknown.Message != TimeoutText
+                            ? $"{TimeoutText} {unknown.Message}"
+                            : unknown.Message;
+                        reports[i] = new StepReport(StepOutcome.Failed, guard.Detail);
+                        return Finish(i, unknown with
+                        {
+                            Message = $"No se pudo saber si correr el paso ({condition.Type}): {why}",
+                            Where = $"steps[{steps[i].Index}].onlyIf",
+                        });
+                    }
+                }
 
                 // WaitAsync: un paso que no mira el token no puede retener la acción más allá del tope.
-                result = await Find(step.Type)!.RunAsync(step, invocation, linked.Token).WaitAsync(linked.Token).ConfigureAwait(false);
+                result = await Find(step.Type)!.RunAsync(step, running, linked.Token).WaitAsync(linked.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -133,5 +195,9 @@ public sealed class Executor(IReadOnlyList<IStepType> catalog, TimeProvider cloc
         return Finish(null, null);
     }
 
+    private static string Join(string prefix, string where) => where.Length == 0 ? prefix : $"{prefix}.{where}";
+
     private IStepType? Find(string type) => catalog.FirstOrDefault(candidate => candidate.Id == type);
+
+    private ConditionType? FindCondition(string type) => conditions.FirstOrDefault(candidate => candidate.Id == type);
 }

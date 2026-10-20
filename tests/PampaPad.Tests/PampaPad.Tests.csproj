@@ -25,6 +25,7 @@
   <ItemGroup>
     <None Include="Data\**" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\examples\library\config.json" Link="Data\example-library\config.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\examples\library\scripts\**" Link="Data\example-library\scripts\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

@@ -160,7 +160,7 @@ public class ExecutorEdgeTests
         await executor.RunAsync(action, Tap, CancellationToken.None);
 
         Assert.Same(action.Steps![0], seenStep);
-        Assert.Same(Tap, seenInvocation);
+        Assert.Equal(Tap with { ActionId = "prueba" }, seenInvocation);     // el Executor le suma el id de la acción (E5-4)
     }
 
     [Fact]

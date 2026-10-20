@@ -50,6 +50,8 @@ public static partial class Validator
             CheckPreflight(check, $"preflight[{index}]", found);
         }
 
+        CheckHold(config, found);
+        CheckRequests(config, found);
         return found;
     }
 

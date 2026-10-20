@@ -185,7 +185,21 @@ public sealed class LibraryTests : IDisposable
         var library = new CoreLibrary(Path.Combine(AppContext.BaseDirectory, "Data", "example-library"), Path.Combine(_folder, "backup"));
 
         Assert.Empty(library.Load());
-        Assert.Equal(5, library.Current.Pages![0].Keys!.Count);
-        Assert.Equal(5, library.Current.Actions!.Count);
+        Assert.Equal(10, library.Current.Pages![0].Keys!.Count);      // ir al banco, escenas, las cinco marcas, el micrófono, la pausa y grabar
+        Assert.Equal(12, library.Current.Pages![1].Keys!.Count);      // la grilla de escenas (decisión 27)
+        Assert.Equal(24, library.Current.Actions!.Count);
+
+        // Cada tecla de escenas termina en su obs.scene: de ese último paso sale el rol "Escena", la tecla que la consola marca al aire (04 §2).
+        Assert.All(library.Current.Pages![1].Keys!, key =>
+            Assert.Equal("obs.scene", library.Current.Actions!.Single(action => action.Id == key.Action).Steps![^1].Type));
+
+        // Grabar y las cinco marcas van en la lista general, que vale con cualquier página de base (decisión 32); en las teclas de grabacion
+        // quedan los atajos de ir al banco y del micrófono.
+        Assert.Equal(
+            new[] { "parar", "grabar", "marca-short", "marca-inicio", "marca-fin", "marca-sacar", "marca-largo" },
+            library.Current.Hotkeys!.Select(binding => binding.Action));
+        Assert.Equal(
+            new[] { "Ctrl+Shift+Alt+B", "Ctrl+Shift+Alt+M" },
+            library.Current.Pages![0].Keys!.Where(key => key.Hotkey is not null).Select(key => key.Hotkey));
     }
 }

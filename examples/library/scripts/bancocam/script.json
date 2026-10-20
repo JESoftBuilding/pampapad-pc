@@ -1,0 +1,8 @@
+{
+  "entry": "bancocam.cmd",
+  "name": "Cámara del banco",
+  "description": "Espejo del celular (scrcpy) para la escena Banco. Deja la ventana 'bancocam' fuera de la pantalla, en 1823x850.",
+  "wait": true,
+  "timeoutSec": 30,
+  "contract": 1
+}

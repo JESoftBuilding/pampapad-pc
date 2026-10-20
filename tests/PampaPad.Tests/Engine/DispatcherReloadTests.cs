@@ -38,9 +38,9 @@ public class DispatcherReloadTests
         })));
         rig.Library.Load();
 
-        Assert.Equal(5, rig.Windows.Registered.Count);
+        Assert.Equal(9, rig.Windows.Registered.Count);
         Assert.Empty(rig.State.Current.Problems);
-        Assert.Equal(new HotkeysState(5, 0), rig.State.Current.Hotkeys);
+        Assert.Equal(new HotkeysState(9, 0), rig.State.Current.Hotkeys);
         Assert.Equal(LibraryStatus.Loaded, rig.State.Current.Library.Status);
         Assert.Empty(rig.Errors);
     }
@@ -91,7 +91,7 @@ public class DispatcherReloadTests
         rig.Write(DispatcherRig.Example);
         rig.Library.Load();
 
-        Assert.Equal(5, rig.Windows.Registered.Count);
+        Assert.Equal(9, rig.Windows.Registered.Count);
         Assert.Empty(rig.State.Current.Problems);
         Assert.Equal("grabacion", rig.State.Current.BasePage);
     }

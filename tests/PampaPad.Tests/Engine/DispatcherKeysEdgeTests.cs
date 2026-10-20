@@ -214,6 +214,10 @@ public class DispatcherKeysEdgeTests
         rig.Clock.Advance(TimeSpan.FromMilliseconds(100));
         rig.Dispatcher.Receive(Raw(12, Gesture.Release));
         Assert.Equal(("inicio", Trigger.Key), await rig.NextRun());
+
+        // El atajo lanza marca-short, como la tecla 5: si esa sigue en curso, la pulsación se ignora (01 §4.6). El paso avisa antes de que
+        // el Dispatcher la suelte, así que se espera a que no quede nada en curso.
+        await Poll.Until(() => rig.Store.Current.Running.Count == 0);
         rig.Dispatcher.Receive(new InputEvent("hotkeys", "hotkey", Gesture.Tap, 0));
         Assert.Equal(("short", Trigger.Hotkey), await rig.NextRun());
 

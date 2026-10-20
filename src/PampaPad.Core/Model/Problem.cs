@@ -34,4 +34,10 @@ public static class ProblemCodes
     public const string ShortLabelInvalid = "short_label_invalid";
     public const string LibraryMissing = "library_missing";
     public const string ConfigMissing = "config_missing";
+
+    /// <summary>Problema 10 de 02 §10: una tecla para o pausa con el toque. Parar y pausar van en onHold, que pide mantener.</summary>
+    public const string HoldRequired = "hold_required";
+
+    /// <summary>Problema 12 de 02 §10: obs.request con uno de los dos pedidos de atajos (Decidido 10).</summary>
+    public const string RequestForbidden = "request_forbidden";
 }

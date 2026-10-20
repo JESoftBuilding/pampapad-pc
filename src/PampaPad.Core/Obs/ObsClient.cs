@@ -172,7 +172,7 @@ public sealed partial class ObsClient(
         }
 
         var before = state.Current.Obs.Recording;
-        Update(obs => ObsMirror.Apply(obs, e));
+        Update(obs => Stamp(obs, ObsMirror.Apply(obs, e)));
         var after = state.Current.Obs.Recording;
         if (after != before)
         {
@@ -218,6 +218,12 @@ public sealed partial class ObsClient(
     }
 
     private void Update(Func<ObsState, ObsState> change) => state.Update(s => s with { Obs = change(s.Obs) });
+
+    // Cuándo fue el último cambio de la grabación que avisó OBS, para la guarda de obs.record (hallazgo E4-11). Sólo por evento: lo que se
+    // lee al conectar pudo haber cambiado hace horas. ObsMirror no tiene reloj: la marca la pone el cliente, con el reloj monótono del
+    // TimeProvider (GetTimestamp) y no con la hora de Windows, que salta si Windows la corrige.
+    private ObsState Stamp(ObsState before, ObsState after) =>
+        after.Recording != before.Recording ? after with { RecordingChangedAt = clock.GetTimestamp() } : after;
 
     private void Info(string message) => log.Write(LogLevel.Info, "obs", message);
 

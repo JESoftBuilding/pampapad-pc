@@ -169,6 +169,9 @@ public class SerialConsoleLineTests
 
         Assert.Equal(Press(3), await rig.NextEvent());
         Assert.Equal(Release(3), await rig.NextEvent());
+
+        // NextEvent vuelve apenas el oyente del arnés recibe el evento, que puede ser antes de que el que tira anote su error (hallazgo E3b-6).
+        await Poll.Until(() => rig.Log.Recent().Count(e => e.Level == LogLevel.Error) == 2);
         var errors = rig.Log.Recent().Where(e => e.Level == LogLevel.Error).ToList();
         Assert.Equal(2, errors.Count);
         Assert.All(errors, e => Assert.Equal(ErrorCodes.InternalError, e.Code));
