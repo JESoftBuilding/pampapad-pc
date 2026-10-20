@@ -106,7 +106,18 @@ public sealed partial class Dispatcher
         else if (Controls.TryKey(e.Control, out int position))
         {
             // Base vacía es "no hay página" (Refresh no la toma ni para una página con el id vacío): no hay tecla a la que llevar el gesto.
-            string basePage = _state.Current.BasePage;
+            // Grabando rige la principal aunque el estado todavía no lo diga (02 §7, regla 1).
+            AppState now = _state.Current;
+            string basePage = KeysPage(config, now);
+
+            // El atajo de una tecla es de la página que lo registró, la base del estado. Grabando, hasta que la regla 2 registra los de la
+            // principal, siguen los de la elegida: ese toque es de una página que ya no rige y no se lleva a la tecla de la principal.
+            if (e.Source == HotkeySource.SourceId && basePage != now.BasePage)
+            {
+                _log.Info("dispatcher", $"El atajo de la tecla {position} es de la página {now.BasePage}, que ya no rige: se ignora.");
+                return;
+            }
+
             Key? key = basePage.Length == 0
                 ? null
                 : config.FindPage(basePage)?.Keys.Indexed().Select(item => item.Item).FirstOrDefault(candidate => candidate.Position == position);

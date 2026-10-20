@@ -5,8 +5,9 @@ using CoreLibrary = PampaPad.Core.Library;
 namespace PampaPad.Tests;
 
 /// <summary>
-/// El despachador armado como lo arma Composition, con un paso de mentira por cada tipo de OBS, atajos de Windows de mentira y una biblioteca
-/// en una carpeta temporal. Sin config es "sin carpeta elegida". Las pruebas de bordes comparten esto; las del plan tienen su Rig.
+/// El despachador armado como lo arma Composition, con un paso de mentira por cada tipo de la biblioteca de ejemplo, las dos condiciones que
+/// usa (siempre se cumplen), atajos de Windows de mentira y una biblioteca en una carpeta temporal. Sin config es "sin carpeta elegida".
+/// Las pruebas de bordes comparten esto; las del plan tienen su Rig.
 /// </summary>
 internal sealed class DispatcherRig : IAsyncDisposable
 {
@@ -28,8 +29,9 @@ internal sealed class DispatcherRig : IAsyncDisposable
         Library.Load();
         beforeWindows?.Invoke(Windows);
         beforeDispatcher?.Invoke(Marker);
-        var steps = new IStepType[] { Marker, Scene, Record, Mute, Request };
-        Dispatcher = new Dispatcher(Library, State, new Executor(steps, TimeProvider.System), new Gestures(clock ?? TimeProvider.System, Gestures.HoldFrom(null), Gestures.DefaultFreshness), Log);
+        var steps = new IStepType[] { Marker, Scene, Record, Mute, Request, Script, WaitWindow, Page };
+        ConditionType[] conditions = [FakeCondition.Met(Conditions.WindowExists).Type, FakeCondition.Met(Conditions.RecordingIs).Type];
+        Dispatcher = new Dispatcher(Library, State, new Executor(steps, conditions, TimeProvider.System), new Gestures(clock ?? TimeProvider.System, Gestures.HoldFrom(null), Gestures.DefaultFreshness), Log);
         Dispatcher.Finished += Finished.Enqueue;
         Hotkeys = new HotkeySource(Windows, State, Log);
         _ = Hotkeys.StartAsync(CancellationToken.None);
@@ -54,6 +56,12 @@ internal sealed class DispatcherRig : IAsyncDisposable
     public FakeStep Mute { get; } = new("obs.mute");
 
     public FakeStep Request { get; } = new("obs.request");
+
+    public FakeStep Script { get; } = new("script.run");
+
+    public FakeStep WaitWindow { get; } = new("wait.window");
+
+    public FakeStep Page { get; } = new("page.go");
 
     public FakeSystemHotkeys Windows { get; } = new();
 

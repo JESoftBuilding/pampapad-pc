@@ -5,6 +5,9 @@ namespace PampaPad.Tests;
 /// <summary>Windows de mentira para los atajos: anota qué se registró, rechaza lo que "ya tiene otro programa" y deja simular una pulsación.</summary>
 public sealed class FakeSystemHotkeys : ISystemHotkeys
 {
+    // La fuente registra en su hilo y la prueba aprieta en el suyo: el diccionario va con lock.
+    private readonly object _gate = new();
+
     public event Action<int>? Pressed;
 
     public Dictionary<int, Hotkey> Registered { get; } = [];
@@ -14,33 +17,71 @@ public sealed class FakeSystemHotkeys : ISystemHotkeys
 
     public bool TryRegister(int id, Hotkey hotkey)
     {
-        if (Taken.Contains(hotkey) || Registered.ContainsValue(hotkey))
+        lock (_gate)
         {
-            return false;
-        }
+            if (Taken.Contains(hotkey) || Registered.ContainsValue(hotkey))
+            {
+                return false;
+            }
 
-        Registered[id] = hotkey;
-        return true;
+            Registered[id] = hotkey;
+            return true;
+        }
     }
 
-    public void Unregister(int id) => Registered.Remove(id);
+    public void Unregister(int id)
+    {
+        lock (_gate)
+        {
+            Registered.Remove(id);
+        }
+    }
 
     /// <summary>Una pulsación: con MOD_NOREPEAT, mantener la combinación apretada es una sola. Devuelve false si nadie la tiene registrada.</summary>
     public bool Press(Hotkey hotkey)
     {
-        foreach ((int id, Hotkey registered) in Registered)
+        int? found = null;
+        lock (_gate)
         {
-            if (registered == hotkey)
+            foreach ((int id, Hotkey registered) in Registered)
             {
-                Pressed?.Invoke(id);
-                return true;
+                if (registered == hotkey)
+                {
+                    found = id;
+                    break;
+                }
             }
         }
 
-        return false;
+        if (found is not { } pressed)
+        {
+            return false;
+        }
+
+        Pressed?.Invoke(pressed);
+        return true;
     }
 
-    public bool Press(string text) => Press(Hotkey.Parse(text) ?? throw new ArgumentException($"\"{text}\" no es un atajo.", nameof(text)));
+    public bool Press(string text) => Press(Parse(text));
+
+    /// <summary>
+    /// Espera a que la fuente registre la combinación y la aprieta. HotkeySource registra en su hilo después de Attach: apretar enseguida
+    /// puede llegar antes (falló 1 de unas 15 corridas de la suite el 2026-10-20) y devolver false.
+    /// </summary>
+    public async Task<bool> PressWhenRegisteredAsync(string text)
+    {
+        Hotkey hotkey = Parse(text);
+        await Poll.Until(() =>
+        {
+            lock (_gate)
+            {
+                return Registered.ContainsValue(hotkey);
+            }
+        });
+        return Press(hotkey);
+    }
+
+    private static Hotkey Parse(string text) => Hotkey.Parse(text) ?? throw new ArgumentException($"\"{text}\" no es un atajo.", nameof(text));
 
     /// <summary>Un aviso con un id cualquiera, como el que quedó en la cola de Windows de una combinación que ya se soltó.</summary>
     public void PressId(int id) => Pressed?.Invoke(id);

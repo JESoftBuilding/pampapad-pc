@@ -11,13 +11,13 @@ public class ObsKeysEndToEndTests
     private static string Example => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Data", "example-library", "config.json"));
 
     [Fact]
-    public async Task The_example_loads_clean_with_the_real_catalog_and_takes_its_eight_hotkeys()
+    public async Task The_example_loads_clean_with_the_real_catalog_and_takes_its_nine_hotkeys()
     {
         await using ObsSession session = await ObsSession.StartAsync();
         await using var rig = new Rig(session, Example);
 
         Assert.Empty(session.State.Current.Problems);
-        Assert.Equal(new HotkeysState(8, 0), session.State.Current.Hotkeys);
+        Assert.Equal(new HotkeysState(9, 0), session.State.Current.Hotkeys);      // B y M en sus teclas; parar, grabar y las cinco marcas en hotkeys
         Assert.Equal("grabacion", session.State.Current.BasePage);
     }
 
@@ -27,9 +27,9 @@ public class ObsKeysEndToEndTests
         await using ObsSession session = await ObsSession.StartAsync();
         await using var rig = new Rig(session, Example);
 
-        Assert.True(rig.Windows.Press("Ctrl+Shift+Alt+G"));
+        Assert.True(await rig.Windows.PressWhenRegisteredAsync("Ctrl+Shift+Alt+G"));
         await Poll.Until(() => session.State.Current.Obs.Recording == RecordingState.Recording && rig.Finished.Count == 1);
-        Assert.True(rig.Windows.Press("Ctrl+Shift+Alt+D"));
+        Assert.True(await rig.Windows.PressWhenRegisteredAsync("Ctrl+Shift+Alt+D"));
         await Poll.Until(() => session.State.Current.Obs.Recording == RecordingState.Stopped && rig.Finished.Count == 2);
 
         Assert.All(rig.Finished, result => Assert.True(result.Ok));
@@ -43,9 +43,9 @@ public class ObsKeysEndToEndTests
         await using ObsSession session = await ObsSession.StartAsync();
         await using var rig = new Rig(session, Example);
 
-        Assert.True(rig.Windows.Press("Ctrl+Shift+Alt+M"));
+        Assert.True(await rig.Windows.PressWhenRegisteredAsync("Ctrl+Shift+Alt+M"));
         await Poll.Until(() => session.State.Current.Obs.MicMuted && rig.Finished.Count == 1);
-        Assert.True(rig.Windows.Press("Ctrl+Shift+Alt+M"));
+        Assert.True(await rig.Windows.PressWhenRegisteredAsync("Ctrl+Shift+Alt+M"));
         await Poll.Until(() => !session.State.Current.Obs.MicMuted && rig.Finished.Count == 2);
 
         Assert.False(session.Obs.MicMuted);
@@ -88,6 +88,42 @@ public class ObsKeysEndToEndTests
         Assert.Equal("escenas", session.State.Current.BasePage);
     }
 
+    [Fact]
+    public async Task From_the_scenes_page_a_scene_goes_on_air_and_with_the_take_stopped_brings_back_the_main_page()
+    {
+        await using ObsSession session = await ObsSession.StartAsync();
+        await using var rig = new Rig(session, Example);
+        Assert.Null(rig.Dispatcher.Go("escenas"));
+
+        rig.Dispatcher.Receive(new InputEvent("console", Controls.Key(12), Gesture.Press));
+        await Poll.Until(() => rig.Finished.Count == 1);
+
+        ActionResult result = Assert.Single(rig.Finished);
+        Assert.True(result.Ok, result.Failure?.Message);
+        Assert.Equal(new[] { StepOutcome.Ok, StepOutcome.Ok }, result.Steps.Select(step => step.Outcome));
+        // La escena del estado la pone el aviso de OBS, que puede llegar después de que la acción terminó.
+        await Poll.Until(() => session.State.Current.Obs.SceneUuid == "ed2f1482-848c-4500-840d-807aee465d1f");
+        Assert.Equal("grabacion", session.State.Current.BasePage);
+        Assert.Equal(new HotkeysState(9, 0), session.State.Current.Hotkeys);
+    }
+
+    [Fact]
+    public async Task Recording_a_scene_from_the_window_skips_the_page_change_and_goes_on_air()
+    {
+        await using ObsSession session = await ObsSession.StartAsync();
+        await using var rig = new Rig(session, Example);
+        Assert.True(await rig.Windows.PressWhenRegisteredAsync("Ctrl+Shift+Alt+G"));
+        await Poll.Until(() => session.State.Current.Obs.Recording == RecordingState.Recording && rig.Finished.Count == 1);
+
+        ActionResult result = await rig.Dispatcher.Launch("escena-fin", new Invocation(Guid.NewGuid(), Trigger.Window, null, null, null, null));
+
+        Assert.True(result.Ok, result.Failure?.Message);
+        Assert.Equal(new[] { StepOutcome.Omitted, StepOutcome.Ok }, result.Steps.Select(step => step.Outcome));
+        // La escena del estado la pone el aviso de OBS, que puede llegar después de que la acción terminó.
+        await Poll.Until(() => session.State.Current.Obs.SceneUuid == "ed2f1482-848c-4500-840d-807aee465d1f");
+        Assert.Equal("grabacion", session.State.Current.BasePage);
+    }
+
     /// <summary>Lo que arma Composition para OBS, con Windows de mentira y la biblioteca en una carpeta temporal.</summary>
     private sealed class Rig : IAsyncDisposable
     {
@@ -98,11 +134,18 @@ public class ObsKeysEndToEndTests
         {
             Directory.CreateDirectory(_temp.Combine("biblioteca"));
             File.WriteAllText(_temp.Combine("biblioteca", "config.json"), config);
+            TestChains.CopyExampleScripts(_temp.Combine("biblioteca"));
             var library = new CoreLibrary(_temp.Combine("biblioteca"), _temp.Combine("backup"));
             library.Load();
-            var executor = new Executor(Catalog.Build(session.Client, session.State, session.Log, TimeProvider.System), TimeProvider.System);
+            Dispatcher? dispatcher = null;
+            Chains chains = TestChains.For(library, session.Log, goToPage: target => dispatcher!.Go(target));
+            var executor = new Executor(
+                Catalog.Build(session.Client, session.State, session.Log, TimeProvider.System, chains),
+                Conditions.Build(chains.Windows, session.State, session.Client),
+                TimeProvider.System);
             var gestures = new Gestures(clock ?? TimeProvider.System, Gestures.HoldFrom(null), Gestures.DefaultFreshness);
-            Dispatcher = new Dispatcher(library, session.State, executor, gestures, session.Log);
+            dispatcher = new Dispatcher(library, session.State, executor, gestures, session.Log);
+            Dispatcher = dispatcher;
             Dispatcher.Finished += Finished.Enqueue;
             _hotkeys = new HotkeySource(Windows, session.State, session.Log);
             _ = _hotkeys.StartAsync(CancellationToken.None);

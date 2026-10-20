@@ -7,34 +7,40 @@
       "name": "Grabación",
       "keys": [
         {
+          "position": 3,
+          "label": "Banco",
+          "action": "ir-al-banco",
+          "hotkey": "Ctrl+Shift+Alt+B"
+        },
+        {
+          "position": 4,
+          "label": "Escenas",
+          "action": "ir-a-escenas"
+        },
+        {
           "position": 5,
           "label": "Short",
-          "action": "marca-short",
-          "hotkey": "Ctrl+Shift+Alt+F9"
+          "action": "marca-short"
         },
         {
           "position": 6,
           "label": "Inicio",
-          "action": "marca-inicio",
-          "hotkey": "Ctrl+Shift+Alt+F6"
+          "action": "marca-inicio"
         },
         {
           "position": 7,
           "label": "Fin",
-          "action": "marca-fin",
-          "hotkey": "Ctrl+Shift+Alt+F7"
+          "action": "marca-fin"
         },
         {
           "position": 8,
           "label": "Sacar",
-          "action": "marca-sacar",
-          "hotkey": "Ctrl+Shift+Alt+F8"
+          "action": "marca-sacar"
         },
         {
           "position": 9,
           "label": "Largo",
-          "action": "marca-largo",
-          "hotkey": "Ctrl+Shift+Alt+F5"
+          "action": "marca-largo"
         },
         {
           "position": 10,
@@ -54,7 +60,6 @@
           "position": 12,
           "label": "Grabar",
           "action": "grabar",
-          "hotkey": "Ctrl+Shift+Alt+G",
           "onHold": {
             "action": "parar"
           }
@@ -229,9 +234,58 @@
       ]
     },
     {
+      "id": "ir-al-banco",
+      "name": "Ir al banco",
+      "steps": [
+        {
+          "type": "script.run",
+          "script": "bancocam",
+          "onlyIf": {
+            "type": "window.exists",
+            "title": "bancocam",
+            "process": "scrcpy",
+            "negate": true
+          }
+        },
+        {
+          "type": "wait.window",
+          "title": "bancocam",
+          "width": 1823,
+          "height": 850,
+          "timeoutSec": 5,
+          "process": "scrcpy"
+        },
+        {
+          "type": "obs.scene",
+          "scene": {
+            "uuid": "900ebc25-03ef-443e-80cc-2ad8991268ff",
+            "name": "Banco"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ir-a-escenas",
+      "name": "Ir a la página de escenas",
+      "steps": [
+        {
+          "type": "page.go",
+          "target": "escenas"
+        }
+      ]
+    },
+    {
       "id": "escena-camara",
       "name": "Escena: Cámara",
       "steps": [
+        {
+          "type": "page.go",
+          "target": "main",
+          "onlyIf": {
+            "type": "recording.is",
+            "state": "stopped"
+          }
+        },
         {
           "type": "obs.scene",
           "scene": {
@@ -246,6 +300,14 @@
       "name": "Escena: Pantalla",
       "steps": [
         {
+          "type": "page.go",
+          "target": "main",
+          "onlyIf": {
+            "type": "recording.is",
+            "state": "stopped"
+          }
+        },
+        {
           "type": "obs.scene",
           "scene": {
             "uuid": "f3637453-bc14-4e54-b4c5-1b76f4fb4a21",
@@ -258,6 +320,14 @@
       "id": "escena-banco",
       "name": "Escena: Banco",
       "steps": [
+        {
+          "type": "page.go",
+          "target": "main",
+          "onlyIf": {
+            "type": "recording.is",
+            "state": "stopped"
+          }
+        },
         {
           "type": "obs.scene",
           "scene": {
@@ -272,6 +342,14 @@
       "name": "Escena: Ya arrancamos",
       "steps": [
         {
+          "type": "page.go",
+          "target": "main",
+          "onlyIf": {
+            "type": "recording.is",
+            "state": "stopped"
+          }
+        },
+        {
           "type": "obs.scene",
           "scene": {
             "uuid": "f221061d-d50a-4904-be00-a381efe74757",
@@ -284,6 +362,14 @@
       "id": "escena-camara-zoom",
       "name": "Escena: Cámara (zoom)",
       "steps": [
+        {
+          "type": "page.go",
+          "target": "main",
+          "onlyIf": {
+            "type": "recording.is",
+            "state": "stopped"
+          }
+        },
         {
           "type": "obs.scene",
           "scene": {
@@ -298,6 +384,14 @@
       "name": "Escena: Pantalla + Cámara",
       "steps": [
         {
+          "type": "page.go",
+          "target": "main",
+          "onlyIf": {
+            "type": "recording.is",
+            "state": "stopped"
+          }
+        },
+        {
           "type": "obs.scene",
           "scene": {
             "uuid": "5bcf806a-9dac-430c-a437-3eab544e8419",
@@ -310,6 +404,14 @@
       "id": "escena-intro",
       "name": "Escena: Intro",
       "steps": [
+        {
+          "type": "page.go",
+          "target": "main",
+          "onlyIf": {
+            "type": "recording.is",
+            "state": "stopped"
+          }
+        },
         {
           "type": "obs.scene",
           "scene": {
@@ -324,6 +426,14 @@
       "name": "Escena: Ya vuelvo",
       "steps": [
         {
+          "type": "page.go",
+          "target": "main",
+          "onlyIf": {
+            "type": "recording.is",
+            "state": "stopped"
+          }
+        },
+        {
           "type": "obs.scene",
           "scene": {
             "uuid": "e231ef9c-23aa-4957-a74b-27181da1d8cf",
@@ -336,6 +446,14 @@
       "id": "escena-vertical-camara",
       "name": "Escena: Vertical Cámara",
       "steps": [
+        {
+          "type": "page.go",
+          "target": "main",
+          "onlyIf": {
+            "type": "recording.is",
+            "state": "stopped"
+          }
+        },
         {
           "type": "obs.scene",
           "scene": {
@@ -350,6 +468,14 @@
       "name": "Escena: Vertical SolidWorks",
       "steps": [
         {
+          "type": "page.go",
+          "target": "main",
+          "onlyIf": {
+            "type": "recording.is",
+            "state": "stopped"
+          }
+        },
+        {
           "type": "obs.scene",
           "scene": {
             "uuid": "67178d64-00f6-4b61-be02-7364b8f5cfe3",
@@ -362,6 +488,14 @@
       "id": "escena-vertical-pantalla-banco",
       "name": "Escena: Vertical Pantalla + Banco",
       "steps": [
+        {
+          "type": "page.go",
+          "target": "main",
+          "onlyIf": {
+            "type": "recording.is",
+            "state": "stopped"
+          }
+        },
         {
           "type": "obs.scene",
           "scene": {
@@ -376,6 +510,14 @@
       "name": "Escena: Fin",
       "steps": [
         {
+          "type": "page.go",
+          "target": "main",
+          "onlyIf": {
+            "type": "recording.is",
+            "state": "stopped"
+          }
+        },
+        {
           "type": "obs.scene",
           "scene": {
             "uuid": "ed2f1482-848c-4500-840d-807aee465d1f",
@@ -389,6 +531,30 @@
     {
       "hotkey": "Ctrl+Shift+Alt+D",
       "action": "parar"
+    },
+    {
+      "hotkey": "Ctrl+Shift+Alt+G",
+      "action": "grabar"
+    },
+    {
+      "hotkey": "Ctrl+Shift+Alt+F9",
+      "action": "marca-short"
+    },
+    {
+      "hotkey": "Ctrl+Shift+Alt+F6",
+      "action": "marca-inicio"
+    },
+    {
+      "hotkey": "Ctrl+Shift+Alt+F7",
+      "action": "marca-fin"
+    },
+    {
+      "hotkey": "Ctrl+Shift+Alt+F8",
+      "action": "marca-sacar"
+    },
+    {
+      "hotkey": "Ctrl+Shift+Alt+F5",
+      "action": "marca-largo"
     }
   ]
 }

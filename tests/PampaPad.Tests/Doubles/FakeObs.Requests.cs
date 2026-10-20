@@ -54,7 +54,7 @@ public sealed partial class FakeObs
         {
             if (e.After > TimeSpan.Zero)
             {
-                await Task.Delay(e.After, _stop.Token);
+                await DelayAsync(e.After);
             }
 
             await EmitAsync(e.Type, e.Intent, e.Data);
@@ -129,6 +129,16 @@ public sealed partial class FakeObs
         "PauseRecord" => PauseRecord(),
         "ResumeRecord" => ResumeRecord(),
         "CreateRecordChapter" => Chapter(data),
+        "GetSceneItemList" => SceneItemList(data),
+        "GetGroupSceneItemList" => GroupItemList(data),
+        "GetVideoSettings" => VideoSettings(),
+        "GetProfileList" => ProfileList(),
+        "GetProfileParameter" => ProfileParameter(data),
+        "GetInputSettings" => InputSettings(data),
+        "GetInputPropertiesListPropertyItems" => PropertyItems(data),
+        "GetInputAudioTracks" => AudioTracks(data),
+        "GetSourceActive" => SourceActive(data),
+        "GetSourceScreenshot" => Screenshot(data),
         _ => Reply.Fail(204, "Your request type is not valid."),
     };
 
@@ -137,6 +147,12 @@ public sealed partial class FakeObs
         if (RecordingActive)
         {
             return Reply.Fail(500);
+        }
+
+        if (IgnoreNextStart)
+        {
+            IgnoreNextStart = false;
+            return Reply.Ok();                // medido una vez (E4-11): 100 y OBS no arranca, sin ningún evento
         }
 
         RecordingActive = true;
