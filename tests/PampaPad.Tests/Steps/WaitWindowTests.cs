@@ -140,7 +140,7 @@ public class WaitWindowTests
     [InlineData("""{ "type": "wait.window", "title": "bancocam" }""", "timeoutSec")]
     [InlineData("""{ "type": "wait.window", "title": "", "timeoutSec": 5 }""", "title")]
     [InlineData("""{ "type": "wait.window", "title": "bancocam", "timeoutSec": 0 }""", "timeoutSec")]
-    [InlineData("""{ "type": "wait.window", "title": "bancocam", "timeoutSec": 61 }""", "timeoutSec")]
+    [InlineData("""{ "type": "wait.window", "title": "bancocam", "timeoutSec": 60 }""", "timeoutSec")]
     [InlineData("""{ "type": "wait.window", "title": "bancocam", "timeoutSec": 5, "width": 0 }""", "width")]
     [InlineData("""{ "type": "wait.window", "title": "bancocam", "timeoutSec": 5, "height": -1 }""", "height")]
     public void A_bad_parameter_is_a_problem_of_the_step(string json, string where)
@@ -153,10 +153,11 @@ public class WaitWindowTests
 
     [Theory]
     [InlineData(1)]
-    [InlineData(60)]
-    public void The_step_of_02_8_with_every_parameter_is_valid_from_1_s_to_the_limit_of_the_action(int timeoutSec)
+    [InlineData(59)]
+    public void The_step_of_02_8_with_every_parameter_is_valid_from_1_s_to_under_the_limit_of_the_action(int timeoutSec)
     {
-        // 02 §5: timeoutSec de 1 a 60. La de arriba prueba sólo lo que se rechaza: un borde corrido no la haría fallar (revisión de E5-9).
+        // 02 §5: timeoutSec de 1 a 59; 60 es el tope de la acción, que vence primero (decisión 35). La de arriba prueba sólo lo que se
+        // rechaza: un borde corrido no la haría fallar (revisión de E5-9).
         Step step = Parse($$"""{ "type": "wait.window", "title": "bancocam", "width": 1823, "height": 850, "timeoutSec": {{timeoutSec}}, "process": "scrcpy" }""");
 
         Assert.Empty(new WaitWindow(new FakeWindows(), TimeProvider.System).Validate(step));

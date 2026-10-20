@@ -65,19 +65,20 @@ public class WaitTimeTests
     [InlineData("""{ "type": "wait.time" }""")]
     [InlineData("""{ "type": "wait.time", "durationMs": 0 }""")]
     [InlineData("""{ "type": "wait.time", "durationMs": -5 }""")]
-    [InlineData("""{ "type": "wait.time", "durationMs": 60001 }""")]
+    [InlineData("""{ "type": "wait.time", "durationMs": 60000 }""")]
     [InlineData("""{ "type": "wait.time", "durationMs": "500" }""")]
     [InlineData("""{ "type": "wait.time", "durationMs": 1.5 }""")]
-    public void A_duration_that_is_not_from_1_ms_to_the_action_limit_is_a_problem(string json)
+    public void A_duration_that_is_not_from_1_ms_to_under_the_action_limit_is_a_problem(string json)
     {
+        // 60.000 es el tope de la acción: la acción vence antes de que la espera termine bien (02 §5, decisión 35).
         Problem problem = Assert.Single(new WaitTime(TimeProvider.System).Validate(Parse(json)));
 
         Assert.Equal(ProblemCodes.ParameterInvalid, problem.Code);
     }
 
     [Fact]
-    public void The_limit_of_the_action_is_the_longest_wait()
+    public void The_longest_wait_is_one_ms_under_the_limit_of_the_action()
     {
-        Assert.Empty(new WaitTime(TimeProvider.System).Validate(Parse("""{ "type": "wait.time", "durationMs": 60000 }""")));
+        Assert.Empty(new WaitTime(TimeProvider.System).Validate(Parse("""{ "type": "wait.time", "durationMs": 59999 }""")));
     }
 }

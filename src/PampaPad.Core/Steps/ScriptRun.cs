@@ -38,9 +38,10 @@ public sealed class ScriptRun(ScriptRunner runner, Library library) : StepType<S
             yield return new Problem("script", missing.Code, missing.Message, Severity.Warning);
         }
 
-        if (p.TimeoutSec is <= 0 || p.TimeoutSec > Executor.ActionTimeout.TotalSeconds)
+        // Tope exclusivo (decisión 35): con 60 vence antes el de la acción y la falla sale cancelled, no script_timeout.
+        if (p.TimeoutSec is <= 0 || p.TimeoutSec >= Executor.ActionTimeout.TotalSeconds)
         {
-            yield return Invalid("timeoutSec", $"timeoutSec va en segundos, de 1 a {Executor.ActionTimeout.TotalSeconds:0}: el tope de la acción.");
+            yield return Invalid("timeoutSec", $"timeoutSec va en segundos, de 1 a {Executor.ActionTimeout.TotalSeconds - 1:0}: con {Executor.ActionTimeout.TotalSeconds:0} vence antes el tope de la acción.");
         }
     }
 

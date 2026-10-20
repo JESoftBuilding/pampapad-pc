@@ -147,7 +147,7 @@ public class ScriptRunTests
     [InlineData("""{ "type": "script.run" }""", "script")]
     [InlineData("""{ "type": "script.run", "script": "" }""", "script")]
     [InlineData("""{ "type": "script.run", "script": "hola", "timeoutSec": 0 }""", "timeoutSec")]
-    [InlineData("""{ "type": "script.run", "script": "hola", "timeoutSec": 61 }""", "timeoutSec")]
+    [InlineData("""{ "type": "script.run", "script": "hola", "timeoutSec": 60 }""", "timeoutSec")]
     [InlineData("""{ "type": "script.run", "script": "hola", "wait": "no" }""", "")]
     public async Task A_bad_parameter_is_a_problem_of_the_step(string json, string where)
     {
@@ -161,10 +161,11 @@ public class ScriptRunTests
 
     [Theory]
     [InlineData(1)]
-    [InlineData(60)]
-    public async Task The_limit_of_the_step_goes_from_1_s_to_the_limit_of_the_action(int timeoutSec)
+    [InlineData(59)]
+    public async Task The_limit_of_the_step_goes_from_1_s_to_under_the_limit_of_the_action(int timeoutSec)
     {
-        // 02 §5: de 1 a 60. La de arriba prueba sólo lo que se rechaza: un borde corrido no la haría fallar (revisión de E5-10).
+        // 02 §5: de 1 a 59; 60 es el tope de la acción, que vence primero (decisión 35). La de arriba prueba sólo lo que se rechaza: un
+        // borde corrido no la haría fallar (revisión de E5-10).
         await using var rig = new ScriptRig();
         rig.AddCmd("hola", "@echo off\n");
 
