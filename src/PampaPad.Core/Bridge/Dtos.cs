@@ -36,6 +36,10 @@ public sealed record ConfigSaveResponse(string Fingerprint, IReadOnlyList<Proble
 /// <summary>library.reload (05 §11): lo que dejó la carga. Los problemas son los del archivo; los de los pasos y los atajos llegan con el estado.</summary>
 public sealed record LibraryReloadResponse(string Fingerprint, IReadOnlyList<Problem> Problems);
 
+/// <summary>hotkeys.suspend (05 §6 y §11): true suelta los atajos globales para grabar una combinación; false los reanuda.</summary>
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed record HotkeysSuspendRequest(bool Suspended);
+
 /// <summary>
 /// app.snapshot (01 §5 y 05 §11): versión, versión del esquema, configuración con su huella, estado con su seq, tipos de paso y de
 /// condición, y ajustes. Los problemas van dentro del estado, que es donde los junta el Dispatcher.

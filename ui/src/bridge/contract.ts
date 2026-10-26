@@ -118,6 +118,7 @@ export const requests = {
     response: z.object({ fingerprint: z.string(), problems: z.array(problemSchema) }),
   },
   "library.reload": { request: noDataSchema, response: z.object({ fingerprint: z.string(), problems: z.array(problemSchema) }) },
+  "hotkeys.suspend": { request: z.strictObject({ suspended: z.boolean() }), response: z.object({}) },
 } as const;
 
 export const events = {

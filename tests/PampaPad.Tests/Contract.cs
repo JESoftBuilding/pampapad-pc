@@ -104,6 +104,7 @@ public class Contract
                     Envelope.Request(5, RequestNames.ConfigSave, new ConfigSaveRequest(config, SampleFingerprint)),
                     Envelope.Response(5, new ConfigSaveResponse(SavedFingerprint, [savedWarning]))),
                 [RequestNames.LibraryReload] = Pair(Envelope.Request(6, RequestNames.LibraryReload, new NoData()), Envelope.Response(6, new LibraryReloadResponse(SavedFingerprint, []))),
+                [RequestNames.HotkeysSuspend] = Pair(Envelope.Request(8, RequestNames.HotkeysSuspend, new HotkeysSuspendRequest(true)), Envelope.Response(8, new NoData())),
             },
             ["events"] = new JsonObject
             {

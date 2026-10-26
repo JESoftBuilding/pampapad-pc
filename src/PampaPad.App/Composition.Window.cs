@@ -51,6 +51,8 @@ internal sealed partial class Composition
         var window = new EditorWindow(_bridge, Log, _ui, uiFolder, Path.Combine(_localFolder, "WebView2"), devServer);
         window.FormClosed += (_, _) =>
         {
+            // Una captura de atajo a medias deja los atajos suspendidos (05 §6, punto 3): al cerrar la ventana vuelven.
+            _hotkeys?.Suspend(false);
             if (ReferenceEquals(_window, window))
             {
                 _window = null;

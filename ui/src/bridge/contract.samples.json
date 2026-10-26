@@ -580,6 +580,20 @@
           "problems": []
         }
       }
+    },
+    "hotkeys.suspend": {
+      "request": {
+        "id": 8,
+        "request": "hotkeys.suspend",
+        "data": {
+          "suspended": true
+        }
+      },
+      "response": {
+        "id": 8,
+        "ok": true,
+        "data": {}
+      }
     }
   },
   "events": {
