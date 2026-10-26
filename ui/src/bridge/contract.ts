@@ -120,6 +120,13 @@ export const requests = {
   "library.reload": { request: noDataSchema, response: z.object({ fingerprint: z.string(), problems: z.array(problemSchema) }) },
   "hotkeys.suspend": { request: z.strictObject({ suspended: z.boolean() }), response: z.object({}) },
   "action.test": { request: z.strictObject({ action: z.record(z.string(), z.unknown()) }), response: z.object({ runId: z.string() }) },
+  "options.list": {
+    request: z.strictObject({ list: z.enum(["scenes", "inputs", "scripts", "windows"]) }),
+    response: z.object({
+      items: z.array(z.object({ name: z.string(), uuid: z.string().optional(), detail: z.string().optional() })),
+      unavailable: z.string().optional(),
+    }),
+  },
 } as const;
 
 export const events = {

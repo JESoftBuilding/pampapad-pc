@@ -22,6 +22,37 @@ public static partial class ScriptFolder
     /// <summary>Las extensiones que corre el contrato 1 (02 §9, punto 1).</summary>
     public static IReadOnlyList<string> Extensions { get; } = [".cmd", ".ps1", ".py", ".exe"];
 
+    /// <summary>
+    /// Los scripts de scripts/ cuya ficha se puede leer, por id y en orden. Los que tienen la ficha rota o ninguna no están: son los que
+    /// script.run no puede correr, y los muestra la pantalla Scripts con su problema (etapa 8). Sin biblioteca o sin carpeta, la lista vacía.
+    /// </summary>
+    public static IReadOnlyList<ScriptInfo> List(string libraryFolder)
+    {
+        string root = string.IsNullOrEmpty(libraryFolder) ? "" : Path.Combine(libraryFolder, FolderName);
+        if (root.Length == 0 || !Directory.Exists(root))
+        {
+            return [];
+        }
+
+        try
+        {
+            return
+            [
+                .. Directory.EnumerateDirectories(root)
+                    .Select(Path.GetFileName)
+                    .OfType<string>()
+                    .Order(StringComparer.Ordinal)
+                    .Select(id => Read(libraryFolder, id))
+                    .Where(read => read.Ok)
+                    .Select(read => read.Value!),
+            ];
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            return [];
+        }
+    }
+
     public static Result<ScriptInfo> Read(string libraryFolder, string id)
     {
         if (string.IsNullOrEmpty(libraryFolder))

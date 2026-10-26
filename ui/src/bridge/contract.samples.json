@@ -619,6 +619,31 @@
           "runId": "0f8fad5b-d9cb-469f-a165-70867728950e"
         }
       }
+    },
+    "options.list": {
+      "request": {
+        "id": 10,
+        "request": "options.list",
+        "data": {
+          "list": "scenes"
+        }
+      },
+      "response": {
+        "id": 10,
+        "ok": true,
+        "data": {
+          "items": [
+            {
+              "name": "Cámara",
+              "uuid": "3da67a13-6704-4c87-9e09-c8be28efdf20"
+            },
+            {
+              "name": "Banco",
+              "uuid": "900ebc25-03ef-443e-80cc-2ad8991268ff"
+            }
+          ]
+        }
+      }
     }
   },
   "events": {

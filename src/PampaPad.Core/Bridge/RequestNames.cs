@@ -14,8 +14,10 @@ public static class RequestNames
     public const string LibraryReload = "library.reload";
     public const string HotkeysSuspend = "hotkeys.suspend";
     public const string ActionTest = "action.test";
+    public const string OptionsList = "options.list";
 
-    public static IReadOnlyList<string> All { get; } = [AppSnapshot, LogRead, ActionCancel, WindowReady, ConfigSave, LibraryReload, HotkeysSuspend, ActionTest];
+    public static IReadOnlyList<string> All { get; } =
+        [AppSnapshot, LogRead, ActionCancel, WindowReady, ConfigSave, LibraryReload, HotkeysSuspend, ActionTest, OptionsList];
 
     /// <summary>Los que atiende la cáscara (AppRequests, 01 §3.2): el núcleo los nombra pero no los registra.</summary>
     public static IReadOnlyList<string> Shell { get; } = [WindowReady];

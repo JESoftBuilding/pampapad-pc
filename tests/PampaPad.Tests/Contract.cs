@@ -106,6 +106,9 @@ public class Contract
                 [RequestNames.LibraryReload] = Pair(Envelope.Request(6, RequestNames.LibraryReload, new NoData()), Envelope.Response(6, new LibraryReloadResponse(SavedFingerprint, []))),
                 [RequestNames.HotkeysSuspend] = Pair(Envelope.Request(8, RequestNames.HotkeysSuspend, new HotkeysSuspendRequest(true)), Envelope.Response(8, new NoData())),
                 [RequestNames.ActionTest] = Pair(Envelope.Request(9, RequestNames.ActionTest, new ActionTestRequest(config.Actions![0])), Envelope.Response(9, new ActionTestResponse(RunId))),
+                [RequestNames.OptionsList] = Pair(
+                    Envelope.Request(10, RequestNames.OptionsList, new OptionsListRequest(OptionsList.Scenes)),
+                    Envelope.Response(10, new OptionsListResponse([new OptionItem("Cámara", "3da67a13-6704-4c87-9e09-c8be28efdf20"), new OptionItem("Banco", "900ebc25-03ef-443e-80cc-2ad8991268ff")]))),
             },
             ["events"] = new JsonObject
             {

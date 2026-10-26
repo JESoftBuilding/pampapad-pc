@@ -45,6 +45,24 @@ public sealed record ActionTestRequest(Action Action);
 
 public sealed record ActionTestResponse(Guid RunId);
 
+/// <summary>Las listas de opciones que pide options.list (05 §4.2): lo que un campo de un paso ofrece elegir.</summary>
+public enum OptionsList
+{
+    Scenes,
+    Inputs,
+    Scripts,
+    Windows,
+}
+
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed record OptionsListRequest(OptionsList List);
+
+/// <summary>Una opción: Name es lo que se guarda y se muestra; Uuid, el de una escena o entrada de OBS (se guardan los dos, 02 §4.8); Detail, un dato para distinguirla (la ficha de un script, el proceso de una ventana).</summary>
+public sealed record OptionItem(string Name, string? Uuid = null, string? Detail = null);
+
+/// <summary>La lista, o Unavailable con el motivo cuando no se puede dar (OBS cerrado): el campo acepta el texto escrito a mano (05 §4.2).</summary>
+public sealed record OptionsListResponse(IReadOnlyList<OptionItem> Items, string? Unavailable = null);
+
 /// <summary>hotkeys.suspend (05 §6 y §11): true suelta los atajos globales para grabar una combinación; false los reanuda.</summary>
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record HotkeysSuspendRequest(bool Suspended);
