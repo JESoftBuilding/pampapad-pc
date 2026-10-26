@@ -49,7 +49,12 @@ public sealed class Executor(IReadOnlyList<IStepType> catalog, IReadOnlyList<Con
     }
 
     /// <summary>Los problemas de una acción que dependen del catálogo. Where es relativo a la acción: steps[0].marker.</summary>
-    public IReadOnlyList<Problem> Check(Action action)
+    public IReadOnlyList<Problem> Check(Action action) => Check(action, (type, step) => type.Validate(step));
+
+    /// <summary>Lo mismo contra una configuración candidata, que todavía no es la cargada: es lo que valida config.save (hallazgo E5-11).</summary>
+    public IReadOnlyList<Problem> Check(Action action, Config config) => Check(action, (type, step) => type.Validate(step, config));
+
+    private List<Problem> Check(Action action, Func<IStepType, Step, IReadOnlyList<Problem>> validate)
     {
         var found = new List<Problem>();
         foreach ((int index, Step step) in action.Steps.Indexed())
@@ -75,7 +80,7 @@ public sealed class Executor(IReadOnlyList<IStepType> catalog, IReadOnlyList<Con
             }
             else
             {
-                found.AddRange(type.Validate(step).Select(problem => problem with { Where = Join(where, problem.Where) }));
+                found.AddRange(validate(type, step).Select(problem => problem with { Where = Join(where, problem.Where) }));
                 if (step.OnlyIf is { } guard)
                 {
                     found.AddRange(ConditionRules.Validate(FindCondition(guard.Type)!, guard).Select(problem => problem with { Where = Join($"{where}.onlyIf", problem.Where) }));
