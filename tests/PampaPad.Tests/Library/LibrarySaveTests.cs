@@ -288,7 +288,7 @@ public sealed class LibrarySaveTests : IDisposable
     }
 
     [Fact]
-    public async Task A_file_another_program_holds_open_is_reported_and_left_as_it_was()
+    public async Task A_file_another_program_has_locked_is_never_overwritten()
     {
         CoreLibrary library = Open(Data("config.minimal.json"));
         string before = File.ReadAllText(ConfigFile, Utf8);
@@ -298,9 +298,31 @@ public sealed class LibrarySaveTests : IDisposable
             saved = await library.SaveAsync(Renamed(library, "Otra"), library.Fingerprint, CancellationToken.None);
         }
 
-        Assert.False(saved.Ok);
+        Assert.Equal(ErrorCodes.ConfigUnreadable, saved.Failure?.Code);
         Assert.Equal(before, File.ReadAllText(ConfigFile, Utf8));
         Assert.False(File.Exists(ConfigFile + ".tmp"));
+    }
+
+    // Con el archivo abierto para leer, la lectura y el respaldo andan y File.Replace falla: el temporal ya se escribió y tiene que borrarse.
+    [Fact]
+    public async Task A_replacement_that_fails_leaves_the_original_and_no_temporary()
+    {
+        CoreLibrary library = Open(Data("config.minimal.json"));
+        string before = File.ReadAllText(ConfigFile, Utf8);
+        string fingerprint = library.Fingerprint;
+        int changes = 0;
+        library.Changed += _ => changes++;
+        Result saved;
+        using (new FileStream(ConfigFile, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            saved = await library.SaveAsync(Renamed(library, "Otra"), fingerprint, CancellationToken.None);
+        }
+
+        Assert.Equal(ErrorCodes.InternalError, saved.Failure?.Code);
+        Assert.Equal(before, File.ReadAllText(ConfigFile, Utf8));
+        Assert.False(File.Exists(ConfigFile + ".tmp"));
+        Assert.Equal(fingerprint, library.Fingerprint);
+        Assert.Equal(0, changes);
     }
 
     [Fact]
