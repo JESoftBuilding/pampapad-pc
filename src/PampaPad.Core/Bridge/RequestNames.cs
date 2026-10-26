@@ -15,12 +15,13 @@ public static class RequestNames
     public const string HotkeysSuspend = "hotkeys.suspend";
     public const string ActionTest = "action.test";
     public const string OptionsList = "options.list";
+    public const string WindowDirty = "window.dirty";
 
     public static IReadOnlyList<string> All { get; } =
-        [AppSnapshot, LogRead, ActionCancel, WindowReady, ConfigSave, LibraryReload, HotkeysSuspend, ActionTest, OptionsList];
+        [AppSnapshot, LogRead, ActionCancel, WindowReady, ConfigSave, LibraryReload, HotkeysSuspend, ActionTest, OptionsList, WindowDirty];
 
     /// <summary>Los que atiende la cáscara (AppRequests, 01 §3.2): el núcleo los nombra pero no los registra.</summary>
-    public static IReadOnlyList<string> Shell { get; } = [WindowReady];
+    public static IReadOnlyList<string> Shell { get; } = [WindowReady, WindowDirty];
 }
 
 /// <summary>Los eventos del puente (05, Términos). script.output entra con los scripts, en la etapa 5.</summary>

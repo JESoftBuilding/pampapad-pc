@@ -144,6 +144,7 @@ internal sealed partial class Composition : IAsyncDisposable
             tray.MenuOpened += notifier.Dismiss;
             tray.OpenWindowRequested += () => composition.OpenWindow(EditorWindow.FirstScreen);
             tray.StatusRequested += () => composition.OpenWindow(EditorWindow.StatusScreen);
+            tray.ExitRequested += composition.RequestExit;
             composition.HookChains(tray, preflight, notifier, dispatcher);
             tray.ReconnectRequested += (_, _) => obs.Reconnect();
             tray.ConsoleToggleRequested += () =>

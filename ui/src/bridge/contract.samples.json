@@ -620,6 +620,20 @@
         }
       }
     },
+    "window.dirty": {
+      "request": {
+        "id": 11,
+        "request": "window.dirty",
+        "data": {
+          "dirty": true
+        }
+      },
+      "response": {
+        "id": 11,
+        "ok": true,
+        "data": {}
+      }
+    },
     "options.list": {
       "request": {
         "id": 10,

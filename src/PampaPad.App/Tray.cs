@@ -50,7 +50,17 @@ internal sealed class Tray : ApplicationContext
             _menu.Items.Add(new ToolStripSeparator());
         }
 
-        _menu.Items.Add("Salir", null, (_, _) => ExitThread());
+        _menu.Items.Add("Salir", null, (_, _) =>
+        {
+            if (ExitRequested is { } request)
+            {
+                request();
+            }
+            else
+            {
+                ExitThread();
+            }
+        });
 
         _reconnect.Click += (_, _) => ReconnectRequested?.Invoke(this, EventArgs.Empty);
         _preflight.Click += (_, _) => PreflightRequested?.Invoke();
@@ -92,6 +102,11 @@ internal sealed class Tray : ApplicationContext
 
     /// <summary>Se eligió "Cancelar todo": cancela las acciones en curso (01 §4.5).</summary>
     public event System.Action? CancelAllRequested;
+
+    /// <summary>
+    /// Se eligió "Salir". Quien compone decide: con cambios sin guardar en la ventana, antes pregunta. Si nadie escucha, sale.
+    /// </summary>
+    public event System.Action? ExitRequested;
 
     /// <summary>El sonido "falló". Sólo desde el hilo de la interfaz. Si suena o no lo decidió el Notifier.</summary>
     public void PlayFailed() => Failed?.Play();

@@ -45,6 +45,10 @@ public sealed record ActionTestRequest(Action Action);
 
 public sealed record ActionTestResponse(Guid RunId);
 
+/// <summary>window.dirty (05 §11): la página avisa a la cáscara si tiene cambios sin guardar, para que al cerrar la ventana pregunte (01 §5).</summary>
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed record WindowDirtyRequest(bool Dirty);
+
 /// <summary>Las listas de opciones que pide options.list (05 §4.2): lo que un campo de un paso ofrece elegir.</summary>
 public enum OptionsList
 {

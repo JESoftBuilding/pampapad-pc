@@ -120,6 +120,7 @@ export const requests = {
   "library.reload": { request: noDataSchema, response: z.object({ fingerprint: z.string(), problems: z.array(problemSchema) }) },
   "hotkeys.suspend": { request: z.strictObject({ suspended: z.boolean() }), response: z.object({}) },
   "action.test": { request: z.strictObject({ action: z.record(z.string(), z.unknown()) }), response: z.object({ runId: z.string() }) },
+  "window.dirty": { request: z.strictObject({ dirty: z.boolean() }), response: z.object({}) },
   "options.list": {
     request: z.strictObject({ list: z.enum(["scenes", "inputs", "scripts", "windows"]) }),
     response: z.object({
