@@ -192,6 +192,33 @@ test("si cambió en el disco, lo dice y ofrece recargar la biblioteca", async ({
   await expect(page.getByLabel("Etiqueta")).toHaveValue("Short");
 });
 
+test("una foto nueva con el borrador sucio no lo pisa: avisa, guarda con la huella de la base y deja descartarlo", async ({ page }) => {
+  await page.getByRole("button", { name: "Tecla 5", exact: true }).click();
+  await page.getByLabel("Etiqueta").fill("Corto");
+  const base = await fingerprint(page);
+  await page.evaluate(() =>
+    (window as unknown as { pampapadFake: Fake }).pampapadFake.emit("config.changed", { config: { version: 1, pages: [], actions: [] }, fingerprint: "nueva" }, 99),
+  );
+
+  await expect(page.getByText("La biblioteca cambió")).toBeVisible();
+  await expect(page.getByLabel("Etiqueta")).toHaveValue("Corto");
+  // El programa rechazaría ese guardado (config_changed_on_disk); lo que importa acá es qué huella manda la página.
+  await page.evaluate(() =>
+    (window as unknown as { pampapadFake: Fake }).pampapadFake.answer("config.save", { ok: false, error: { code: "config_changed_on_disk", message: "config.json cambió en el disco desde que se leyó." } }),
+  );
+  await page.getByRole("button", { name: "Guardar" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "No se guardó" })).toBeVisible();
+  const saves = (await calls(page, "config.save")) as SaveCall[];
+  expect(saves).toHaveLength(1);
+  expect(saves[0].expectedFingerprint).toBe(base);
+  expect(base).not.toBe("nueva");
+
+  await page.getByRole("button", { name: "Descartar y tomar la nueva" }).click();
+  await expect(page.getByText("La biblioteca cambió")).toHaveCount(0);
+  await expect(page.getByText("cambios sin guardar")).toHaveCount(0);
+  await expect(page.locator("[data-fingerprint='nueva']")).toBeVisible();
+});
+
 test("Probar corre la acción de la tecla como borrador y muestra lo que llega por action.finished", async ({ page }) => {
   await stopped(page);
   await page.getByRole("button", { name: "Tecla 5", exact: true }).click();
