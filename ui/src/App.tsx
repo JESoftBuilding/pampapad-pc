@@ -3,6 +3,7 @@ import type { Bridge } from "@/bridge/bridge";
 import { useSnapshot } from "@/bridge/useSnapshot";
 import { Frame, type NavItem } from "@/Frame";
 import { useDraft } from "@/screens/common/useDraft";
+import { ActionsScreen } from "@/screens/actions/Actions";
 import { KeysScreen } from "@/screens/keys/Keys";
 import { Placeholder } from "@/screens/Placeholder";
 import type { ScreenProps } from "@/screens/screen";
@@ -13,12 +14,7 @@ export type ScreenRow = NavItem & { Component: ComponentType<ScreenProps> };
 /** La tabla de pantallas (01 §6): hash, título y componente, en el orden de 05 §4. stage: la etapa en que llega (01 §8). */
 export const screens: ScreenRow[] = [
   { hash: "keys", title: "Teclas", Component: KeysScreen },
-  {
-    hash: "actions",
-    title: "Acciones",
-    stage: 7,
-    Component: () => <Placeholder title="Acciones" stage={7} note="Mientras tanto, las acciones se escriben a mano en config.json." />,
-  },
+  { hash: "actions", title: "Acciones", Component: ActionsScreen },
   {
     hash: "scripts",
     title: "Scripts",
