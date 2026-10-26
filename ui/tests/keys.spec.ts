@@ -89,6 +89,33 @@ test("Esc cancela la captura, reanuda los globales y deja el atajo como estaba",
   expect(await calls(page, "hotkeys.suspend")).toEqual([{ suspended: true }, { suspended: false }]);
 });
 
+test("salir de la pantalla en plena captura reanuda los globales", async ({ page }) => {
+  await stopped(page);
+  await page.getByRole("button", { name: "Tecla 5", exact: true }).click();
+  await page.getByRole("button", { name: "Grabar atajo" }).click();
+  await expect(page.getByText("Apretá la combinación")).toBeVisible();
+  // Un cambio de hash y no un click: el click ya dispara onBlur y taparía la limpieza del desmontaje.
+  await page.evaluate(() => {
+    window.location.hash = "#/status";
+  });
+
+  await expect(page.getByRole("heading", { level: 1, name: "Estado" })).toBeVisible();
+  await expect.poll(() => calls(page, "hotkeys.suspend")).toEqual([{ suspended: true }, { suspended: false }]);
+});
+
+test("si suspender falla, la captura no empieza y la caja dice por qué", async ({ page }) => {
+  await stopped(page);
+  await page.evaluate(() =>
+    (window as unknown as { pampapadFake: Fake }).pampapadFake.answer("hotkeys.suspend", { ok: false, error: { code: "read_only_while_recording", message: "Hay una toma en curso." } }),
+  );
+  await page.getByRole("button", { name: "Tecla 5", exact: true }).click();
+  await page.getByRole("button", { name: "Grabar atajo" }).click();
+
+  await expect(page.getByText("Hay una toma en curso.")).toBeVisible();
+  await expect(page.getByText("Apretá la combinación")).toHaveCount(0);
+  expect(await calls(page, "hotkeys.suspend")).toEqual([{ suspended: true }]);
+});
+
 test("una tecla sola se rechaza con el motivo y la captura sigue", async ({ page }) => {
   await stopped(page);
   await page.getByRole("button", { name: "Tecla 5", exact: true }).click();
