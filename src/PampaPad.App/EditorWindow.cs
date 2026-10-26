@@ -25,8 +25,9 @@ internal sealed partial class EditorWindow : Form
     // Si la página no avisa, se muestra igual a los 3 s (01 §5; Propuesto, sin medir). E0-3 midió el aviso entre 563 y 1476 ms.
     private static readonly TimeSpan ShowLimit = TimeSpan.FromSeconds(3);
 
-    // El fondo de la página (ui/src/index.css, --color-background): igual acá, para que no haya destello al mostrarla (01 §9).
-    private static readonly Color Background = Color.FromArgb(0x0E, 0x0D, 0x17);
+    // El fondo de la página (ui/src/index.css, --color-background): igual acá, para que no haya destello al mostrarla (01 §9). El gris
+    // sobrio de la decisión 28 desde la etapa 7; ui/src/theme.test.ts compara los dos colores.
+    private static readonly Color Background = Color.FromArgb(0x0F, 0x10, 0x12);
 
     // Los lentes, como el ejecutable (ApplicationIcon): un Form no toma solo el ícono del .exe y sin esto lleva el de WinForms. Va como
     // recurso, con sus siete tamaños; Icon.ExtractAssociatedIcon da sólo el de 32 px. Uno para todas las ventanas: el Form no lo libera.
