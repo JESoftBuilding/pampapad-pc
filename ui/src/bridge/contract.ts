@@ -44,8 +44,35 @@ export const stateSchema = z.object({
   console: z.object({ state: z.enum(["off", "waiting", "connected", "released"]), port: z.string().optional() }),
 });
 
-// config.json se describe en 02 y se tipa en la etapa 7, con la pantalla que lo edita. Hasta entonces viaja entero, sin mirar adentro.
-export const configSchema = z.record(z.string(), z.unknown());
+// config.json (02 §4), tipado sin cerrar ningún nivel: z.looseObject deja pasar lo que la página no conoce, que vuelve igual en
+// config.save (02 §3, regla 1). Los campos conocidos van con el tipo con que los lee el núcleo, que con otro tipo no carga el archivo;
+// los tres que el núcleo lee con tolerancia (type, negate y un onlyIf que no es un objeto quedan entre los parámetros: Step.cs y
+// Condition.cs) llevan catch, para que un archivo que el núcleo carga no deje a la página sin foto.
+export const conditionSchema = z.looseObject({ type: z.string().optional().catch(undefined), negate: z.boolean().optional().catch(undefined) });
+export const stepSchema = z.looseObject({ type: z.string().optional().catch(undefined), onlyIf: conditionSchema.optional().catch(undefined) });
+export const holdSchema = z.looseObject({ action: z.string().optional() });
+export const keySchema = z.looseObject({
+  position: z.number().int().optional(),
+  label: z.string().optional(),
+  shortLabel: z.array(z.string()).optional(),
+  action: z.string().optional(),
+  hotkey: z.string().optional(),
+  onHold: holdSchema.optional(),
+});
+export const pageSchema = z.looseObject({ id: z.string().optional(), name: z.string().optional(), type: z.string().optional(), keys: z.array(keySchema).optional(), show: z.boolean().optional() });
+export const actionSchema = z.looseObject({ id: z.string().optional(), name: z.string().optional(), steps: z.array(stepSchema).optional() });
+export const bindingSchema = z.looseObject({ hotkey: z.string().optional(), action: z.string().optional() });
+export const preflightCheckSchema = z.looseObject({ condition: conditionSchema.optional(), message: z.string().optional() });
+export const configSchema = z.looseObject({
+  version: z.number().int().optional(),
+  mainPage: z.string().optional(),
+  pages: z.array(pageSchema).optional(),
+  actions: z.array(actionSchema).optional(),
+  hotkeys: z.array(bindingSchema).optional(),
+  preflight: z.array(preflightCheckSchema).optional(),
+  moduleKey: z.looseObject({ layer: z.string().optional() }).optional(),
+  console: z.record(z.string(), z.unknown()).optional(),
+});
 
 export const fieldSchema = z.object({
   name: z.string(),
@@ -119,7 +146,7 @@ export const requests = {
   },
   "library.reload": { request: noDataSchema, response: z.object({ fingerprint: z.string(), problems: z.array(problemSchema) }) },
   "hotkeys.suspend": { request: z.strictObject({ suspended: z.boolean() }), response: z.object({}) },
-  "action.test": { request: z.strictObject({ action: z.record(z.string(), z.unknown()) }), response: z.object({ runId: z.string() }) },
+  "action.test": { request: z.strictObject({ action: actionSchema }), response: z.object({ runId: z.string() }) },
   "window.dirty": { request: z.strictObject({ dirty: z.boolean() }), response: z.object({}) },
   "options.list": {
     request: z.strictObject({ list: z.enum(["scenes", "inputs", "scripts", "windows"]) }),
@@ -164,5 +191,13 @@ export type LogEntry = z.output<typeof logEntrySchema>;
 export type ActionFinished = z.output<typeof actionFinishedSchema>;
 export type Problem = z.output<typeof problemSchema>;
 export type Config = z.output<typeof configSchema>;
+export type Page = z.output<typeof pageSchema>;
+export type Key = z.output<typeof keySchema>;
+export type Action = z.output<typeof actionSchema>;
+export type Step = z.output<typeof stepSchema>;
+export type Condition = z.output<typeof conditionSchema>;
+export type Field = z.output<typeof fieldSchema>;
+export type StepType = Snapshot["stepTypes"][number];
+export type ConditionType = Snapshot["conditionTypes"][number];
 export type Trigger = z.output<typeof triggerSchema>;
 export type LogLevel = z.output<typeof logLevelSchema>;
