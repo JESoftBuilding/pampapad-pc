@@ -29,7 +29,7 @@ export function StatusScreen({ bridge, view }: ScreenProps) {
       <div className="grid gap-4 xl:grid-cols-2">
         <Connections state={state} settings={snapshot.settings} />
         <Running running={state.running} finished={model.finished} onCancel={(runId) => void model.cancel(runId)} />
-        <Problems problems={state.problems} library={state.library} />
+        <Problems problems={state.problems} library={state.library} config={snapshot.config} />
         <div className="grid gap-4">
           <ProgramCard version={snapshot.version} schemaVersion={snapshot.schemaVersion} update={state.update} />
           <PreflightCard />

@@ -1,10 +1,11 @@
-import type { Problem, State } from "@/bridge/contract";
+import type { Config, Problem, State } from "@/bridge/contract";
 import { libraryText } from "@/model/status";
+import { linkFor } from "@/model/where";
 import { Badge } from "@/ui/badge";
 import { Card, CardTitle } from "@/ui/card";
 
-/** Problemas de la configuración (05 §4.4): cada uno con su ubicación. Llevar a la tecla o a la acción llega con esas pantallas, en la etapa 7. */
-export function Problems({ problems, library }: { problems: Problem[]; library: State["library"] }) {
+/** Problemas de la configuración (05 §4.4): cada uno con su ubicación, que lleva a la tecla o a la acción; los de la lista general no tienen pantalla hasta Ajustes (etapa 8). */
+export function Problems({ problems, library, config }: { problems: Problem[]; library: State["library"]; config: Config }) {
   return (
     <Card>
       <CardTitle>Problemas de la configuración</CardTitle>
@@ -16,12 +17,23 @@ export function Problems({ problems, library }: { problems: Problem[]; library: 
           {problems.map((problem) => (
             <li key={`${problem.where}|${problem.code}`} className="text-sm">
               <Badge tone={problem.severity === "error" ? "bad" : "warn"}>{problem.severity === "error" ? "error" : "aviso"}</Badge>{" "}
-              <span className="font-mono text-xs text-muted">{problem.where === "" ? "config.json" : problem.where}</span>
+              <Where where={problem.where} link={linkFor(problem.where, config)} />
               <p>{problem.message}</p>
             </li>
           ))}
         </ul>
       )}
     </Card>
+  );
+}
+
+function Where({ where, link }: { where: string; link?: string }) {
+  const text = where === "" ? "config.json" : where;
+  return link === undefined ? (
+    <span className="font-mono text-xs text-muted">{text}</span>
+  ) : (
+    <a href={link} className="font-mono text-xs text-accent underline-offset-2 hover:underline">
+      {text}
+    </a>
   );
 }

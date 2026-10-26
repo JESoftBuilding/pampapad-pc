@@ -154,10 +154,14 @@ public class Contract
           "version": 1,
           "mainPage": "grabacion",
           "pages": [
-            { "id": "grabacion", "name": "Grabación", "keys": [ { "position": 5, "label": "Short", "action": "marca-short", "hotkey": "Ctrl+Shift+Alt+F9" } ] }
+            { "id": "grabacion", "name": "Grabación", "keys": [
+              { "position": 5, "label": "Short", "action": "marca-short", "hotkey": "Ctrl+Shift+Alt+F9" },
+              { "position": 6, "label": "Inicio", "action": "marca-inicio", "hotkey": "Ctrl+Shift+Alt+F6" }
+            ] }
           ],
           "actions": [
-            { "id": "marca-short", "name": "Marca: short", "steps": [ { "type": "obs.marker", "marker": "short" } ] }
+            { "id": "marca-short", "name": "Marca: short", "steps": [ { "type": "obs.marker", "marker": "short" } ] },
+            { "id": "marca-inicio", "name": "Marca: inicio", "steps": [ { "type": "obs.marker", "marker": "inicio" } ] }
           ]
         }
         """,
