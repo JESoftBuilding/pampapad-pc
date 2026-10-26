@@ -31,6 +31,7 @@ public static class Requests
         IDisposable hooks = StatusRequests.Register(bridge, status);
         ConfigRequests.Register(bridge, edit);
         KeysRequests.Register(bridge, edit);
+        ActionsRequests.Register(bridge, edit);
         return hooks;
     }
 }

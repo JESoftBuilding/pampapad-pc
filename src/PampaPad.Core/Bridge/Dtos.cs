@@ -36,6 +36,15 @@ public sealed record ConfigSaveResponse(string Fingerprint, IReadOnlyList<Proble
 /// <summary>library.reload (05 §11): lo que dejó la carga. Los problemas son los del archivo; los de los pasos y los atajos llegan con el estado.</summary>
 public sealed record LibraryReloadResponse(string Fingerprint, IReadOnlyList<Problem> Problems);
 
+/// <summary>
+/// action.test (05 §4.2 y §11): la acción tal como está en el borrador, con todo lo que la página no conoce. Contesta en el acto con el
+/// runId; el resultado, paso por paso, llega por el evento action.finished.
+/// </summary>
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed record ActionTestRequest(Action Action);
+
+public sealed record ActionTestResponse(Guid RunId);
+
 /// <summary>hotkeys.suspend (05 §6 y §11): true suelta los atajos globales para grabar una combinación; false los reanuda.</summary>
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record HotkeysSuspendRequest(bool Suspended);

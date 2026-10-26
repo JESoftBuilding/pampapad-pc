@@ -7,6 +7,9 @@ namespace PampaPad.Core;
 /// </summary>
 public sealed partial class Dispatcher
 {
+    /// <summary>La clave con que figura en las acciones en curso un borrador sin id (action.test).</summary>
+    public const string DraftKey = "(borrador)";
+
     private readonly Library _library;
     private readonly StateStore _state;
     private readonly Executor _executor;
@@ -85,20 +88,51 @@ public sealed partial class Dispatcher
         }
 
         var run = new Run(invocation.RunId, invocation.RequestedBy, new CancellationTokenSource());
-        lock (_gate)
+        if (Reserve(actionId, run) is { } current)
         {
-            if (_running.TryGetValue(actionId, out Run? current))
-            {
-                // La misma acción no se pisa (01 §4.6): queda una línea con el runId de la que está en curso, y no suena ni se muestra nada.
-                _log.Write(LogLevel.Info, "dispatcher", $"{actionId} ya está en curso: se ignora la pulsación.", null, current.RequestedBy, current.RunId);
-                return Task.FromResult(Rejected(actionId, invocation, ErrorCodes.Cancelled, $"La acción ya está en curso (runId {current.RunId})."));
-            }
-
-            _running[actionId] = run;
+            // La misma acción no se pisa (01 §4.6): queda una línea con el runId de la que está en curso, y no suena ni se muestra nada.
+            _log.Write(LogLevel.Info, "dispatcher", $"{actionId} ya está en curso: se ignora la pulsación.", null, current.RequestedBy, current.RunId);
+            return Task.FromResult(Rejected(actionId, invocation, ErrorCodes.Cancelled, $"La acción ya está en curso (runId {current.RunId})."));
         }
 
         PublishRunning();
         return Task.Run(() => RunAsync(actionId, action, invocation, run));
+    }
+
+    /// <summary>
+    /// Corre una acción en borrador, que todavía no está en la biblioteca: es lo que hace action.test (05 §4.1 y §4.2). Corre por el mismo
+    /// camino que una guardada —figura en las acciones en curso, se cancela por su runId y termina con Finished, que lleva el informe de
+    /// cada paso— y con la misma regla: la misma acción no se pisa, y la clave es su id (un borrador sin id, DraftKey). Devuelve la falla
+    /// si ya hay una en curso y null si arrancó; el resultado llega por Finished.
+    /// </summary>
+    public Failure? LaunchDraft(Action draft, Invocation invocation)
+    {
+        ArgumentNullException.ThrowIfNull(draft);
+        string key = draft.Id is { Length: > 0 } id ? id : DraftKey;
+        var run = new Run(invocation.RunId, invocation.RequestedBy, new CancellationTokenSource());
+        if (Reserve(key, run) is { } current)
+        {
+            return new Failure(ErrorCodes.Cancelled, $"La acción \"{key}\" ya está en curso (runId {current.RunId}): esperá a que termine o cancelala desde Estado.");
+        }
+
+        PublishRunning();
+        _ = Task.Run(() => RunAsync(key, draft, invocation, run));
+        return null;
+    }
+
+    // Anota la corrida como en curso si esa clave no lo está; si lo está, devuelve la que ya estaba.
+    private Run? Reserve(string key, Run run)
+    {
+        lock (_gate)
+        {
+            if (_running.TryGetValue(key, out Run? current))
+            {
+                return current;
+            }
+
+            _running[key] = run;
+            return null;
+        }
     }
 
     public bool Cancel(Guid runId)

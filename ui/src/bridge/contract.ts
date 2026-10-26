@@ -119,6 +119,7 @@ export const requests = {
   },
   "library.reload": { request: noDataSchema, response: z.object({ fingerprint: z.string(), problems: z.array(problemSchema) }) },
   "hotkeys.suspend": { request: z.strictObject({ suspended: z.boolean() }), response: z.object({}) },
+  "action.test": { request: z.strictObject({ action: z.record(z.string(), z.unknown()) }), response: z.object({ runId: z.string() }) },
 } as const;
 
 export const events = {

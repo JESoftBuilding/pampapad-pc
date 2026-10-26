@@ -594,6 +594,31 @@
         "ok": true,
         "data": {}
       }
+    },
+    "action.test": {
+      "request": {
+        "id": 9,
+        "request": "action.test",
+        "data": {
+          "action": {
+            "id": "marca-short",
+            "name": "Marca: short",
+            "steps": [
+              {
+                "type": "obs.marker",
+                "marker": "short"
+              }
+            ]
+          }
+        }
+      },
+      "response": {
+        "id": 9,
+        "ok": true,
+        "data": {
+          "runId": "0f8fad5b-d9cb-469f-a165-70867728950e"
+        }
+      }
     }
   },
   "events": {
