@@ -31,7 +31,8 @@ internal sealed class DispatcherRig : IAsyncDisposable
         beforeDispatcher?.Invoke(Marker);
         var steps = new IStepType[] { Marker, Scene, Record, Mute, Request, Script, WaitWindow, Page };
         ConditionType[] conditions = [FakeCondition.Met(Conditions.WindowExists).Type, FakeCondition.Met(Conditions.RecordingIs).Type];
-        Dispatcher = new Dispatcher(Library, State, new Executor(steps, conditions, TimeProvider.System), new Gestures(clock ?? TimeProvider.System, Gestures.HoldFrom(null), Gestures.DefaultFreshness), Log);
+        Executor = new Executor(steps, conditions, TimeProvider.System);
+        Dispatcher = new Dispatcher(Library, State, Executor, new Gestures(clock ?? TimeProvider.System, Gestures.HoldFrom(null), Gestures.DefaultFreshness), Log);
         Dispatcher.Finished += Finished.Enqueue;
         Hotkeys = new HotkeySource(Windows, State, Log);
         _ = Hotkeys.StartAsync(CancellationToken.None);
@@ -66,6 +67,8 @@ internal sealed class DispatcherRig : IAsyncDisposable
     public FakeSystemHotkeys Windows { get; } = new();
 
     public CoreLibrary Library { get; }
+
+    public Executor Executor { get; }
 
     public Dispatcher Dispatcher { get; }
 

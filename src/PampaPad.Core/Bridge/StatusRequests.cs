@@ -36,7 +36,12 @@ public static class StatusRequests
         // El estado lleva su propio seq: el de este momento puede ser más nuevo que el del estado que trae el evento (01 §4.4).
         IDisposable states = sources.State.Subscribe((_, next) => bridge.Publish(EventNames.State, next.Seq, StateView.From(next)));
         Action<ActionResult> finished = result => bridge.Publish(EventNames.ActionFinished, ActionFinishedView.From(result));
-        Action<Config> changed = config => bridge.Publish(EventNames.ConfigChanged, new ConfigChangedView(config));
+        // La huella es la de la misma carga que la configuración: leer las dos por separado podría caer entre dos recargas.
+        Action<Config> changed = _ =>
+        {
+            (Config config, string fingerprint) = sources.Library.Latest();
+            bridge.Publish(EventNames.ConfigChanged, new ConfigChangedView(config, fingerprint));
+        };
         Action<LogEntry> written = entry => PublishLog(bridge, entry);
         sources.Dispatcher.Finished += finished;
         sources.Library.Changed += changed;
@@ -58,10 +63,12 @@ public static class StatusRequests
     public static AppSnapshot Snapshot(StatusSources sources)
     {
         ArgumentNullException.ThrowIfNull(sources);
+        (Config config, string fingerprint) = sources.Library.Latest();
         return new AppSnapshot(
             sources.Version,
             Migrations.CurrentVersion,
-            sources.Library.Current,
+            config,
+            fingerprint,
             StateView.From(sources.State.Current),
             [.. sources.Catalog.Select(StepTypeView.From)],
             [.. sources.Conditions.Select(ConditionTypeView.From)],

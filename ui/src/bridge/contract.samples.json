@@ -42,6 +42,7 @@
               }
             ]
           },
+          "fingerprint": "2794f40e573b3b53bffad440a4c6bc8d988493d2f15bcaed0ed3e845ed927083",
           "state": {
             "seq": 42,
             "update": {
@@ -510,6 +511,75 @@
         "ok": true,
         "data": {}
       }
+    },
+    "config.save": {
+      "request": {
+        "id": 5,
+        "request": "config.save",
+        "data": {
+          "config": {
+            "version": 1,
+            "mainPage": "grabacion",
+            "pages": [
+              {
+                "id": "grabacion",
+                "name": "Grabación",
+                "keys": [
+                  {
+                    "position": 5,
+                    "label": "Short",
+                    "action": "marca-short",
+                    "hotkey": "Ctrl+Shift+Alt+F9"
+                  }
+                ]
+              }
+            ],
+            "actions": [
+              {
+                "id": "marca-short",
+                "name": "Marca: short",
+                "steps": [
+                  {
+                    "type": "obs.marker",
+                    "marker": "short"
+                  }
+                ]
+              }
+            ]
+          },
+          "expectedFingerprint": "2794f40e573b3b53bffad440a4c6bc8d988493d2f15bcaed0ed3e845ed927083"
+        }
+      },
+      "response": {
+        "id": 5,
+        "ok": true,
+        "data": {
+          "fingerprint": "3aed4eeba8413dcf2840a313b9546d8ffe0c4b324269c04fbe12b582b2caab34",
+          "problems": [
+            {
+              "where": "pages[0].keys[0].shortLabel",
+              "code": "short_label_invalid",
+              "message": "shortLabel lleva una o dos líneas de hasta 6 caracteres.",
+              "severity": "warning"
+            }
+          ]
+        }
+      }
+    },
+    "library.reload": {
+      "request": {
+        "id": 6,
+        "request": "library.reload",
+        "data": {}
+      },
+      "response": {
+        "id": 6,
+        "ok": true,
+        "data": {
+          "fingerprint": "3aed4eeba8413dcf2840a313b9546d8ffe0c4b324269c04fbe12b582b2caab34",
+          "problems": []
+        }
+      }
     }
   },
   "events": {
@@ -631,7 +701,8 @@
               ]
             }
           ]
-        }
+        },
+        "fingerprint": "2794f40e573b3b53bffad440a4c6bc8d988493d2f15bcaed0ed3e845ed927083"
       }
     }
   },
@@ -642,6 +713,29 @@
       "code": "unknown_request",
       "message": "No existe el pedido config.sav.",
       "where": "request"
+    }
+  },
+  "saveRejected": {
+    "id": 7,
+    "ok": false,
+    "error": {
+      "code": "config_invalid",
+      "message": "La tecla 5 de Grabación para o pausa la grabación con un toque.",
+      "where": "pages[0].keys[0].action",
+      "problems": [
+        {
+          "where": "pages[0].keys[0].action",
+          "code": "hold_required",
+          "message": "La tecla 5 de Grabación para o pausa la grabación con un toque.",
+          "severity": "error"
+        },
+        {
+          "where": "pages[0].keys[0].shortLabel",
+          "code": "short_label_invalid",
+          "message": "shortLabel lleva una o dos líneas de hasta 6 caracteres.",
+          "severity": "warning"
+        }
+      ]
     }
   }
 }

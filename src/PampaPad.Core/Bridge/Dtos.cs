@@ -24,13 +24,27 @@ public sealed record ActionCancelRequest(Guid? RunId = null, bool All = false);
 public sealed record ActionCancelResponse(int Cancelled);
 
 /// <summary>
-/// app.snapshot (01 §5 y 05 §11): versión, versión del esquema, configuración, estado con su seq, tipos de paso y de condición, y
-/// ajustes. Sin huella hasta la etapa 7. Los problemas van dentro del estado, que es donde los junta el Dispatcher.
+/// config.save (05 §11): la configuración entera, con lo que la página no conoce incluido (el modelo de config.json es la única excepción a
+/// "campos desconocidos prohibidos", 01 §5), y la huella del archivo con que se leyó. Un campo de más en este record sí es invalid_data.
+/// </summary>
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed record ConfigSaveRequest(Config Config, string ExpectedFingerprint);
+
+/// <summary>La huella de lo que quedó escrito y los problemas que no frenan (los warning del archivo, de los pasos y los atajos que Windows rechazó).</summary>
+public sealed record ConfigSaveResponse(string Fingerprint, IReadOnlyList<Problem> Problems);
+
+/// <summary>library.reload (05 §11): lo que dejó la carga. Los problemas son los del archivo; los de los pasos y los atajos llegan con el estado.</summary>
+public sealed record LibraryReloadResponse(string Fingerprint, IReadOnlyList<Problem> Problems);
+
+/// <summary>
+/// app.snapshot (01 §5 y 05 §11): versión, versión del esquema, configuración con su huella, estado con su seq, tipos de paso y de
+/// condición, y ajustes. Los problemas van dentro del estado, que es donde los junta el Dispatcher.
 /// </summary>
 public sealed record AppSnapshot(
     string Version,
     int SchemaVersion,
     Config Config,
+    string Fingerprint,
     StateView State,
     IReadOnlyList<StepTypeView> StepTypes,
     IReadOnlyList<ConditionTypeView> ConditionTypes,
@@ -152,5 +166,5 @@ public sealed record ActionFinishedView(
     }
 }
 
-/// <summary>config.changed: la configuración que quedó después de cargar. Los problemas llegan con el estado.</summary>
-public sealed record ConfigChangedView(Config Config);
+/// <summary>config.changed: la configuración que quedó después de cargar o de guardar, con la huella de esa misma carga. Los problemas llegan con el estado.</summary>
+public sealed record ConfigChangedView(Config Config, string Fingerprint);

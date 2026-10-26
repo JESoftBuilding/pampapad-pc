@@ -8,7 +8,7 @@ export type SnapshotView = { snapshot?: Snapshot; state?: State; failure?: Failu
 export type SnapshotMessage =
   | { kind: "snapshot"; snapshot: Snapshot }
   | { kind: "state"; state: State }
-  | { kind: "config"; config: Config }
+  | { kind: "config"; config: Config; fingerprint: string }
   | { kind: "failed"; failure: Failure };
 
 /** La regla de 01 §4.4: un estado entra sólo si su seq es mayor que el que ya se tiene. */
@@ -23,7 +23,7 @@ export function reduce(view: SnapshotView, message: SnapshotMessage): SnapshotVi
     case "state":
       return { ...view, state: newer(view.state, message.state) };
     case "config":
-      return view.snapshot === undefined ? view : { ...view, snapshot: { ...view.snapshot, config: message.config } };
+      return view.snapshot === undefined ? view : { ...view, snapshot: { ...view.snapshot, config: message.config, fingerprint: message.fingerprint } };
     case "failed":
       return { ...view, failure: message.failure };
   }
@@ -39,7 +39,7 @@ export function useSnapshot(bridge: Bridge): SnapshotView {
   useEffect(() => {
     let alive = true;
     const offState = bridge.on("state", (state) => dispatch({ kind: "state", state }));
-    const offConfig = bridge.on("config.changed", (changed) => dispatch({ kind: "config", config: changed.config }));
+    const offConfig = bridge.on("config.changed", (changed) => dispatch({ kind: "config", config: changed.config, fingerprint: changed.fingerprint }));
     void bridge.request("app.snapshot", {}).then((reply) => {
       if (alive) {
         dispatch(reply.ok ? { kind: "snapshot", snapshot: reply.data } : { kind: "failed", failure: reply.error });

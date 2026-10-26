@@ -4,8 +4,6 @@ import { z } from "zod";
 // valida contra estos esquemas cada muestra de contract.samples.json, que escribe tests/PampaPad.Tests/Contract.cs. Lo que C# deja en
 // null no viaja (Json.cs omite los nulos): acá es opcional, nunca null.
 
-export const failureSchema = z.object({ code: z.string(), message: z.string(), where: z.string().optional() });
-
 export const triggerSchema = z.enum(["key", "hotkey", "window", "mcp", "tray", "internal"]);
 export const severitySchema = z.enum(["error", "warning"]);
 export const logLevelSchema = z.enum(["info", "warning", "error"]);
@@ -14,6 +12,9 @@ export const obsLinkSchema = z.enum(["closed", "no_websocket", "auth_failed", "l
 export const recordingSchema = z.enum(["stopped", "starting", "recording", "paused", "stopping"]);
 
 export const problemSchema = z.object({ where: z.string(), code: z.string(), message: z.string(), severity: severitySchema });
+
+// Un config_invalid trae en problems todos los de la configuración que no se guardó; message y where son los del primero (E7-2).
+export const failureSchema = z.object({ code: z.string(), message: z.string(), where: z.string().optional(), problems: z.array(problemSchema).optional() });
 
 export const stateSchema = z.object({
   seq: z.number().int(),
@@ -58,6 +59,7 @@ export const snapshotSchema = z.object({
   version: z.string(),
   schemaVersion: z.number().int(),
   config: configSchema,
+  fingerprint: z.string(),
   state: stateSchema,
   stepTypes: z.array(z.object({ id: z.string(), name: z.string(), group: z.string(), fields: z.array(fieldSchema) })),
   conditionTypes: z.array(z.object({ id: z.string(), name: z.string(), fields: z.array(fieldSchema) })),
@@ -111,13 +113,18 @@ export const requests = {
     response: z.object({ cancelled: z.number().int() }),
   },
   "window.ready": { request: noDataSchema, response: z.object({}) },
+  "config.save": {
+    request: z.strictObject({ config: configSchema, expectedFingerprint: z.string() }),
+    response: z.object({ fingerprint: z.string(), problems: z.array(problemSchema) }),
+  },
+  "library.reload": { request: noDataSchema, response: z.object({ fingerprint: z.string(), problems: z.array(problemSchema) }) },
 } as const;
 
 export const events = {
   state: stateSchema,
   log: logEntrySchema,
   "action.finished": actionFinishedSchema,
-  "config.changed": z.object({ config: configSchema }),
+  "config.changed": z.object({ config: configSchema, fingerprint: z.string() }),
 } as const;
 
 export const errorEnvelopeSchema = z.object({ id: z.number().int(), ok: z.literal(false), error: failureSchema, data: z.unknown().optional() });
