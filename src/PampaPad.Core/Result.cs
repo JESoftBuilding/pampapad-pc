@@ -2,8 +2,14 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace PampaPad.Core;
 
-/// <summary>Una falla esperada. Viaja como dato, nunca como excepción (01 §4.1).</summary>
-public sealed record Failure(string Code, string Message, string? Where = null);
+/// <summary>
+/// Una falla esperada. Viaja como dato, nunca como excepción (01 §4.1). Problems, sólo en un config_invalid, trae todos los problemas
+/// de la configuración que no se guardó: Message y Where son los del primero.
+/// </summary>
+public sealed record Failure(string Code, string Message, string? Where = null)
+{
+    public IReadOnlyList<Problem>? Problems { get; init; }
+}
 
 /// <summary>El resultado de algo que puede fallar y no devuelve nada.</summary>
 public readonly record struct Result

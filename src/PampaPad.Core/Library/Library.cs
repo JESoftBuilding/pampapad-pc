@@ -17,10 +17,10 @@ public enum LibraryStatus
 }
 
 /// <summary>
-/// La biblioteca del usuario: una carpeta con config.json (02 §1). En esta etapa sólo lee: nunca escribe el archivo.
-/// Sin vigilancia del archivo: se recarga a pedido.
+/// La biblioteca del usuario: una carpeta con config.json (02 §1). Lee (Load) y escribe (SaveAsync, en Library.Save.cs); sólo escribe
+/// lo que le pide la ventana. Sin vigilancia del archivo: se recarga a pedido.
 /// </summary>
-public sealed class Library(string folder, string backupFolder)
+public sealed partial class Library(string folder, string backupFolder)
 {
     public const string FileName = "config.json";
 
@@ -31,12 +31,25 @@ public sealed class Library(string folder, string backupFolder)
 
     public string Folder { get; } = folder;
 
-    /// <summary>Carpeta local para la generación anterior de config.json. La usan las migraciones y el guardado, que todavía no existen.</summary>
+    /// <summary>Carpeta local para la generación anterior de config.json: la usa el guardado (backup\config.json) y, más adelante, las migraciones.</summary>
     public string BackupFolder { get; } = backupFolder;
 
     public Config Current => _loaded.Config;
 
     public LibraryStatus Status => _loaded.Status;
+
+    /// <summary>
+    /// La huella de lo que leyó la última carga: el SHA-256 de los bytes de config.json (02 §3, regla 11). Vacía sin archivo o si no se
+    /// pudo leer. Quien guarda manda la huella del archivo que leyó, y si el disco ya no la tiene, el guardado falla.
+    /// </summary>
+    public string Fingerprint => _loaded.Fingerprint;
+
+    /// <summary>La configuración y su huella, de la misma carga: dos lecturas seguidas de Current y Fingerprint podrían caer a los lados de una recarga.</summary>
+    public (Config Config, string Fingerprint) Latest()
+    {
+        Loaded now = _loaded;
+        return (now.Config, now.Fingerprint);
+    }
 
     /// <summary>Los problemas de la última carga: los de lectura o, si cargó, los del validador.</summary>
     public IReadOnlyList<Problem> Problems => _loaded.Problems;
@@ -115,7 +128,7 @@ public sealed class Library(string folder, string backupFolder)
 
         try
         {
-            return Build(document);
+            return Build(document) with { Fingerprint = Fingerprints.Of(bytes) };
         }
         catch (JsonException e)
         {
@@ -142,5 +155,5 @@ public sealed class Library(string folder, string backupFolder)
         return new Loaded(config, LibraryStatus.Loaded, Validator.Validate(config));
     }
 
-    private sealed record Loaded(Config Config, LibraryStatus Status, IReadOnlyList<Problem> Problems);
+    private sealed record Loaded(Config Config, LibraryStatus Status, IReadOnlyList<Problem> Problems, string Fingerprint = "");
 }
