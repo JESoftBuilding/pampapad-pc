@@ -705,6 +705,173 @@
           ]
         }
       }
+    },
+    "scripts.list": {
+      "request": {
+        "id": 12,
+        "request": "scripts.list",
+        "data": {}
+      },
+      "response": {
+        "id": 12,
+        "ok": true,
+        "data": {
+          "scripts": [
+            {
+              "id": "bancocam",
+              "name": "Cámara del banco",
+              "description": "Abre scrcpy con el celu del banco.",
+              "entry": "bancocam.cmd",
+              "wait": true,
+              "timeoutSec": 15,
+              "contract": 1,
+              "tags": [
+                "banco"
+              ],
+              "status": "ready",
+              "problems": [],
+              "usedBy": [
+                {
+                  "action": "ir-al-banco",
+                  "actionName": "Ir al banco",
+                  "where": "actions[0].steps[1].script",
+                  "places": [
+                    {
+                      "kind": "key",
+                      "where": "pages[0].keys[0].action",
+                      "page": "banco",
+                      "pageName": "Banco",
+                      "position": 3,
+                      "label": "Banco"
+                    },
+                    {
+                      "kind": "hotkey",
+                      "where": "hotkeys[0].action",
+                      "hotkey": "Ctrl+Shift+Alt+F2"
+                    }
+                  ]
+                }
+              ],
+              "lastRun": {
+                "at": "2026-10-14T23:30:12-03:00",
+                "requestedBy": "key",
+                "end": {
+                  "ok": true,
+                  "exitCode": 0,
+                  "durationMs": 2400,
+                  "message": "cámara lista"
+                }
+              }
+            },
+            {
+              "id": "suelto.cmd",
+              "name": "suelto.cmd",
+              "wait": true,
+              "timeoutSec": 15,
+              "tags": [],
+              "status": "noManifest",
+              "problems": [
+                {
+                  "code": "manifest_missing",
+                  "message": "\"suelto.cmd\" es un archivo suelto: un script es una carpeta scripts\\<id> con su script.json."
+                }
+              ],
+              "usedBy": []
+            }
+          ]
+        }
+      }
+    },
+    "scripts.read": {
+      "request": {
+        "id": 13,
+        "request": "scripts.read",
+        "data": {
+          "id": "bancocam"
+        }
+      },
+      "response": {
+        "id": 13,
+        "ok": true,
+        "data": {
+          "script": {
+            "id": "bancocam",
+            "name": "Cámara del banco",
+            "description": "Abre scrcpy con el celu del banco.",
+            "entry": "bancocam.cmd",
+            "wait": true,
+            "timeoutSec": 15,
+            "contract": 1,
+            "tags": [
+              "banco"
+            ],
+            "status": "ready",
+            "problems": [],
+            "usedBy": [
+              {
+                "action": "ir-al-banco",
+                "actionName": "Ir al banco",
+                "where": "actions[0].steps[1].script",
+                "places": [
+                  {
+                    "kind": "key",
+                    "where": "pages[0].keys[0].action",
+                    "page": "banco",
+                    "pageName": "Banco",
+                    "position": 3,
+                    "label": "Banco"
+                  },
+                  {
+                    "kind": "hotkey",
+                    "where": "hotkeys[0].action",
+                    "hotkey": "Ctrl+Shift+Alt+F2"
+                  }
+                ]
+              }
+            ],
+            "lastRun": {
+              "at": "2026-10-14T23:30:12-03:00",
+              "requestedBy": "key",
+              "end": {
+                "ok": true,
+                "exitCode": 0,
+                "durationMs": 2400,
+                "message": "cámara lista"
+              }
+            }
+          },
+          "manifest": {
+            "entry": "bancocam.cmd",
+            "name": "Cámara del banco",
+            "inventado": true
+          },
+          "files": [
+            {
+              "name": "bancocam.cmd",
+              "size": 412,
+              "modified": "2026-10-11T23:30:00-03:00"
+            },
+            {
+              "name": "script.json",
+              "size": 96,
+              "modified": "2026-10-11T23:30:00-03:00"
+            }
+          ],
+          "fingerprint": "3aed4eeba8413dcf2840a313b9546d8ffe0c4b324269c04fbe12b582b2caab34",
+          "runs": [
+            {
+              "at": "2026-10-14T23:30:12-03:00",
+              "requestedBy": "key",
+              "end": {
+                "ok": true,
+                "exitCode": 0,
+                "durationMs": 2400,
+                "message": "cámara lista"
+              }
+            }
+          ]
+        }
+      }
     }
   },
   "events": {

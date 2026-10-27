@@ -69,7 +69,7 @@ internal sealed partial class Composition : IAsyncDisposable
 
         // El Dispatcher publica la biblioteca en el estado al construirse y en cada recarga, junto con los problemas de los pasos y de los atajos.
         Dispatcher? dispatcher = null;
-        (IReadOnlyList<IStepType> catalog, IReadOnlyList<ConditionType> conditions, Executor executor) =
+        (IReadOnlyList<IStepType> catalog, IReadOnlyList<ConditionType> conditions, Executor executor, ScriptRunner scripts) =
             ComposeChains(library, state, obs, windows, log, clock, target => dispatcher!.Go(target));
         var preflight = new Preflight(conditions, library, state, log, clock);
 
@@ -117,7 +117,9 @@ internal sealed partial class Composition : IAsyncDisposable
 
         // El puente con todos sus pedidos, después de las fuentes de entrada y el Notifier (01 §4.3). Fuera del if de la bandeja:
         // la prueba de humo comprueba que cada pedido tenga manejador (01 §3.2).
-        composition.ComposeBridge(state, library, dispatcher, executor, catalog, conditions, windows, settings, ui, localFolder);
+        // Las últimas corridas de cada script salen de las líneas de cierre del registro (etapa 8): se lee antes de que corra ninguno.
+        var scriptsSources = new ScriptsSources(library, scripts, new ScriptRuns(log, Path.Combine(localFolder, "log"), clock));
+        composition.ComposeBridge(state, library, dispatcher, executor, catalog, conditions, windows, settings, ui, localFolder, scriptsSources);
 
         if (!headless)
         {

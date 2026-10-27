@@ -47,7 +47,8 @@ public class Contract
     {
         await using var rig = new DispatcherRig(DispatcherRig.Example);
         var bridge = new Bridge(rig.State, rig.Log);
-        using IDisposable hooks = Requests.RegisterAll(bridge, Sources(rig), Edit(rig));
+        using var runs = new ScriptRuns(rig.Log, Path.Combine(Path.GetTempPath(), "pampapad-sin-registro"), TimeProvider.System);
+        using IDisposable hooks = Requests.RegisterAll(bridge, Sources(rig), Edit(rig), new ScriptsSources(rig.Library, new ScriptRunner(rig.Library, rig.Log, TimeProvider.System, null), runs));
 
         // Los de la cáscara (AppRequests) no se ven desde acá: van por RequestNames.Shell, y la prueba de humo los controla con el programa real.
         string[] windowRequests = [.. bridge.RegisteredFor(Caller.Window), .. RequestNames.Shell];
@@ -60,7 +61,8 @@ public class Contract
     {
         await using var rig = new DispatcherRig(DispatcherRig.Example);
         var bridge = new Bridge(rig.State, rig.Log);
-        using IDisposable hooks = Requests.RegisterAll(bridge, Sources(rig), Edit(rig));
+        using var runs = new ScriptRuns(rig.Log, Path.Combine(Path.GetTempPath(), "pampapad-sin-registro"), TimeProvider.System);
+        using IDisposable hooks = Requests.RegisterAll(bridge, Sources(rig), Edit(rig), new ScriptsSources(rig.Library, new ScriptRunner(rig.Library, rig.Log, TimeProvider.System, null), runs));
 
         Assert.Equal(RequestNames.All.Order(StringComparer.Ordinal), bridge.Registered.Concat(RequestNames.Shell).Order(StringComparer.Ordinal));
     }
@@ -110,6 +112,15 @@ public class Contract
                 [RequestNames.OptionsList] = Pair(
                     Envelope.Request(10, RequestNames.OptionsList, new OptionsListRequest(OptionsList.Scenes)),
                     Envelope.Response(10, new OptionsListResponse([new OptionItem("Cámara", "3da67a13-6704-4c87-9e09-c8be28efdf20"), new OptionItem("Banco", "900ebc25-03ef-443e-80cc-2ad8991268ff")]))),
+                [RequestNames.ScriptsList] = Pair(Envelope.Request(12, RequestNames.ScriptsList, new NoData()), Envelope.Response(12, new ScriptsListResponse([SampleScript(), SampleLoose()]))),
+                [RequestNames.ScriptsRead] = Pair(
+                    Envelope.Request(13, RequestNames.ScriptsRead, new ScriptsReadRequest("bancocam")),
+                    Envelope.Response(13, new ScriptsReadResponse(
+                        SampleScript(),
+                        JsonSerializer.Deserialize<ScriptManifest>("""{ "entry": "bancocam.cmd", "name": "Cámara del banco", "inventado": true }""", Json.Options),
+                        [new ScriptFile("bancocam.cmd", 412, At.AddDays(-3)), new ScriptFile("script.json", 96, At.AddDays(-3))],
+                        SavedFingerprint,
+                        [SampleScriptRun()]))),
             },
             ["events"] = new JsonObject
             {
@@ -195,6 +206,18 @@ public class Contract
         new(At.AddSeconds(9), LogLevel.Warning, "dispatcher", "marca-fin falló en el paso 1 (obs.marker): Estás en pausa: la marca no entró.", ErrorCodes.MarkerPaused, Trigger.Hotkey, PausedRunId),
         new(At.AddSeconds(12), LogLevel.Info, "scripts", "bancocam terminó con 0 en 2.4 s: cámara lista", null, Trigger.Key, RunId, "bancocam", new ScriptEnd(true, 0, 2400, "cámara lista")),
     ];
+
+    private static ScriptRunView SampleScriptRun() => new(At.AddSeconds(12), Trigger.Key, new ScriptEnd(true, 0, 2400, "cámara lista"));
+
+    private static ScriptView SampleScript() => new(
+        "bancocam", "Cámara del banco", "Abre scrcpy con el celu del banco.", "bancocam.cmd", true, 15, 1, ["banco"], ScriptStatus.Ready, [],
+        [new ScriptUse("ir-al-banco", "Ir al banco", "actions[0].steps[1].script",
+            [new ScriptPlace(PlaceKind.Key, "pages[0].keys[0].action", "banco", "Banco", 3, "Banco"), new ScriptPlace(PlaceKind.Hotkey, "hotkeys[0].action", Hotkey: "Ctrl+Shift+Alt+F2")])],
+        SampleScriptRun());
+
+    private static ScriptView SampleLoose() => new(
+        "suelto.cmd", "suelto.cmd", null, null, true, 15, null, [], ScriptStatus.NoManifest,
+        [new ScriptProblem(ProblemCodes.ManifestMissing, "\"suelto.cmd\" es un archivo suelto: un script es una carpeta scripts\\<id> con su script.json.")], []);
 
     private static ActionFinishedView SampleFinished() => new(
         "marca-fin", PausedRunId, Trigger.Hotkey, false, 1, ObsMarker.TypeId,

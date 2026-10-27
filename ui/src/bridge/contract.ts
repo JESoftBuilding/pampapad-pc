@@ -1,11 +1,12 @@
 import { z } from "zod";
-import { scriptEndSchema } from "./contract.scripts";
+import { triggerSchema } from "./contract.base";
+import { scriptEndSchema, scriptsRequests } from "./contract.scripts";
 
 // El contrato del puente del lado de la página (01 §5): espejo de src/PampaPad.Core/Bridge/Dtos.cs y RequestNames.cs. contract.test.ts
 // valida contra estos esquemas cada muestra de contract.samples.json, que escribe tests/PampaPad.Tests/Contract.cs. Lo que C# deja en
 // null no viaja (Json.cs omite los nulos): acá es opcional, nunca null.
 
-export const triggerSchema = z.enum(["key", "hotkey", "window", "mcp", "tray", "internal"]);
+export { triggerSchema };
 export const severitySchema = z.enum(["error", "warning"]);
 export const logLevelSchema = z.enum(["info", "warning", "error"]);
 // Con guion bajo, convertido a mano en ObsView.LinkName: pregunta abierta 59, escrito (b).
@@ -159,6 +160,7 @@ export const requests = {
       unavailable: z.string().optional(),
     }),
   },
+  ...scriptsRequests,
 } as const;
 
 export const events = {

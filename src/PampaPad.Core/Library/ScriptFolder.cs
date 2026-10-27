@@ -77,23 +77,9 @@ public static partial class ScriptFolder
             return Fail(ErrorCodes.ScriptWithoutManifest, $"El script \"{id}\" no tiene ficha: falta scripts\\{id}\\{ManifestName}.");
         }
 
-        ScriptManifest? manifest;
-        try
+        if (ReadManifest(file, id, out ScriptManifest? manifest) is { } unreadable)
         {
-            byte[] bytes = File.ReadAllBytes(file);
-            int skip = bytes.AsSpan().StartsWith(Encoding.UTF8.Preamble) ? Encoding.UTF8.Preamble.Length : 0;
-            manifest = JsonSerializer.Deserialize<ScriptManifest>(bytes.AsSpan(skip), Json.Options);
-        }
-        catch (JsonException error)
-        {
-            // Como config.json (Library.Read): la línea y la columna contadas desde 1, y el campo cuando lo que falla es el tipo de un valor.
-            string field = error.Path is { Length: > 1 } where ? $" ({where})" : "";
-            return Fail(ErrorCodes.ScriptWithoutManifest,
-                $"La ficha del script \"{id}\" no se puede leer: error en la línea {(error.LineNumber ?? 0) + 1}, columna {(error.BytePositionInLine ?? 0) + 1}{field}.");
-        }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
-        {
-            return Fail(ErrorCodes.ScriptWithoutManifest, $"La ficha del script \"{id}\" no se puede leer: {error.Message}");
+            return Fail(ErrorCodes.ScriptWithoutManifest, unreadable);
         }
 
         if (manifest?.Entry is not { Length: > 0 } entry)
@@ -101,28 +87,9 @@ public static partial class ScriptFolder
             return Fail(ErrorCodes.ScriptWithoutManifest, $"La ficha del script \"{id}\" no dice qué archivo correr: falta \"entry\".");
         }
 
-        if (Path.IsPathRooted(entry) || entry.Split('/', '\\').Contains(".."))
+        if (ResolveEntry(folder, id, entry, out string path) is { } outside)
         {
-            return Fail(ErrorCodes.ScriptNotFound, $"El entry \"{entry}\" del script \"{id}\" sale de su carpeta: va el nombre de un archivo de scripts\\{id}.");
-        }
-
-        string path;
-        string inside;
-        try
-        {
-            path = Path.GetFullPath(Path.Combine(folder, entry));
-            inside = Path.GetFullPath(folder) + Path.DirectorySeparatorChar;
-        }
-        catch (Exception error) when (error is ArgumentException or IOException or NotSupportedException)
-        {
-            // Un carácter nulo o decenas de miles de caracteres son texto válido en JSON y no una ruta: es otra ficha rota (02 §10, problema 6).
-            return Fail(ErrorCodes.ScriptNotFound, $"El entry del script \"{id}\" no es una ruta de archivo: va el nombre de un archivo de scripts\\{id}.");
-        }
-
-        // La segunda defensa mira la ruta ya resuelta: un nombre de dispositivo como NUL pasa la de arriba y Windows lo lleva a \\.\NUL.
-        if (!path.StartsWith(inside, StringComparison.OrdinalIgnoreCase))
-        {
-            return Fail(ErrorCodes.ScriptNotFound, $"El entry \"{entry}\" del script \"{id}\" no queda dentro de scripts\\{id}: va el nombre de un archivo de esa carpeta.");
+            return outside;
         }
 
         if (!File.Exists(path))
@@ -141,6 +108,56 @@ public static partial class ScriptFolder
         }
 
         return new ScriptInfo(id, folder, path, manifest);
+    }
+
+    // La ficha leída con las opciones del programa, con o sin marca de orden de bytes. Devuelve por qué no se pudo leer, o null.
+    private static string? ReadManifest(string file, string id, out ScriptManifest? manifest)
+    {
+        manifest = null;
+        try
+        {
+            byte[] bytes = File.ReadAllBytes(file);
+            int skip = bytes.AsSpan().StartsWith(Encoding.UTF8.Preamble) ? Encoding.UTF8.Preamble.Length : 0;
+            manifest = JsonSerializer.Deserialize<ScriptManifest>(bytes.AsSpan(skip), Json.Options);
+            return null;
+        }
+        catch (JsonException error)
+        {
+            // Como config.json (Library.Read): la línea y la columna contadas desde 1, y el campo cuando lo que falla es el tipo de un valor.
+            string field = error.Path is { Length: > 1 } where ? $" ({where})" : "";
+            return $"La ficha del script \"{id}\" no se puede leer: error en la línea {(error.LineNumber ?? 0) + 1}, columna {(error.BytePositionInLine ?? 0) + 1}{field}.";
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            return $"La ficha del script \"{id}\" no se puede leer: {error.Message}";
+        }
+    }
+
+    // La ruta completa del entry, sin salir nunca de la carpeta del script. Devuelve la falla si sale o no es una ruta, o null.
+    private static Failure? ResolveEntry(string folder, string id, string entry, out string path)
+    {
+        path = "";
+        if (Path.IsPathRooted(entry) || entry.Split('/', '\\').Contains(".."))
+        {
+            return new Failure(ErrorCodes.ScriptNotFound, $"El entry \"{entry}\" del script \"{id}\" sale de su carpeta: va el nombre de un archivo de scripts\\{id}.");
+        }
+
+        string inside;
+        try
+        {
+            path = Path.GetFullPath(Path.Combine(folder, entry));
+            inside = Path.GetFullPath(folder) + Path.DirectorySeparatorChar;
+        }
+        catch (Exception error) when (error is ArgumentException or IOException or NotSupportedException)
+        {
+            // Un carácter nulo o decenas de miles de caracteres son texto válido en JSON y no una ruta: es otra ficha rota (02 §10, problema 6).
+            return new Failure(ErrorCodes.ScriptNotFound, $"El entry del script \"{id}\" no es una ruta de archivo: va el nombre de un archivo de scripts\\{id}.");
+        }
+
+        // La segunda defensa mira la ruta ya resuelta: un nombre de dispositivo como NUL pasa la de arriba y Windows lo lleva a \\.\NUL.
+        return path.StartsWith(inside, StringComparison.OrdinalIgnoreCase)
+            ? null
+            : new Failure(ErrorCodes.ScriptNotFound, $"El entry \"{entry}\" del script \"{id}\" no queda dentro de scripts\\{id}: va el nombre de un archivo de esa carpeta.");
     }
 
     // El formato de los otros ids (02 §4.2 y §9), con \z como en Validator.IdFormat.

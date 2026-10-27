@@ -34,4 +34,12 @@ public static class Requests
         ActionsRequests.Register(bridge, edit);
         return hooks;
     }
+
+    /// <summary>Todos, también los de la pantalla Scripts (etapa 8).</summary>
+    public static IDisposable RegisterAll(Bridge bridge, StatusSources status, EditSources edit, ScriptsSources scripts)
+    {
+        IDisposable hooks = RegisterAll(bridge, status, edit);
+        ScriptsRequests.Register(bridge, scripts);
+        return hooks;
+    }
 }
