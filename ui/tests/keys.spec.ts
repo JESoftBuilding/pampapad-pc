@@ -153,6 +153,24 @@ test("elegir un script deja en la tecla una acción de un paso script.run", asyn
   expect(saves[0].config.actions.at(-1)).toEqual({ id: "script-bancocam", name: "Cámara del banco", steps: [{ type: "script.run", script: "bancocam" }] });
 });
 
+test("lo que se escribe mientras guarda no se pierde: queda como cambio sin guardar", async ({ page }) => {
+  // El puente falso contesta en el acto: se demora config.save para escribir en el medio.
+  await page.evaluate(() => {
+    const fake = (window as unknown as { pampapadFake: { request(name: string, data: unknown): Promise<unknown> } }).pampapadFake;
+    const reply = fake.request.bind(fake);
+    fake.request = (name, data) => (name === "config.save" ? new Promise((done) => setTimeout(() => done(reply(name, data)), 500)) : reply(name, data));
+  });
+  await page.getByRole("button", { name: "Tecla 5", exact: true }).click();
+  await page.getByLabel("Etiqueta").fill("Corto");
+  await page.getByRole("button", { name: "Guardar" }).click();
+  await expect(page.getByText("Guardando…")).toBeVisible();
+  await page.getByLabel("Etiqueta").fill("Corto 2");
+
+  await expect(page.getByText("Guardado.")).toBeVisible();
+  await expect(page.getByLabel("Etiqueta")).toHaveValue("Corto 2");
+  await expect(page.getByText("cambios sin guardar")).toBeVisible();
+});
+
 test("un guardado que falla se muestra, con cada problema y su ubicación", async ({ page }) => {
   await page.evaluate(() =>
     (window as unknown as { pampapadFake: Fake }).pampapadFake.answer("config.save", {

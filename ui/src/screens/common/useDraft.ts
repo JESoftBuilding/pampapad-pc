@@ -65,16 +65,21 @@ export function useDraft(bridge: Bridge, view: SnapshotView) {
       return;
     }
 
+    const sent = edit.draft;
     setSaveState({ kind: "saving" });
-    const reply = await bridge.request("config.save", { config: edit.draft, expectedFingerprint: edit.base.fingerprint });
+    const reply = await bridge.request("config.save", { config: sent, expectedFingerprint: edit.base.fingerprint });
     if (!reply.ok) {
       setSaveState({ kind: "failed", failure: reply.error });
       return;
     }
 
     // Lo que quedó escrito es lo que la foto trae si ya llegó (en forma canónica); si no, el borrador tal cual.
-    const written = snapshot !== undefined && snapshot.fingerprint === reply.data.fingerprint ? snapshot.config : edit.draft;
-    setEdit({ draft: written, base: { config: written, fingerprint: reply.data.fingerprint } });
+    const written = snapshot !== undefined && snapshot.fingerprint === reply.data.fingerprint ? snapshot.config : sent;
+    // Lo que se escribió mientras guardaba no se pisa: queda como cambio sin guardar sobre lo escrito.
+    setEdit((current) => ({
+      draft: current === undefined || current.draft === sent ? written : current.draft,
+      base: { config: written, fingerprint: reply.data.fingerprint },
+    }));
     setSaveState({ kind: "saved", problems: reply.data.problems });
   }, [bridge, edit, snapshot]);
 
