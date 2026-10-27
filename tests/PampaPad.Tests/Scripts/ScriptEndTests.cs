@@ -40,6 +40,7 @@ public class ScriptEndTests
         Assert.Equal(3, end.ExitCode);
         Assert.Equal("sin celu", end.Message);
         Assert.Equal(3, Assert.Single(finished).ExitCode);
+        Assert.DoesNotContain("bancocam", rig.Runner.Running);
     }
 
     [Fact]
