@@ -102,6 +102,26 @@ public class ScriptEndTests
     }
 
     [Fact]
+    public async Task Without_waiting_the_limit_closes_once_and_tells_on_finished()
+    {
+        var clock = new FakeTimeProvider();
+        await using var rig = new ScriptRig(clock);
+        string folder = rig.AddPs1("suelto", ScriptRig.LaunchesPing, """, "wait": false, "timeoutSec": 5""");
+        var finished = new ConcurrentQueue<ScriptResult>();
+
+        Assert.True((await Run(rig, "suelto", finished)).Ok);
+        await ScriptRig.ChildAsync(folder);
+        clock.Advance(TimeSpan.FromSeconds(5));
+        await Poll.Until(() => !finished.IsEmpty, 15_000);
+
+        ScriptEnd end = SingleEnd(rig, "suelto");
+        Assert.False(end.Ok);
+        Assert.Null(end.ExitCode);
+        Assert.Single(finished);
+        Assert.DoesNotContain("suelto", rig.Runner.Running);
+    }
+
+    [Fact]
     public async Task A_script_that_does_not_start_closes_once_too()
     {
         await using var rig = new ScriptRig();
