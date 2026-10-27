@@ -124,7 +124,8 @@ internal sealed partial class EditorWindow : Form
 
         try
         {
-            _web.CoreWebView2.PostWebMessageAsJson(json);
+            // Como texto: PostWebMessageAsJson convierte el objeto ordenando sus claves, y la página guardaría config.json reordenado.
+            _web.CoreWebView2.PostWebMessageAsString(json);
         }
         catch (Exception e) when (e is InvalidOperationException or ObjectDisposedException or COMException)
         {
@@ -183,19 +184,6 @@ internal sealed partial class EditorWindow : Form
         settings.IsStatusBarEnabled = false;
         settings.AreHostObjectsAllowed = false;
         settings.AreDevToolsEnabled = AppIdentity.Dev;       // sólo en Debug (01 §5)
-    }
-
-    // async void porque es un evento. HandleAsync nunca tira (01 §4.1) y Send atrapa lo suyo; nada se espera bloqueando.
-    private async void OnMessage(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
-    {
-        if (!IsOwnOrigin(e.Source))
-        {
-            _log.Warning("window", "Mensaje de un origen que no es el de la página, ignorado: " + e.Source);
-            return;
-        }
-
-        string reply = await _bridge.HandleAsync(e.WebMessageAsJson, Caller.Window, _closing.Token);
-        Send(reply);
     }
 
     private void OnNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
