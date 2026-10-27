@@ -304,3 +304,51 @@ Usa `%APPDATA%\PampaPad-dev` y la biblioteca de ejemplo, sin atajos ni consola (
 - **La página sola, sin el programa:** `pnpm.cmd -C ui dev` y `http://localhost:5173/#/status` en el navegador. Contesta el puente falso con las muestras de `ui/src/bridge/contract.samples.json`.
 - **La ventana abierta mientras se graba sale en el video** si está en el monitor que se captura. No hay regla todavía (05, Incierto).
 - **Lo que repasa la prueba automática y no hace falta repetir a mano:** los sobres y los permisos del puente, la foto y los eventos con cadenas (`BridgeTests`, `StatusRequestsTests`), el contrato entre C# y la página (`Contract.cs` y `contract.test.ts`), la pantalla contra el puente falso, con un evento simulado (`ui/tests/status.spec.ts`), y que el programa real mande en `app.snapshot` los tipos de paso y de condición que corre (la prueba de humo sale con 5 si no; `SnapshotCheckTests`). La ventana real con esa foto no la abre ninguna: son las filas 2 y 3.
+
+## Etapa 7: la edición desde la ventana, Teclas y Acciones
+
+Se repasa con la copia de desarrollo de la rama `etapa-7` (worktree `D:\Conocimiento\Sistemas\electronica\pampapad-pc-etapa-7`), armada con la página, y **sobre la biblioteca real**: desde esta etapa la ventana escribe `config.json`. La real la versiona git: antes de empezar, `git -C D:\Conocimiento status --short -- Areas/marca-personal/pampapad` tiene que estar vacío, y si algo sale mal se vuelve con `git -C D:\Conocimiento checkout -- Areas/marca-personal/pampapad/config.json`. Las filas 1 a 4, 10 y 11 andan con los atajos apagados; las 5 a 9 piden que la copia de desarrollo tome los atajos y la instalada esté cerrada ("Salir" en la instalada), porque la captura suspende y reanuda los atajos globales de verdad. OBS sólo hace falta en las filas 12 y 13, sin grabar nada que importe.
+
+Antes de las filas 5 a 9, en `%APPDATA%\PampaPad-dev\local.json` (si el archivo tiene otras claves, cambiar sólo `hotkeysEnabled`):
+
+```json
+{
+  "version": 1,
+  "hotkeysEnabled": true
+}
+```
+
+Desde la raíz del worktree:
+
+```powershell
+pnpm.cmd -C ui build
+$env:PAMPAPAD_LIBRARY = 'D:\Conocimiento\Areas\marca-personal\pampapad'
+dotnet run --project src\PampaPad.App
+```
+
+| N | Qué hacer | Qué tiene que pasar |
+|---|---|---|
+| 1 | "Abrir PampaPad" en el ícono de la copia de desarrollo | La ventana abre en **Teclas**, en gris sobrio (sin el violeta), con las dos páginas arriba (Grabación, con "principal", y Escenas) y la grilla de 12 de Grabación: BANCO en la 3, ESCEN. en la 4, SHORT a LARGO en la 5 a la 9, MICRO., PAUSA y GRABAR en la 10 a la 12 ("Escenas" y "Micrófono" no traen etiqueta corta: la página recorta a seis con punto, `shortLabelFor`); las teclas 1 y 2 con un guion |
+| 2 | Clic en la tecla 1, escribir "Prueba" en Etiqueta y elegir "Marca: short" en Qué hace | La tecla 1 de la grilla pasa a decir PRUEBA en el momento; abajo aparece "cambios sin guardar" y Guardar se enciende. El título de la ventana no cambia |
+| 3 | Guardar | "Guardado." sin avisos. `git -C D:\Conocimiento diff -- Areas/marca-personal/pampapad/config.json` muestra sólo las líneas de la tecla nueva, con sangría de dos y sin cambios en el resto del archivo |
+| 4 | Con la ventana abierta, en otra terminal: `git -C D:\Conocimiento checkout -- Areas/marca-personal/pampapad/config.json`. Volver a la ventana, cambiar la etiqueta de la tecla 1 y Guardar | Rojo: "No se guardó: config.json cambió en el disco desde que se leyó…" con el botón Recargar biblioteca. Al apretarlo, la tecla 1 vuelve a estar vacía: la ventana muestra lo del disco y el borrador se descartó |
+| 5 | Con los atajos encendidos y la instalada cerrada: clic en la tecla 1, Etiqueta "Prueba", Qué hace "Marca: short", "Grabar atajo", y apretar Ctrl+Shift+Alt+P en el teclado | La caja dice "Apretá la combinación…"; al apretarla el campo pasa a `Ctrl+Shift+Alt+P` y la caja se cierra. El registro dice "Atajos suspendidos para grabar una combinación en la ventana." y "Atajos reanudados." |
+| 6 | "Grabar atajo" otra vez y apretar F8 sola; después Esc | "Hace falta por lo menos un modificador: Ctrl, Shift o Alt." y la captura sigue; con Esc se cierra y el campo sigue en `Ctrl+Shift+Alt+P`. El registro vuelve a decir suspendidos y reanudados |
+| 7 | Guardar, y apretar Ctrl+Shift+Alt+P con OBS cerrado | "Guardado." sin avisos y el registro dice "Atajos tomados: 10; rechazados por Windows: 0." (los 9 de antes más el nuevo). La combinación dispara `marca-short`: con OBS cerrado suena "falló", sale el cartel "Sin OBS: la marca no entró." y el ícono pasa al triángulo (regla de la etapa 3) |
+| 8 | "Salir" en la copia de desarrollo; abrir la instalada (menú Inicio), que toma las nueve de la biblioteca; volver a abrir la de desarrollo, con `hotkeysEnabled` todavía encendido. En la ventana: tecla 1, "Grabar atajo", apretar Ctrl+Shift+Alt+F9 (una marca, que ahora tiene la instalada); Esc. Después "Quitar atajo" en la tecla 1 y Guardar | Al abrir, el registro de la de desarrollo dice "Atajos tomados: 1; rechazados por Windows: 9": la instalada tiene las nueve de la biblioteca y la de desarrollo sólo la P. Mientras la caja espera, Ctrl+Shift+Alt+F9 **no llega** a la página (la tiene la instalada: lo que midió E0-3 con `SendInput`), y la instalada dispara `marca-short`: con OBS cerrado suena "falló" y sale su cartel. La caja sigue esperando hasta Esc. Al guardar sin el atajo, "Guardado." con 9 avisos en la barra (`hotkey_taken`, uno por combinación). "Salir" en la instalada y "Recargar biblioteca" en la de desarrollo: "Atajos tomados: 9; rechazados por Windows: 0" |
+| 9 | Tecla 1: en Qué hace elegir "Parar" y Guardar | Rojo: "No se guardó: La tecla 1 de Grabación para o pausa la grabación con un toque." con la ubicación `pages[0].keys[0].action`; la tecla 1 se ve rota (borde punteado). Pasar "Parar" a "Al mantener" y poner "Grabar" en Qué hace: Guardar anda. Después volver a "Marca: short" sin "Al mantener" y Guardar |
+| 10 | Acciones: "Nombre de la acción nueva" = "Ir al banco"; Crear acción | Aparece "id: ir-al-banco-2": el id sale del nombre y no repite el que ya está. Agregar un paso `wait.window`: el formulario trae Título de la ventana (con las ventanas abiertas de la PC para elegir, o escribirlo), Ancho, Alto, Cuánto esperar y Proceso; "Sólo si" con las once condiciones. Elegir "Marca: short" en la lista y "Quitar la acción": apagado, con "La usan: Grabación, tecla 1 · Grabación, tecla 5" |
+| 11 | En Acciones, con "Ir al banco" (la original) elegida, Probar | Con OBS cerrado: en el acto figura en curso y, a los 5 s, "falló" en el paso 2 (`wait.window`: no hay ventana bancocam) y "no corrió" en el 3; el paso 1 dice "salteado" o "bien" según haya corrido `bancocam` (si corre, abre scrcpy: cerrarlo). Sin sonido, sin cartel y el ícono de la bandeja no cambia (la prueba se ve en la pantalla) |
+| 12 | Con OBS abierto, Ctrl+Shift+Alt+G (graba): en Teclas, tecla 5, y en Acciones, cualquier acción | Probar y Grabar atajo están apagados con "Se apaga mientras grabás, estás en pausa o transmitís."; Guardar con un cambio da "No se guardó: …read_only_while_recording…". Ctrl+Shift+Alt+D para |
+| 13 | Con OBS detenido: Teclas, tecla 1, "Quitar la tecla"; Acciones, la "Ir al banco" nueva de la fila 10 (`ir-al-banco-2`), que no usa nadie: "Quitar la acción"; Guardar | "Guardado." y `git -C D:\Conocimiento diff -- Areas/marca-personal/pampapad/config.json` queda vacío: el archivo volvió byte a byte al de la v0.4.0 |
+| 14 | Cambiar una etiqueta sin guardar y cerrar la ventana con la X | Un diálogo nativo "Hay cambios sin guardar", con "Seguir editando" por defecto y "Cerrar sin guardar". Seguir editando deja la ventana; Cerrar sin guardar la cierra, y el registro dice "Ventana cerrada con cambios sin guardar, a pedido." |
+| 15 | Cambiar una etiqueta sin guardar y "Salir" en la bandeja | El mismo diálogo. "Seguir editando" no sale del programa; "Cerrar sin guardar" sale, y el registro termina en "Salida ordenada" |
+
+Al terminar: en `%APPDATA%\PampaPad-dev\local.json`, `hotkeysEnabled` en `false`, o borrar el archivo; volver a abrir la copia instalada; `git -C D:\Conocimiento status --short -- Areas/marca-personal/pampapad` vacío (si quedó algo, es lo que el repaso dejó a propósito: se mira y se commitea o se descarta).
+
+## Notas de la etapa 7
+
+- **Lo que repasó Claude solo, el 2026-10-26**, con `ui/scripts/repaso-ventana.mjs` sobre la ventana real y una copia de la biblioteca de ejemplo (plan de la etapa 7, E7-13): asignar la tecla 1 y guardar, el archivo canónico y el respaldo en la carpeta local, el guardado atrasado que falla y recarga, y una acción nueva desde Acciones. El informe está en `D:\repos\pampapad-construccion\E7-13-repaso.txt`.
+- **Lo que queda para Emmanuel:** las filas 1 a 15, con el teclado y la biblioteca real; las 12 y 13 con OBS. La captura con el teclado real (filas 5 a 8) nunca se midió: E0-3 fue con `SendInput`.
+- **La ventana abierta mientras se graba sale en el video** si está en el monitor que se captura. Sigue sin regla (05, Incierto).
+- **Lo que repasa la prueba automática y no hace falta repetir a mano:** el guardado con huella, el respaldo, el temporal y lo desconocido conservado (`LibrarySaveTests`), la configuración candidata y el orden de los parámetros (`ConfigCheckTests`, `ConfigCanonTests`), los pedidos del puente con sus puertas (`ConfigRequestsTests`, `KeysRequestsTests`, `ActionsRequestsTests`, `OptionsListTests`), la suspensión y el reloj de los 30 s con el Windows de mentira (`HotkeySourceSuspendTests`), el borrador que corre (`DispatcherDraftTests`), el avisador que ignora una prueba (`NotifierWindowTests`), el contrato (`Contract.cs`, `contract.test.ts`), los modelos de la página (`model/*.test.ts`) y las dos pantallas contra el puente falso (`keys.spec.ts`, `actions.spec.ts`).
