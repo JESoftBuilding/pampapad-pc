@@ -111,7 +111,7 @@ public static partial class ScriptFolder
     }
 
     // La ficha leída con las opciones del programa, con o sin marca de orden de bytes. Devuelve por qué no se pudo leer, o null.
-    private static string? ReadManifest(string file, string id, out ScriptManifest? manifest)
+    internal static string? ReadManifest(string file, string id, out ScriptManifest? manifest)
     {
         manifest = null;
         try
@@ -134,7 +134,7 @@ public static partial class ScriptFolder
     }
 
     // La ruta completa del entry, sin salir nunca de la carpeta del script. Devuelve la falla si sale o no es una ruta, o null.
-    private static Failure? ResolveEntry(string folder, string id, string entry, out string path)
+    internal static Failure? ResolveEntry(string folder, string id, string entry, out string path)
     {
         path = "";
         if (Path.IsPathRooted(entry) || entry.Split('/', '\\').Contains(".."))

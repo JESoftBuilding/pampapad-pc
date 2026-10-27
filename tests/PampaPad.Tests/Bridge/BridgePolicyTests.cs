@@ -34,6 +34,12 @@ public class BridgePolicyTests
         { "config.save", RequestKind.Write, "window", Caller.Window, "idle", null },
         { "library.reload", RequestKind.Write, "window,tray", Caller.Tray, "take", null },
         { "scripts.test", RequestKind.Execute, "window,mcp", Caller.Internal, "take", ErrorCodes.ReadOnlyWhileRecording },
+        // Los tres de escritura de Scripts (E8-4): con una toma en curso tampoco desde la ventana, como config.save.
+        { "scripts.write", RequestKind.Write, "window,mcp", Caller.Window, "take", ErrorCodes.ReadOnlyWhileRecording },
+        { "scripts.import", RequestKind.Write, "window", Caller.Window, "take", ErrorCodes.ReadOnlyWhileRecording },
+        { "scripts.delete", RequestKind.Write, "window", Caller.Window, "take", ErrorCodes.ReadOnlyWhileRecording },
+        { "scripts.delete", RequestKind.Write, "window", Caller.Window, "idle", null },
+        { "scripts.reveal", RequestKind.Execute, "window", Caller.Window, "take", null },
     };
 
     [Theory]

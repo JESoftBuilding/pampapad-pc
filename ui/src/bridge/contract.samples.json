@@ -872,6 +872,85 @@
           ]
         }
       }
+    },
+    "scripts.write": {
+      "request": {
+        "id": 14,
+        "request": "scripts.write",
+        "data": {
+          "id": "bancocam",
+          "manifest": {
+            "entry": "bancocam.cmd",
+            "name": "Cámara del banco",
+            "timeoutSec": 20,
+            "inventado": true
+          },
+          "expectedFingerprint": "2794f40e573b3b53bffad440a4c6bc8d988493d2f15bcaed0ed3e845ed927083"
+        }
+      },
+      "response": {
+        "id": 14,
+        "ok": true,
+        "data": {
+          "fingerprint": "3aed4eeba8413dcf2840a313b9546d8ffe0c4b324269c04fbe12b582b2caab34"
+        }
+      }
+    },
+    "scripts.import": {
+      "request": {
+        "id": 15,
+        "request": "scripts.import",
+        "data": {}
+      },
+      "response": {
+        "id": 15,
+        "ok": true,
+        "data": {
+          "id": "bancocam-2"
+        }
+      }
+    },
+    "scripts.delete": {
+      "request": {
+        "id": 16,
+        "request": "scripts.delete",
+        "data": {
+          "id": "viejo"
+        }
+      },
+      "response": {
+        "id": 16,
+        "ok": true,
+        "data": {
+          "backupPath": "C:\\Users\\Emmanuel\\AppData\\Roaming\\PampaPad\\backup\\scripts\\viejo-20261027-153000"
+        }
+      }
+    },
+    "scripts.reveal": {
+      "request": {
+        "id": 17,
+        "request": "scripts.reveal",
+        "data": {
+          "id": "bancocam"
+        }
+      },
+      "response": {
+        "id": 17,
+        "ok": true,
+        "data": {}
+      }
+    },
+    "library.reveal": {
+      "request": {
+        "id": 18,
+        "request": "library.reveal",
+        "data": {}
+      },
+      "response": {
+        "id": 18,
+        "ok": true,
+        "data": {}
+      }
     }
   },
   "events": {

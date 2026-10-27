@@ -19,7 +19,7 @@ public sealed class ScriptsRequestsTests : IAsyncLifetime
         var executor = new Executor([new ScriptRun(_rig.Runner, _rig.Library)], [], TimeProvider.System);
         _dispatcher = new Dispatcher(_rig.Library, _state, executor, new Gestures(TimeProvider.System, Gestures.HoldFrom(null), Gestures.DefaultFreshness), _rig.Log);
         _bridge = new Bridge(_state, _rig.Log);
-        ScriptsRequests.Register(_bridge, new ScriptsSources(_rig.Library, _rig.Runner, _runs));
+        ScriptsRequests.Register(_bridge, new ScriptsSources(_rig.Library, _rig.Runner, _runs, new FakeShellDialogs(), Path.Combine(_rig.LibraryFolder, "respaldo"), TimeProvider.System));
     }
 
     public Task InitializeAsync() => Task.CompletedTask;

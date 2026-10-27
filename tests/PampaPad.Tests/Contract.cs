@@ -48,7 +48,7 @@ public class Contract
         await using var rig = new DispatcherRig(DispatcherRig.Example);
         var bridge = new Bridge(rig.State, rig.Log);
         using var runs = new ScriptRuns(rig.Log, Path.Combine(Path.GetTempPath(), "pampapad-sin-registro"), TimeProvider.System);
-        using IDisposable hooks = Requests.RegisterAll(bridge, Sources(rig), Edit(rig), new ScriptsSources(rig.Library, new ScriptRunner(rig.Library, rig.Log, TimeProvider.System, null), runs));
+        using IDisposable hooks = Requests.RegisterAll(bridge, Sources(rig), Edit(rig), new ScriptsSources(rig.Library, new ScriptRunner(rig.Library, rig.Log, TimeProvider.System, null), runs, new FakeShellDialogs(), rig.Library.BackupFolder, TimeProvider.System));
 
         // Los de la cáscara (AppRequests) no se ven desde acá: van por RequestNames.Shell, y la prueba de humo los controla con el programa real.
         string[] windowRequests = [.. bridge.RegisteredFor(Caller.Window), .. RequestNames.Shell];
@@ -62,7 +62,7 @@ public class Contract
         await using var rig = new DispatcherRig(DispatcherRig.Example);
         var bridge = new Bridge(rig.State, rig.Log);
         using var runs = new ScriptRuns(rig.Log, Path.Combine(Path.GetTempPath(), "pampapad-sin-registro"), TimeProvider.System);
-        using IDisposable hooks = Requests.RegisterAll(bridge, Sources(rig), Edit(rig), new ScriptsSources(rig.Library, new ScriptRunner(rig.Library, rig.Log, TimeProvider.System, null), runs));
+        using IDisposable hooks = Requests.RegisterAll(bridge, Sources(rig), Edit(rig), new ScriptsSources(rig.Library, new ScriptRunner(rig.Library, rig.Log, TimeProvider.System, null), runs, new FakeShellDialogs(), rig.Library.BackupFolder, TimeProvider.System));
 
         Assert.Equal(RequestNames.All.Order(StringComparer.Ordinal), bridge.Registered.Concat(RequestNames.Shell).Order(StringComparer.Ordinal));
     }
@@ -121,6 +121,16 @@ public class Contract
                         [new ScriptFile("bancocam.cmd", 412, At.AddDays(-3)), new ScriptFile("script.json", 96, At.AddDays(-3))],
                         SavedFingerprint,
                         [SampleScriptRun()]))),
+                [RequestNames.ScriptsWrite] = Pair(
+                    Envelope.Request(14, RequestNames.ScriptsWrite, new ScriptsWriteRequest(
+                        "bancocam", JsonSerializer.Deserialize<ScriptManifest>("""{ "entry": "bancocam.cmd", "name": "Cámara del banco", "timeoutSec": 20, "inventado": true }""", Json.Options)!, SampleFingerprint)),
+                    Envelope.Response(14, new ScriptsWriteResponse(SavedFingerprint))),
+                [RequestNames.ScriptsImport] = Pair(Envelope.Request(15, RequestNames.ScriptsImport, new NoData()), Envelope.Response(15, new ScriptsImportResponse("bancocam-2"))),
+                [RequestNames.ScriptsDelete] = Pair(
+                    Envelope.Request(16, RequestNames.ScriptsDelete, new ScriptsDeleteRequest("viejo")),
+                    Envelope.Response(16, new ScriptsDeleteResponse(@"C:\Users\Emmanuel\AppData\Roaming\PampaPad\backup\scripts\viejo-20261027-153000"))),
+                [RequestNames.ScriptsReveal] = Pair(Envelope.Request(17, RequestNames.ScriptsReveal, new ScriptsRevealRequest("bancocam")), Envelope.Response(17, new NoData())),
+                [RequestNames.LibraryReveal] = Pair(Envelope.Request(18, RequestNames.LibraryReveal, new NoData()), Envelope.Response(18, new NoData())),
             },
             ["events"] = new JsonObject
             {

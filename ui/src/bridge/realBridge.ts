@@ -15,6 +15,9 @@ import type { WebviewLike } from "./webview";
 /** Tope de espera de la página: 30 s (01 §5; el número es Propuesto y sin medir). Es de la página, no de lo que se pide. */
 export const replyTimeoutMs = 30_000;
 
+/** Los pedidos que esperan algo de la persona y no del programa: scripts.import vuelve cuando se cierra el diálogo de Windows (etapa 8). */
+const longReplies: Partial<Record<RequestName, number>> = { "scripts.import": 10 * 60_000 };
+
 type Listener = (data: unknown, seq: number) => void;
 type Pending = { name: RequestName; resolve: (reply: Reply<unknown>) => void; timer: ReturnType<typeof setTimeout> };
 
@@ -99,11 +102,12 @@ export function createRealBridge(webview: WebviewLike, timeoutMs: number = reply
   return {
     request<N extends RequestName>(name: N, data: RequestData<N>): Promise<Reply<ResponseData<N>>> {
       const id = ++nextId;
+      const limitMs = longReplies[name] ?? timeoutMs;
       return new Promise<Reply<unknown>>((resolve) => {
         const timer = setTimeout(() => {
           pending.delete(id);
-          resolve({ ok: false, error: { code: "no_response", message: `El programa no contestó ${name} en ${timeoutMs / 1000} s.` } });
-        }, timeoutMs);
+          resolve({ ok: false, error: { code: "no_response", message: `El programa no contestó ${name} en ${limitMs / 1000} s.` } });
+        }, limitMs);
         pending.set(id, { name, resolve, timer });
         try {
           // Como texto y no como objeto: WebView2 convierte un objeto ordenando sus claves, y config.save reordenaría config.json.

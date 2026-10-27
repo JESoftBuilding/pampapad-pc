@@ -118,7 +118,8 @@ internal sealed partial class Composition : IAsyncDisposable
         // El puente con todos sus pedidos, después de las fuentes de entrada y el Notifier (01 §4.3). Fuera del if de la bandeja:
         // la prueba de humo comprueba que cada pedido tenga manejador (01 §3.2).
         // Las últimas corridas de cada script salen de las líneas de cierre del registro (etapa 8): se lee antes de que corra ninguno.
-        var scriptsSources = new ScriptsSources(library, scripts, new ScriptRuns(log, Path.Combine(localFolder, "log"), clock));
+        var scriptsSources = new ScriptsSources(
+            library, scripts, new ScriptRuns(log, Path.Combine(localFolder, "log"), clock), new ShellDialogs(ui, () => composition._window), library.BackupFolder, clock);
         composition.ComposeBridge(state, library, dispatcher, executor, catalog, conditions, windows, settings, ui, localFolder, scriptsSources);
 
         if (!headless)

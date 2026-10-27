@@ -42,6 +42,9 @@ public static class ProblemCodes
     public const string ContractNewer = "contract_newer";
     public const string NoInterpreter = "no_interpreter";
 
+    /// <summary>Quitar un script que corre alguna acción (05 §4.3): la ubicación es el paso que lo corre.</summary>
+    public const string ScriptInUse = "script_in_use";
+
     /// <summary>Problema 10 de 02 §10: una tecla para o pausa con el toque. Parar y pausar van en onHold, que pide mantener.</summary>
     public const string HoldRequired = "hold_required";
 

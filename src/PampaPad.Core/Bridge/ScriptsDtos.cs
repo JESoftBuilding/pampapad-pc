@@ -59,3 +59,19 @@ public sealed record ScriptsReadRequest(string Id);
 /// ficha) y las cinco últimas corridas, primero la más nueva. El contenido de los archivos no viaja: la ventana no edita código.
 /// </summary>
 public sealed record ScriptsReadResponse(ScriptView Script, ScriptManifest? Manifest, IReadOnlyList<ScriptFile> Files, string Fingerprint, IReadOnlyList<ScriptRunView> Runs);
+
+/// <summary>scripts.write: sólo la ficha, con la huella de script.json que se leyó (vacía si no había). Contesta la huella nueva.</summary>
+public sealed record ScriptsWriteRequest(string Id, ScriptManifest Manifest, string ExpectedFingerprint);
+
+public sealed record ScriptsWriteResponse(string Fingerprint);
+
+/// <summary>scripts.import: el id del script creado, o vacío si se canceló el diálogo.</summary>
+public sealed record ScriptsImportResponse(string Id);
+
+public sealed record ScriptsDeleteRequest(string Id);
+
+/// <summary>La carpeta del respaldo local donde quedó el script quitado.</summary>
+public sealed record ScriptsDeleteResponse(string BackupPath);
+
+/// <summary>scripts.reveal: con el id abre la carpeta del script; sin id, scripts/.</summary>
+public sealed record ScriptsRevealRequest(string? Id = null);

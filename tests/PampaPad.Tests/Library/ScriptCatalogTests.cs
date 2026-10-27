@@ -20,7 +20,7 @@ public class ScriptCatalogTests
         File.WriteAllText(Path.Combine(Scripts(rig), "suelto.cmd"), "@echo off");
         using var runs = Runs(rig);
 
-        Dictionary<string, ScriptView> rows = ScriptCatalog.List(new ScriptsSources(rig.Library, rig.Runner, runs)).ToDictionary(row => row.Id);
+        Dictionary<string, ScriptView> rows = ScriptCatalog.List(new ScriptsSources(rig.Library, rig.Runner, runs, new FakeShellDialogs(), Path.Combine(rig.LibraryFolder, "respaldo"), TimeProvider.System)).ToDictionary(row => row.Id);
 
         Assert.Equal(["nuevo", "rota", "sano", "sinentrada", "sinficha", "suelto.cmd", "texto"], rows.Keys.Order(StringComparer.Ordinal));
         ScriptView sano = rows["sano"];
@@ -63,7 +63,7 @@ public class ScriptCatalogTests
         rig.Library.Load();
         using var runs = Runs(rig);
 
-        ScriptView row = Assert.Single(ScriptCatalog.List(new ScriptsSources(rig.Library, rig.Runner, runs)));
+        ScriptView row = Assert.Single(ScriptCatalog.List(new ScriptsSources(rig.Library, rig.Runner, runs, new FakeShellDialogs(), Path.Combine(rig.LibraryFolder, "respaldo"), TimeProvider.System)));
 
         ScriptUse use = Assert.Single(row.UsedBy);
         Assert.Equal("ir-al-banco", use.Action);

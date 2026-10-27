@@ -62,6 +62,15 @@ export const scriptsRequests = {
       runs: z.array(scriptRunSchema),
     }),
   },
+  "scripts.write": {
+    request: z.strictObject({ id: z.string(), manifest: scriptManifestSchema, expectedFingerprint: z.string() }),
+    response: z.object({ fingerprint: z.string() }),
+  },
+  // Cancelar el diálogo de Windows contesta bien, con el id vacío.
+  "scripts.import": { request: z.strictObject({}), response: z.object({ id: z.string() }) },
+  "scripts.delete": { request: z.strictObject({ id: z.string() }), response: z.object({ backupPath: z.string() }) },
+  "scripts.reveal": { request: z.strictObject({ id: z.string().optional() }), response: z.object({}) },
+  "library.reveal": { request: z.strictObject({}), response: z.object({}) },
 } as const;
 
 export type ScriptEnd = z.output<typeof scriptEndSchema>;
