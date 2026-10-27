@@ -1,18 +1,19 @@
 @import "tailwindcss";
 
-/* La paleta del canal (Areas/marca-personal/CLAUDE.md), Propuesta para PampaPad: Estado no tuvo boceto (pregunta abierta 37).
-   El fondo es el mismo DefaultBackgroundColor de src/PampaPad.App/EditorWindow.cs: si cambia uno, cambia el otro (01 §9).
-   muted, border, danger y ok no salen de ninguna nota. Las letras se piden por nombre y caen a las del sistema: la página no baja nada. */
+/* El gris sobrio de la decisión 28 (05 §4): los valores del diseño aprobado de Teclas (Notas/pampapad/bocetos/2026-10-15-teclas-con-consola.dc.html),
+   con el ámbar del canal sólo para lo elegido y el violeta fuera del color principal. danger y ok se ajustaron al contraste AA sobre
+   la tarjeta (hallazgos E6-8 y E6-11). El fondo es el mismo DefaultBackgroundColor de src/PampaPad.App/EditorWindow.cs: si cambia uno,
+   cambia el otro (01 §9), y theme.test.ts lo mira. Las letras se piden por nombre y caen a las del sistema: la página no baja nada. */
 @theme {
-  --color-background: #0e0d17;
-  --color-card: #16142a;
-  --color-foreground: #f2f1fa;
-  --color-muted: #a09cc0;
-  --color-border: #2a2745;
-  --color-primary: #6d5df6;
+  --color-background: #0f1012;
+  --color-card: #16171a;
+  --color-foreground: #e9eaec;
+  --color-muted: #a4a8b0;
+  --color-border: #33363c;
+  --color-primary: #3a3d44;
   --color-accent: #f5a623;
-  --color-danger: #ef4444;
-  --color-ok: #22c55e;
+  --color-danger: #e5455a;
+  --color-ok: #3fb27f;
   --font-sans: "Archivo", "Segoe UI", system-ui, sans-serif;
   --font-display: "Kode Mono", "Cascadia Mono", ui-monospace, monospace;
   --font-mono: "JetBrains Mono", "Cascadia Mono", ui-monospace, monospace;

@@ -66,7 +66,7 @@ export function LogView({ entries, filter, onFilter }: { entries: LogEntry[]; fi
               <span>
                 {entry.message}
                 {entry.runId !== undefined && (
-                  <button type="button" className="ml-2 text-primary underline" onClick={() => onFilter({ ...filter, runId: entry.runId })}>
+                  <button type="button" className="ml-2 text-accent underline" onClick={() => onFilter({ ...filter, runId: entry.runId })}>
                     sólo esta ejecución
                   </button>
                 )}

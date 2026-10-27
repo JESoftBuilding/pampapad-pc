@@ -8,9 +8,13 @@ type Listener = (event: { data: unknown }) => void;
 /** Un WebView2 de mentira: anota lo que manda la página y le hace llegar lo que mandaría el programa. */
 function fakeWebview() {
   const sent: unknown[] = [];
+  const raw: string[] = [];
   let listener: Listener | undefined;
   const webview: WebviewLike = {
-    postMessage: (message) => sent.push(message),
+    postMessage: (message) => {
+      raw.push(message as string);
+      sent.push(JSON.parse(message as string));
+    },
     addEventListener: (_type, handler) => {
       listener = handler;
     },
@@ -18,7 +22,7 @@ function fakeWebview() {
       listener = undefined;
     },
   };
-  return { webview, sent, deliver: (data: unknown) => listener?.({ data }), listening: () => listener !== undefined };
+  return { webview, sent, raw, deliver: (data: unknown) => listener?.({ data: JSON.stringify(data) }), listening: () => listener !== undefined };
 }
 
 afterEach(() => {
@@ -37,6 +41,15 @@ describe("realBridge", () => {
       { id: 1, request: "log.read", data: { count: 5 } },
       { id: 2, request: "app.snapshot", data: {} },
     ]);
+  });
+
+  it("manda texto y no un objeto, así el orden de las claves llega intacto", () => {
+    const host = fakeWebview();
+    const bridge = createRealBridge(host.webview);
+
+    void bridge.request("action.test", { action: { id: "a", steps: [{ type: "obs.scene", scene: { uuid: "u", name: "Banco" } }] } });
+
+    expect(host.raw[0]).toBe('{"id":1,"request":"action.test","data":{"action":{"id":"a","steps":[{"type":"obs.scene","scene":{"uuid":"u","name":"Banco"}}]}}}');
   });
 
   it("resuelve con la respuesta que trae su id", async () => {

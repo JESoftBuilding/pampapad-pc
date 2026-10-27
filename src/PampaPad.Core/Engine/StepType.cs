@@ -17,7 +17,11 @@ public abstract class StepType<P> : IStepType
 
     public abstract IReadOnlyList<Field> Fields { get; }
 
-    public IReadOnlyList<Problem> Validate(Step step)
+    public IReadOnlyList<Problem> Validate(Step step) => Validate(step, parameters => Check(parameters));
+
+    public IReadOnlyList<Problem> Validate(Step step, Config config) => Validate(step, parameters => Check(parameters, config));
+
+    private List<Problem> Validate(Step step, Func<P, IEnumerable<Problem>> check)
     {
         var found = new List<Problem>();
         foreach (Field field in Fields)
@@ -40,7 +44,7 @@ public abstract class StepType<P> : IStepType
         }
         else
         {
-            found.AddRange(Check(parameters));
+            found.AddRange(check(parameters));
         }
 
         return found;
@@ -58,6 +62,9 @@ public abstract class StepType<P> : IStepType
 
     /// <summary>Las reglas propias del tipo sobre parámetros que ya se pudieron leer.</summary>
     protected virtual IEnumerable<Problem> Check(P p) => [];
+
+    /// <summary>Las mismas reglas contra una configuración candidata. Sólo las pisa quien mira la configuración (page.go); si no, valen las de Check(p).</summary>
+    protected virtual IEnumerable<Problem> Check(P p, Config config) => Check(p);
 
     protected abstract Task<StepResult> RunAsync(P p, Invocation invocation, CancellationToken ct);
 

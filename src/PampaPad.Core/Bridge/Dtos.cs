@@ -24,13 +24,62 @@ public sealed record ActionCancelRequest(Guid? RunId = null, bool All = false);
 public sealed record ActionCancelResponse(int Cancelled);
 
 /// <summary>
-/// app.snapshot (01 §5 y 05 §11): versión, versión del esquema, configuración, estado con su seq, tipos de paso y de condición, y
-/// ajustes. Sin huella hasta la etapa 7. Los problemas van dentro del estado, que es donde los junta el Dispatcher.
+/// config.save (05 §11): la configuración entera, con lo que la página no conoce incluido (el modelo de config.json es la única excepción a
+/// "campos desconocidos prohibidos", 01 §5), y la huella del archivo con que se leyó. Un campo de más en este record sí es invalid_data.
+/// </summary>
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed record ConfigSaveRequest(Config Config, string ExpectedFingerprint);
+
+/// <summary>La huella de lo que quedó escrito y los problemas que no frenan (los warning del archivo, de los pasos y los atajos que Windows rechazó).</summary>
+public sealed record ConfigSaveResponse(string Fingerprint, IReadOnlyList<Problem> Problems);
+
+/// <summary>library.reload (05 §11): lo que dejó la carga. Los problemas son los del archivo; los de los pasos y los atajos llegan con el estado.</summary>
+public sealed record LibraryReloadResponse(string Fingerprint, IReadOnlyList<Problem> Problems);
+
+/// <summary>
+/// action.test (05 §4.2 y §11): la acción tal como está en el borrador, con todo lo que la página no conoce. Contesta en el acto con el
+/// runId; el resultado, paso por paso, llega por el evento action.finished.
+/// </summary>
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed record ActionTestRequest(Action Action);
+
+public sealed record ActionTestResponse(Guid RunId);
+
+/// <summary>window.dirty (05 §11): la página avisa a la cáscara si tiene cambios sin guardar, para que al cerrar la ventana pregunte (01 §5).</summary>
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed record WindowDirtyRequest(bool Dirty);
+
+/// <summary>Las listas de opciones que pide options.list (05 §4.2): lo que un campo de un paso ofrece elegir.</summary>
+public enum OptionsList
+{
+    Scenes,
+    Inputs,
+    Scripts,
+    Windows,
+}
+
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed record OptionsListRequest(OptionsList List);
+
+/// <summary>Una opción: Name es lo que se guarda y se muestra; Uuid, el de una escena o entrada de OBS (se guardan los dos, 02 §4.8); Detail, un dato para distinguirla (la ficha de un script, el proceso de una ventana).</summary>
+public sealed record OptionItem(string Name, string? Uuid = null, string? Detail = null);
+
+/// <summary>La lista, o Unavailable con el motivo cuando no se puede dar (OBS cerrado): el campo acepta el texto escrito a mano (05 §4.2).</summary>
+public sealed record OptionsListResponse(IReadOnlyList<OptionItem> Items, string? Unavailable = null);
+
+/// <summary>hotkeys.suspend (05 §6 y §11): true suelta los atajos globales para grabar una combinación; false los reanuda.</summary>
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed record HotkeysSuspendRequest(bool Suspended);
+
+/// <summary>
+/// app.snapshot (01 §5 y 05 §11): versión, versión del esquema, configuración con su huella, estado con su seq, tipos de paso y de
+/// condición, y ajustes. Los problemas van dentro del estado, que es donde los junta el Dispatcher.
 /// </summary>
 public sealed record AppSnapshot(
     string Version,
     int SchemaVersion,
     Config Config,
+    string Fingerprint,
     StateView State,
     IReadOnlyList<StepTypeView> StepTypes,
     IReadOnlyList<ConditionTypeView> ConditionTypes,
@@ -152,5 +201,5 @@ public sealed record ActionFinishedView(
     }
 }
 
-/// <summary>config.changed: la configuración que quedó después de cargar. Los problemas llegan con el estado.</summary>
-public sealed record ConfigChangedView(Config Config);
+/// <summary>config.changed: la configuración que quedó después de cargar o de guardar, con la huella de esa misma carga. Los problemas llegan con el estado.</summary>
+public sealed record ConfigChangedView(Config Config, string Fingerprint);

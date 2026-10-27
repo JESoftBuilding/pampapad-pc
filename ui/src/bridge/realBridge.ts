@@ -26,6 +26,15 @@ export function createRealBridge(webview: WebviewLike, timeoutMs: number = reply
   const pending = new Map<number, Pending>();
   const listeners = new Map<string, Set<Listener>>();
 
+  // El programa manda cada mensaje como texto (PostWebMessageAsString), para que el orden de las claves llegue intacto.
+  function parse(text: string): unknown {
+    try {
+      return JSON.parse(text) as unknown;
+    } catch {
+      return undefined;
+    }
+  }
+
   function invalid(name: string, detail: string): Reply<unknown> {
     return { ok: false, error: { code: "invalid_data", message: `La respuesta a ${name} no tiene la forma del contrato: ${detail}` } };
   }
@@ -72,7 +81,7 @@ export function createRealBridge(webview: WebviewLike, timeoutMs: number = reply
   }
 
   function onMessage(event: { data: unknown }) {
-    const message = event.data;
+    const message = typeof event.data === "string" ? parse(event.data) : undefined;
     if (typeof message !== "object" || message === null) {
       return;
     }
@@ -97,7 +106,8 @@ export function createRealBridge(webview: WebviewLike, timeoutMs: number = reply
         }, timeoutMs);
         pending.set(id, { name, resolve, timer });
         try {
-          webview.postMessage({ id, request: name, data });
+          // Como texto y no como objeto: WebView2 convierte un objeto ordenando sus claves, y config.save reordenaría config.json.
+          webview.postMessage(JSON.stringify({ id, request: name, data }));
         } catch (error) {
           pending.delete(id);
           clearTimeout(timer);

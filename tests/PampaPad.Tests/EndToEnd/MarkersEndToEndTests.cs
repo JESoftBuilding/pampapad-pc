@@ -83,11 +83,12 @@ public class MarkersEndToEndTests
     /// <summary>Lo mismo que arma Composition para las marcas, con Windows de mentira.</summary>
     private sealed class Rig : IAsyncDisposable
     {
+        private readonly TempFolder _temp = new();
         private readonly HotkeySource _hotkeys;
 
         public Rig(ObsSession session)
         {
-            var library = new CoreLibrary(ExampleLibrary, Path.Combine(Path.GetTempPath(), "pampapad-e2e-backup"));
+            var library = new CoreLibrary(ExampleLibrary, _temp.Combine("backup"));
             library.Load();
             Chains chains = TestChains.For(library, session.Log);
             var executor = new Executor(
@@ -111,6 +112,10 @@ public class MarkersEndToEndTests
 
         public ConcurrentQueue<Notice> Balloons { get; } = new();
 
-        public ValueTask DisposeAsync() => _hotkeys.DisposeAsync();
+        public async ValueTask DisposeAsync()
+        {
+            await _hotkeys.DisposeAsync();
+            _temp.Dispose();
+        }
     }
 }

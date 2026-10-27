@@ -117,7 +117,7 @@ internal sealed partial class Composition : IAsyncDisposable
 
         // El puente con todos sus pedidos, después de las fuentes de entrada y el Notifier (01 §4.3). Fuera del if de la bandeja:
         // la prueba de humo comprueba que cada pedido tenga manejador (01 §3.2).
-        composition.ComposeBridge(state, library, dispatcher, catalog, conditions, settings, ui, localFolder);
+        composition.ComposeBridge(state, library, dispatcher, executor, catalog, conditions, windows, settings, ui, localFolder);
 
         if (!headless)
         {
@@ -144,6 +144,7 @@ internal sealed partial class Composition : IAsyncDisposable
             tray.MenuOpened += notifier.Dismiss;
             tray.OpenWindowRequested += () => composition.OpenWindow(EditorWindow.FirstScreen);
             tray.StatusRequested += () => composition.OpenWindow(EditorWindow.StatusScreen);
+            tray.ExitRequested += composition.RequestExit;
             composition.HookChains(tray, preflight, notifier, dispatcher);
             tray.ReconnectRequested += (_, _) => obs.Reconnect();
             tray.ConsoleToggleRequested += () =>

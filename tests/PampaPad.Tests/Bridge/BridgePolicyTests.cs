@@ -30,6 +30,9 @@ public class BridgePolicyTests
         { "action.cancel", RequestKind.Execute, "window,tray", Caller.Window, "take", null },
         { "action.test", RequestKind.Execute, "window", Caller.Window, "take", ErrorCodes.ReadOnlyWhileRecording },
         { "action.test", RequestKind.Execute, "window", Caller.Window, "idle", null },
+        { "config.save", RequestKind.Write, "window", Caller.Window, "take", ErrorCodes.ReadOnlyWhileRecording },
+        { "config.save", RequestKind.Write, "window", Caller.Window, "idle", null },
+        { "library.reload", RequestKind.Write, "window,tray", Caller.Tray, "take", null },
         { "scripts.test", RequestKind.Execute, "window,mcp", Caller.Internal, "take", ErrorCodes.ReadOnlyWhileRecording },
     };
 

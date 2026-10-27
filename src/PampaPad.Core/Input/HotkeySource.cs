@@ -4,9 +4,12 @@ namespace PampaPad.Core;
 /// Decide qué combinaciones se registran y traduce cada pulsación a un InputEvent. Las reglas están acá;
 /// el adaptador de Windows no tiene ninguna (01 §3.2). Entrega el toque ya reconocido: por teclado no hay "mantener".
 /// </summary>
-public sealed class HotkeySource(ISystemHotkeys system, StateStore state, Log log) : IInputSource
+public sealed class HotkeySource(ISystemHotkeys system, StateStore state, Log log, TimeProvider? clock = null) : IInputSource
 {
     public const string SourceId = "hotkeys";
+
+    /// <summary>Lo más que pueden quedar suspendidos los atajos mientras la ventana graba una combinación (05 §6, punto 3; Propuesto, sin medir).</summary>
+    public static readonly TimeSpan SuspendLimit = TimeSpan.FromSeconds(30);
 
     private const int LastId = 0xBFFF;   // RegisterHotKey admite ids de 0x0000 a 0xBFFF
 
@@ -14,9 +17,14 @@ public sealed class HotkeySource(ISystemHotkeys system, StateStore state, Log lo
 
     private readonly Lock _applying = new();
     private volatile IReadOnlyDictionary<int, InputEvent> _registered = Nothing;
+    private readonly TimeProvider _clock = clock ?? TimeProvider.System;
+    private Page _page = new();
+    private IReadOnlyList<HotkeyBinding> _general = [];
+    private ITimer? _limit;
     private int _nextId = 1;
     private bool _listening;
     private bool _disposed;
+    private bool _suspended;
 
     public event Action<InputEvent>? Input;
 
@@ -48,6 +56,14 @@ public sealed class HotkeySource(ISystemHotkeys system, StateStore state, Log lo
                 return [];
             }
 
+            // Lo último que llegó se guarda siempre: al reanudar se vuelve a aplicar. Suspendida, no se registra nada.
+            _page = page;
+            _general = hotkeys;
+            if (_suspended)
+            {
+                return [];
+            }
+
             Release();
             var next = new Dictionary<int, InputEvent>();
             var seen = new HashSet<Hotkey>();
@@ -76,11 +92,90 @@ public sealed class HotkeySource(ISystemHotkeys system, StateStore state, Log lo
         return rejected;
     }
 
+    /// <summary>Si los atajos están suspendidos porque la ventana está grabando una combinación.</summary>
+    public bool Suspended
+    {
+        get
+        {
+            lock (_applying)
+            {
+                return _suspended;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Suspender suelta todos los atajos globales y deja de registrar hasta que se reanude; reanudar vuelve a aplicar la última página y
+    /// la última lista (05 §6). La ventana lo pide mientras graba una combinación: una combinación ya registrada no llega a la página (E0-3).
+    /// Nunca quedan suspendidos más de SuspendLimit: si nadie reanuda, lo hace el reloj, porque una captura a medias deja la botonera
+    /// muda. Suspender de nuevo vuelve a contar los 30 s. La consola no se suspende: es otra fuente.
+    /// </summary>
+    public void Suspend(bool on)
+    {
+        lock (_applying)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (on)
+            {
+                if (!_suspended)
+                {
+                    _suspended = true;
+                    Release();
+                    state.Update(s => s with { Hotkeys = new HotkeysState(0, 0) });
+                    log.Info("hotkeys", "Atajos suspendidos para grabar una combinación en la ventana.");
+                }
+
+                if (_limit is null)
+                {
+                    _limit = _clock.CreateTimer(_ => OnLimit(), null, SuspendLimit, Timeout.InfiniteTimeSpan);
+                }
+                else
+                {
+                    _limit.Change(SuspendLimit, Timeout.InfiniteTimeSpan);
+                }
+
+                return;
+            }
+
+            if (!_suspended)
+            {
+                return;
+            }
+
+            _suspended = false;
+            _limit?.Dispose();
+            _limit = null;
+            log.Info("hotkeys", "Atajos reanudados.");
+            Apply(_page, _general);
+        }
+    }
+
+    // El reloj de los 30 s. Si ya se reanudó, el aviso llegó tarde: no hay nada que hacer ni que anotar.
+    private void OnLimit()
+    {
+        lock (_applying)
+        {
+            if (!_suspended)
+            {
+                return;
+            }
+
+            log.Warning("hotkeys", $"Los atajos llevaban {SuspendLimit.TotalSeconds:0} s suspendidos sin que la ventana los reanudara: se reanudan solos.");
+            Suspend(false);
+        }
+    }
+
     public ValueTask DisposeAsync()
     {
         lock (_applying)
         {
             _disposed = true;
+            _limit?.Dispose();
+            _limit = null;
             if (_listening)
             {
                 system.Pressed -= OnPressed;

@@ -11,15 +11,15 @@ export function Frame({ screens, current, title, view, children }: { screens: Na
   return (
     <div className="flex h-full">
       <nav aria-label="Pantallas" className="flex w-52 shrink-0 flex-col gap-1 border-r border-border bg-card p-3">
-        <p className="mb-4 px-2 font-display text-lg text-primary">PampaPad</p>
+        <p className="mb-4 px-2 font-display text-lg text-foreground">PampaPad</p>
         {screens.map((screen) => (
           <a
             key={screen.hash}
             href={`#/${screen.hash}`}
             aria-current={screen.hash === current ? "page" : undefined}
             className={cn(
-              "flex items-center justify-between rounded-md px-2 py-1.5 text-sm",
-              screen.hash === current ? "bg-primary/20 text-foreground" : "text-muted hover:bg-background",
+              "flex items-center justify-between rounded-md border-l-2 px-2 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/60",
+              screen.hash === current ? "border-accent bg-background text-foreground" : "border-transparent text-muted hover:bg-background",
             )}
           >
             <span>{screen.title}</span>

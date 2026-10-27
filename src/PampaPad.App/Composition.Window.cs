@@ -51,6 +51,8 @@ internal sealed partial class Composition
         var window = new EditorWindow(_bridge, Log, _ui, uiFolder, Path.Combine(_localFolder, "WebView2"), devServer);
         window.FormClosed += (_, _) =>
         {
+            // Una captura de atajo a medias deja los atajos suspendidos (05 §6, punto 3): al cerrar la ventana vuelven.
+            _hotkeys?.Suspend(false);
             if (ReferenceEquals(_window, window))
             {
                 _window = null;
@@ -62,38 +64,90 @@ internal sealed partial class Composition
 
     // Los new del puente, en su lugar de 01 §4.3. Los pedidos de la cáscara (AppRequests) van acá también: el humo los cuenta.
     private void ComposeBridge(
-        StateStore state, Library library, Dispatcher dispatcher, IReadOnlyList<IStepType> catalog, IReadOnlyList<ConditionType> conditions,
-        LocalSettings settings, SynchronizationContext ui, string localFolder)
+        StateStore state, Library library, Dispatcher dispatcher, Executor executor, IReadOnlyList<IStepType> catalog,
+        IReadOnlyList<ConditionType> conditions, IWindows windows, LocalSettings settings, SynchronizationContext ui, string localFolder)
     {
         var bridge = new Bridge(state, Log);
         bool hotkeysOn = _hotkeys is not null;
-        _bridgeEvents = Requests.RegisterAll(bridge, new StatusSources(
-            AppIdentity.Version,
-            state,
-            library,
-            dispatcher,
-            Log,
-            catalog,
-            conditions,
-            () => new SettingsView(hotkeysOn, settings.Current.ConsolePort, settings.Current.SkippedVersion)));
-        AppRequests.Register(bridge, onWindowReady: () => ui.Post(_ => _window?.PageReady(), null));
+        _bridgeEvents = Requests.RegisterAll(
+            bridge,
+            new StatusSources(
+                AppIdentity.Version,
+                state,
+                library,
+                dispatcher,
+                Log,
+                catalog,
+                conditions,
+                () => new SettingsView(hotkeysOn, settings.Current.ConsolePort, settings.Current.SkippedVersion)),
+            new EditSources(library, state, Log, executor, catalog, conditions, dispatcher, windows, _hotkeys));
+        AppRequests.Register(
+            bridge,
+            onWindowReady: () => ui.Post(_ => _window?.PageReady(), null),
+            onWindowDirty: dirty => ui.Post(_ => _window?.SetDirty(dirty), null));
         _bridge = bridge;
         _ui = ui;
         _localFolder = localFolder;
     }
 
-    // Primero la ventana, en el hilo de la interfaz y antes de cerrar lo demás; después, los eventos del puente.
+    // Primero la ventana, en el hilo de la interfaz y antes de cerrar lo demás; después, los eventos del puente. A esta altura el programa
+    // ya está saliendo: RequestExit preguntó por los cambios sin guardar, y no se vuelve a preguntar.
     private void CloseWindow()
     {
-        _window?.Close();
+        if (_window is { IsDisposed: false } open)
+        {
+            open.Dirty = false;
+            open.Close();
+        }
+
         _window = null;
         _bridgeEvents?.Dispose();
+    }
+
+    /// <summary>
+    /// "Salir" de la bandeja (y salir para instalar una actualización): si la ventana tiene cambios sin guardar, la cierra con su diálogo
+    /// y, si se eligió seguir editando, no sale. Sólo desde el hilo de la interfaz.
+    /// </summary>
+    public void RequestExit()
+    {
+        if (_window is { IsDisposed: false, Dirty: true } window)
+        {
+            window.Close();
+            if (!window.IsDisposed)
+            {
+                return;
+            }
+        }
+
+        Tray?.ExitThread();
+    }
+
+    // La biblioteca se recarga sola al abrir la ventana (02 §1, Decidido 9), para que la huella de la foto sea la del disco: sin esto, un
+    // git pull con el programa abierto haría fallar el primer guardado. Con una toma en curso no se recarga: volver a leer vuelve a
+    // registrar los atajos, y una marca no se puede perder.
+    private async Task ReloadForWindowAsync()
+    {
+        ObsState obs = _state.Current.Obs;
+        if (obs.TakeInProgress || obs.Streaming)
+        {
+            return;
+        }
+
+        try
+        {
+            await Task.Run(() => Library.Load());
+        }
+        catch (Exception ex)
+        {
+            Log.Error("window", "No se pudo recargar la biblioteca al abrir la ventana: " + ex.Message, ErrorCodes.InternalError);
+        }
     }
 
     private async Task OpenAsync(EditorWindow window, string screen)
     {
         try
         {
+            await ReloadForWindowAsync();
             await window.OpenAsync(screen);
         }
         catch (WebView2RuntimeNotFoundException ex)
@@ -138,8 +192,9 @@ internal sealed partial class Composition
         var result = await _updater.DownloadAndApplyAsync(_life.Token);
         if (result.Ok)
         {
-            // Seguimos en el hilo de la interfaz. Velopack ya espera a que el programa salga para instalarlo y reabrirlo.
-            Tray?.ExitThread();
+            // Seguimos en el hilo de la interfaz. Velopack ya espera a que el programa salga para instalarlo y reabrirlo. Con cambios sin
+            // guardar en la ventana, antes pregunta; si se elige seguir editando, la actualización queda bajada para cuando se salga.
+            RequestExit();
         }
 
         return result;

@@ -10,21 +10,24 @@ namespace PampaPad.App;
 /// La ventana de edición: un Form con WebView2 que se crea al abrir y se destruye al cerrar (Decidido 6). No decide nada: conecta
 /// WebMessageReceived con Bridge.HandleAsync y le pasa a la página los eventos del puente (01 §3.2 y §5). Todo en el hilo de la interfaz.
 /// </summary>
-internal sealed class EditorWindow : Form
+internal sealed partial class EditorWindow : Form
 {
     /// <summary>El host virtual de la página (01 §5). Termina en .example porque .local demora las navegaciones.</summary>
     public const string Host = "pampapad.example";
 
     public const string StatusScreen = "status";
 
-    /// <summary>La de "Abrir PampaPad" y la de la segunda copia. 05 §3 dice Teclas; hasta la etapa 7 no existe y abre Estado.</summary>
-    public const string FirstScreen = StatusScreen;
+    public const string KeysScreen = "keys";
+
+    /// <summary>La de "Abrir PampaPad" y la de la segunda copia: Teclas (05 §3), desde que existe (etapa 7).</summary>
+    public const string FirstScreen = KeysScreen;
 
     // Si la página no avisa, se muestra igual a los 3 s (01 §5; Propuesto, sin medir). E0-3 midió el aviso entre 563 y 1476 ms.
     private static readonly TimeSpan ShowLimit = TimeSpan.FromSeconds(3);
 
-    // El fondo de la página (ui/src/index.css, --color-background): igual acá, para que no haya destello al mostrarla (01 §9).
-    private static readonly Color Background = Color.FromArgb(0x0E, 0x0D, 0x17);
+    // El fondo de la página (ui/src/index.css, --color-background): igual acá, para que no haya destello al mostrarla (01 §9). El gris
+    // sobrio de la decisión 28 desde la etapa 7; ui/src/theme.test.ts compara los dos colores.
+    private static readonly Color Background = Color.FromArgb(0x0F, 0x10, 0x12);
 
     // Los lentes, como el ejecutable (ApplicationIcon): un Form no toma solo el ícono del .exe y sin esto lleva el de WinForms. Va como
     // recurso, con sus siete tamaños; Icon.ExtractAssociatedIcon da sólo el de 32 px. Uno para todas las ventanas: el Form no lo libera.
@@ -121,7 +124,8 @@ internal sealed class EditorWindow : Form
 
         try
         {
-            _web.CoreWebView2.PostWebMessageAsJson(json);
+            // Como texto: PostWebMessageAsJson convierte el objeto ordenando sus claves, y la página guardaría config.json reordenado.
+            _web.CoreWebView2.PostWebMessageAsString(json);
         }
         catch (Exception e) when (e is InvalidOperationException or ObjectDisposedException or COMException)
         {
@@ -182,19 +186,6 @@ internal sealed class EditorWindow : Form
         settings.AreDevToolsEnabled = AppIdentity.Dev;       // sólo en Debug (01 §5)
     }
 
-    // async void porque es un evento. HandleAsync nunca tira (01 §4.1) y Send atrapa lo suyo; nada se espera bloqueando.
-    private async void OnMessage(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
-    {
-        if (!IsOwnOrigin(e.Source))
-        {
-            _log.Warning("window", "Mensaje de un origen que no es el de la página, ignorado: " + e.Source);
-            return;
-        }
-
-        string reply = await _bridge.HandleAsync(e.WebMessageAsJson, Caller.Window, _closing.Token);
-        Send(reply);
-    }
-
     private void OnNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
     {
         if (IsOwnOrigin(e.Uri))
@@ -217,7 +208,9 @@ internal sealed class EditorWindow : Form
         _log.Error("window", $"Falló un proceso de WebView2: {e.ProcessFailedKind}", ErrorCodes.InternalError);
         if (e.ProcessFailedKind is CoreWebView2ProcessFailedKind.BrowserProcessExited or CoreWebView2ProcessFailedKind.RenderProcessExited)
         {
-            // La página no se recupera sola: se cierra, y la próxima apertura arma un entorno nuevo (01 §9).
+            // La página no se recupera sola: se cierra, y la próxima apertura arma un entorno nuevo (01 §9). Sin preguntar por cambios sin
+            // guardar: ya no hay página que los guarde.
+            Dirty = false;
             BeginInvoke(new MethodInvoker(Close));
         }
     }

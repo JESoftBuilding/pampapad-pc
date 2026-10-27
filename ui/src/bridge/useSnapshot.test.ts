@@ -37,10 +37,11 @@ describe("reduce", () => {
     expect(reduce(early, { kind: "snapshot", snapshot }).state?.seq).toBe(50);
   });
 
-  it("config.changed reemplaza la configuración de la foto", () => {
-    const view = reduce(reduce({}, { kind: "snapshot", snapshot }), { kind: "config", config: { mainPage: "otra" } });
+  it("config.changed reemplaza la configuración de la foto y su huella", () => {
+    const view = reduce(reduce({}, { kind: "snapshot", snapshot }), { kind: "config", config: { mainPage: "otra" }, fingerprint: "nueva" });
 
     expect(view.snapshot?.config).toEqual({ mainPage: "otra" });
+    expect(view.snapshot?.fingerprint).toBe("nueva");
   });
 
   it("una falla al pedir la foto queda a la vista y no borra el estado", () => {

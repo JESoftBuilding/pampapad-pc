@@ -22,7 +22,10 @@ public sealed class PageGo(Library library, Func<string, Failure?> go) : StepTyp
         new Field("target", "Página", FieldKind.Page),
     ];
 
-    protected override IEnumerable<Problem> Check(PageGoParameters p)
+    protected override IEnumerable<Problem> Check(PageGoParameters p) => Check(p, library.Current);
+
+    // La página se busca en la configuración que se valida: la cargada al revisar el archivo, la candidata al guardar (hallazgo E5-11).
+    protected override IEnumerable<Problem> Check(PageGoParameters p, Config config)
     {
         if (string.IsNullOrWhiteSpace(p.Target))
         {
@@ -30,7 +33,7 @@ public sealed class PageGo(Library library, Func<string, Failure?> go) : StepTyp
         }
         else if (p.Target is not (Navigation.Main or Navigation.Next or Navigation.Previous))
         {
-            Page? page = library.Current.FindPage(p.Target);
+            Page? page = config.FindPage(p.Target);
             if (page is null)
             {
                 yield return new Problem("target", ProblemCodes.PageNotFound, $"page.go nombra la página \"{p.Target}\", que no existe.", Severity.Error);

@@ -42,4 +42,11 @@ describe("contract.samples.json contra contract.ts", () => {
     expect(parsed.error?.issues ?? []).toEqual([]);
     expect(parsed.data).toStrictEqual(samples.error);
   });
+
+  it("un guardado rechazado trae todos sus problemas, sin perder ninguna clave", () => {
+    const parsed = errorEnvelopeSchema.safeParse(samples.saveRejected);
+    expect(parsed.error?.issues ?? []).toEqual([]);
+    expect(parsed.data).toStrictEqual(samples.saveRejected);
+    expect(parsed.data?.error.problems?.map((problem) => problem.severity)).toEqual(["error", "warning"]);
+  });
 });

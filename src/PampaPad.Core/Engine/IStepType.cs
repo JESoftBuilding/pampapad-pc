@@ -16,6 +16,12 @@ public interface IStepType
     /// <summary>Los problemas de los parámetros de un paso. Where es el nombre del parámetro, relativo al paso.</summary>
     IReadOnlyList<Problem> Validate(Step step);
 
+    /// <summary>
+    /// Lo mismo contra una configuración que todavía no es la cargada, que es lo que valida config.save antes de escribir (hallazgo E5-11).
+    /// Los pasos que no miran la configuración (todos menos page.go) no lo tocan: la respuesta es la de Validate(step).
+    /// </summary>
+    IReadOnlyList<Problem> Validate(Step step, Config config) => Validate(step);
+
     Task<StepResult> RunAsync(Step step, Invocation invocation, CancellationToken ct);
 }
 

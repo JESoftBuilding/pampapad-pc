@@ -24,7 +24,11 @@ public class Contract
     public void Samples_match_the_file_the_page_reads()
     {
         string expected = Samples().ToJsonString(Json.Options) + "\n";
-        if (Environment.GetEnvironmentVariable("PAMPAPAD_WRITE_SAMPLES") == "1")
+        bool write = Environment.GetEnvironmentVariable("PAMPAPAD_WRITE_SAMPLES") == "1";
+
+        // Hallazgo E6-7: en modo escritura la prueba compara el archivo con lo que acaba de escribir y no puede fallar; en el CI dejaría el contrato sin control.
+        Assert.False(write && Environment.GetEnvironmentVariable("CI") == "true", "PAMPAPAD_WRITE_SAMPLES=1 en el CI deja el contrato sin control.");
+        if (write)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(SamplesFile)!);
             File.WriteAllText(SamplesFile, expected, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
@@ -43,7 +47,7 @@ public class Contract
     {
         await using var rig = new DispatcherRig(DispatcherRig.Example);
         var bridge = new Bridge(rig.State, rig.Log);
-        using IDisposable hooks = Requests.RegisterAll(bridge, Sources(rig));
+        using IDisposable hooks = Requests.RegisterAll(bridge, Sources(rig), Edit(rig));
 
         // Los de la cáscara (AppRequests) no se ven desde acá: van por RequestNames.Shell, y la prueba de humo los controla con el programa real.
         string[] windowRequests = [.. bridge.RegisteredFor(Caller.Window), .. RequestNames.Shell];
@@ -56,7 +60,7 @@ public class Contract
     {
         await using var rig = new DispatcherRig(DispatcherRig.Example);
         var bridge = new Bridge(rig.State, rig.Log);
-        using IDisposable hooks = Requests.RegisterAll(bridge, Sources(rig));
+        using IDisposable hooks = Requests.RegisterAll(bridge, Sources(rig), Edit(rig));
 
         Assert.Equal(RequestNames.All.Order(StringComparer.Ordinal), bridge.Registered.Concat(RequestNames.Shell).Order(StringComparer.Ordinal));
     }
@@ -85,7 +89,8 @@ public class Contract
         StateView state = SampleState();
         LogEntry[] entries = SampleLog();
         (StepTypeView[] stepTypes, ConditionTypeView[] conditionTypes) = Catalogs();
-        var snapshot = new AppSnapshot("0.2.1", Migrations.CurrentVersion, config, state, stepTypes, conditionTypes, new SettingsView(true, "COM20", null));
+        var snapshot = new AppSnapshot("0.2.1", Migrations.CurrentVersion, config, SampleFingerprint, state, stepTypes, conditionTypes, new SettingsView(true, "COM20", null));
+        Problem savedWarning = new("pages[0].keys[0].shortLabel", ProblemCodes.ShortLabelInvalid, "shortLabel lleva una o dos líneas de hasta 6 caracteres.", Severity.Warning);
 
         return new JsonObject
         {
@@ -95,20 +100,47 @@ public class Contract
                 [RequestNames.LogRead] = Pair(Envelope.Request(2, RequestNames.LogRead, new LogReadRequest(Count: 200)), Envelope.Response(2, new LogReadResponse(entries))),
                 [RequestNames.ActionCancel] = Pair(Envelope.Request(3, RequestNames.ActionCancel, new ActionCancelRequest(RunId: RunId)), Envelope.Response(3, new ActionCancelResponse(1))),
                 [RequestNames.WindowReady] = Pair(Envelope.Request(4, RequestNames.WindowReady, new NoData()), Envelope.Response(4, new NoData())),
+                [RequestNames.ConfigSave] = Pair(
+                    Envelope.Request(5, RequestNames.ConfigSave, new ConfigSaveRequest(config, SampleFingerprint)),
+                    Envelope.Response(5, new ConfigSaveResponse(SavedFingerprint, [savedWarning]))),
+                [RequestNames.LibraryReload] = Pair(Envelope.Request(6, RequestNames.LibraryReload, new NoData()), Envelope.Response(6, new LibraryReloadResponse(SavedFingerprint, []))),
+                [RequestNames.HotkeysSuspend] = Pair(Envelope.Request(8, RequestNames.HotkeysSuspend, new HotkeysSuspendRequest(true)), Envelope.Response(8, new NoData())),
+                [RequestNames.ActionTest] = Pair(Envelope.Request(9, RequestNames.ActionTest, new ActionTestRequest(config.Actions![0])), Envelope.Response(9, new ActionTestResponse(RunId))),
+                [RequestNames.WindowDirty] = Pair(Envelope.Request(11, RequestNames.WindowDirty, new WindowDirtyRequest(true)), Envelope.Response(11, new NoData())),
+                [RequestNames.OptionsList] = Pair(
+                    Envelope.Request(10, RequestNames.OptionsList, new OptionsListRequest(OptionsList.Scenes)),
+                    Envelope.Response(10, new OptionsListResponse([new OptionItem("Cámara", "3da67a13-6704-4c87-9e09-c8be28efdf20"), new OptionItem("Banco", "900ebc25-03ef-443e-80cc-2ad8991268ff")]))),
             },
             ["events"] = new JsonObject
             {
                 [EventNames.State] = Node(Envelope.Event(EventNames.State, state.Seq, state)),
                 [EventNames.Log] = Node(Envelope.Event(EventNames.Log, state.Seq, entries[1])),
                 [EventNames.ActionFinished] = Node(Envelope.Event(EventNames.ActionFinished, state.Seq, SampleFinished())),
-                [EventNames.ConfigChanged] = Node(Envelope.Event(EventNames.ConfigChanged, state.Seq, new ConfigChangedView(config))),
+                [EventNames.ConfigChanged] = Node(Envelope.Event(EventNames.ConfigChanged, state.Seq, new ConfigChangedView(config, SampleFingerprint))),
             },
             ["error"] = Node(Envelope.Error(5, new Failure(ErrorCodes.UnknownRequest, "No existe el pedido config.sav.", "request"))),
+
+            // Un guardado que frena: el mensaje y el lugar son los del primer problema, y la lista trae todos (config_invalid).
+            ["saveRejected"] = Node(Envelope.Error(7, new Failure(ErrorCodes.ConfigInvalid, "La tecla 5 de Grabación para o pausa la grabación con un toque.", "pages[0].keys[0].action")
+            {
+                Problems =
+                [
+                    new Problem("pages[0].keys[0].action", ProblemCodes.HoldRequired, "La tecla 5 de Grabación para o pausa la grabación con un toque.", Severity.Error),
+                    savedWarning,
+                ],
+            })),
         };
     }
 
+    private static readonly string SampleFingerprint = Fingerprints.Of("config.json de la muestra"u8);
+
+    private static readonly string SavedFingerprint = Fingerprints.Of("config.json ya guardado"u8);
+
     private static StatusSources Sources(DispatcherRig rig) =>
         new("0.0.0", rig.State, rig.Library, rig.Dispatcher, rig.Log, [rig.Marker], [], () => new SettingsView(false, null, null));
+
+    private static EditSources Edit(DispatcherRig rig) =>
+        new(rig.Library, rig.State, rig.Log, rig.Executor, [rig.Marker], [], rig.Dispatcher, new FakeWindows(), rig.Hotkeys);
 
     private static IEnumerable<string> SampleNames(string section) => Samples()[section]!.AsObject().Select(pair => pair.Key);
 
@@ -122,10 +154,14 @@ public class Contract
           "version": 1,
           "mainPage": "grabacion",
           "pages": [
-            { "id": "grabacion", "name": "Grabación", "keys": [ { "position": 5, "label": "Short", "action": "marca-short", "hotkey": "Ctrl+Shift+Alt+F9" } ] }
+            { "id": "grabacion", "name": "Grabación", "keys": [
+              { "position": 5, "label": "Short", "action": "marca-short", "hotkey": "Ctrl+Shift+Alt+F9" },
+              { "position": 6, "label": "Inicio", "action": "marca-inicio", "hotkey": "Ctrl+Shift+Alt+F6" }
+            ] }
           ],
           "actions": [
-            { "id": "marca-short", "name": "Marca: short", "steps": [ { "type": "obs.marker", "marker": "short" } ] }
+            { "id": "marca-short", "name": "Marca: short", "steps": [ { "type": "obs.marker", "marker": "short" } ] },
+            { "id": "marca-inicio", "name": "Marca: inicio", "steps": [ { "type": "obs.marker", "marker": "inicio" } ] }
           ]
         }
         """,

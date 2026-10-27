@@ -3,13 +3,20 @@ using PampaPad.Core;
 namespace PampaPad.App;
 
 /// <summary>
-/// Los pedidos que sólo la cáscara puede atender, como windowOnly (01 §3.2). En la etapa 6, uno: window.ready, el aviso de la página de
-/// que está lista para mostrarse (05 §11). Sus nombres están en RequestNames.Shell, que Contract.cs y la prueba de humo controlan.
+/// Los pedidos que sólo la cáscara puede atender, como windowOnly (01 §3.2): window.ready, el aviso de la página de que está lista para
+/// mostrarse, y window.dirty, el de que tiene cambios sin guardar (05 §11). Sus nombres están en RequestNames.Shell, que Contract.cs y
+/// la prueba de humo controlan.
 /// </summary>
 internal static class AppRequests
 {
-    public static void Register(Bridge bridge, System.Action onWindowReady)
+    public static void Register(Bridge bridge, System.Action onWindowReady, System.Action<bool> onWindowDirty)
     {
+        bridge.Register<WindowDirtyRequest, NoData>(RequestNames.WindowDirty, RequestKind.WindowOnly, Doors.Window, (request, _, _) =>
+        {
+            onWindowDirty(request.Dirty);
+            return Task.FromResult(Result<NoData>.Success(new NoData()));
+        });
+
         bridge.Register<NoData, NoData>(RequestNames.WindowReady, RequestKind.WindowOnly, Doors.Window, (_, _, _) =>
         {
             onWindowReady();

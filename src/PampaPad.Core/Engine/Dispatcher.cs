@@ -7,6 +7,9 @@ namespace PampaPad.Core;
 /// </summary>
 public sealed partial class Dispatcher
 {
+    /// <summary>La clave con que figura en las acciones en curso un borrador sin id (action.test).</summary>
+    public const string DraftKey = "(borrador)";
+
     private readonly Library _library;
     private readonly StateStore _state;
     private readonly Executor _executor;
@@ -52,17 +55,7 @@ public sealed partial class Dispatcher
         {
             Config config = _library.Current;
             var problems = new List<Problem>(_library.Problems);
-            foreach ((int index, Action action) in config.Actions.Indexed())
-            {
-                problems.AddRange(CheckAction(action, index));
-            }
-
-            // La lista del chequeo previo también se revisa al cargar (02 §10, problemas 7 y 8): una condición mal escrita se ve en el ícono
-            // de la bandeja, y no sólo como "sin comprobar" cuando se corre el chequeo.
-            foreach ((int index, PreflightCheck check) in config.Preflight.Indexed())
-            {
-                problems.AddRange(CheckPreflight(check, index));
-            }
+            problems.AddRange(ConfigCheck.Steps(config, _executor, _log, "dispatcher"));
 
             // Los de la configuración se guardan aparte: cambiar de página vuelve a aplicar las fuentes sin volver a revisar cada acción.
             _configProblems = problems;
@@ -70,40 +63,7 @@ public sealed partial class Dispatcher
         }
     }
 
-    // Refresh corre en el arranque y en cada recarga: un tipo de paso o una fuente que tiren no pueden dejar al programa sin teclas ni sin arrancar.
-    private IEnumerable<Problem> CheckAction(Action action, int index)
-    {
-        try
-        {
-            return [.. _executor.Check(action).Select(problem => problem with { Where = $"actions[{index}].{problem.Where}" })];
-        }
-        catch (Exception error)
-        {
-            _log.Error("dispatcher", $"No se pudo revisar la acción {action.Id}: {error.Message}", ErrorCodes.InternalError);
-            return [new Problem($"actions[{index}]", ProblemCodes.ParameterInvalid, $"No se pudo revisar esta acción: {error.Message}", Severity.Error)];
-        }
-    }
-
-    // Una comprobación de la lista preflight, con el catálogo de condiciones del ejecutor. Sin "condition" no dice nada: lo informa el validador.
-    private IEnumerable<Problem> CheckPreflight(PreflightCheck check, int index)
-    {
-        if (check.Condition is not { } condition)
-        {
-            return [];
-        }
-
-        string where = $"preflight[{index}].condition";
-        try
-        {
-            return [.. _executor.CheckCondition(condition).Select(problem => problem with { Where = problem.Where.Length == 0 ? where : $"{where}.{problem.Where}" })];
-        }
-        catch (Exception error)
-        {
-            _log.Error("dispatcher", $"No se pudo revisar la comprobación {where}: {error.Message}", ErrorCodes.InternalError);
-            return [new Problem(where, ProblemCodes.ParameterInvalid, $"No se pudo revisar esta comprobación: {error.Message}", Severity.Warning)];
-        }
-    }
-
+    // Refresh corre en el arranque y en cada recarga: una fuente que tire no puede dejar al programa sin teclas ni sin arrancar.
     private IEnumerable<Problem> ApplyTo(IInputSource source, Page page, IReadOnlyList<HotkeyBinding> hotkeys, int pageIndex)
     {
         try
@@ -128,20 +88,51 @@ public sealed partial class Dispatcher
         }
 
         var run = new Run(invocation.RunId, invocation.RequestedBy, new CancellationTokenSource());
-        lock (_gate)
+        if (Reserve(actionId, run) is { } current)
         {
-            if (_running.TryGetValue(actionId, out Run? current))
-            {
-                // La misma acción no se pisa (01 §4.6): queda una línea con el runId de la que está en curso, y no suena ni se muestra nada.
-                _log.Write(LogLevel.Info, "dispatcher", $"{actionId} ya está en curso: se ignora la pulsación.", null, current.RequestedBy, current.RunId);
-                return Task.FromResult(Rejected(actionId, invocation, ErrorCodes.Cancelled, $"La acción ya está en curso (runId {current.RunId})."));
-            }
-
-            _running[actionId] = run;
+            // La misma acción no se pisa (01 §4.6): queda una línea con el runId de la que está en curso, y no suena ni se muestra nada.
+            _log.Write(LogLevel.Info, "dispatcher", $"{actionId} ya está en curso: se ignora la pulsación.", null, current.RequestedBy, current.RunId);
+            return Task.FromResult(Rejected(actionId, invocation, ErrorCodes.Cancelled, $"La acción ya está en curso (runId {current.RunId})."));
         }
 
         PublishRunning();
         return Task.Run(() => RunAsync(actionId, action, invocation, run));
+    }
+
+    /// <summary>
+    /// Corre una acción en borrador, que todavía no está en la biblioteca: es lo que hace action.test (05 §4.1 y §4.2). Corre por el mismo
+    /// camino que una guardada —figura en las acciones en curso, se cancela por su runId y termina con Finished, que lleva el informe de
+    /// cada paso— y con la misma regla: la misma acción no se pisa, y la clave es su id (un borrador sin id, DraftKey). Devuelve la falla
+    /// si ya hay una en curso y null si arrancó; el resultado llega por Finished.
+    /// </summary>
+    public Failure? LaunchDraft(Action draft, Invocation invocation)
+    {
+        ArgumentNullException.ThrowIfNull(draft);
+        string key = draft.Id is { Length: > 0 } id ? id : DraftKey;
+        var run = new Run(invocation.RunId, invocation.RequestedBy, new CancellationTokenSource());
+        if (Reserve(key, run) is { } current)
+        {
+            return new Failure(ErrorCodes.Cancelled, $"La acción \"{key}\" ya está en curso (runId {current.RunId}): esperá a que termine o cancelala desde Estado.");
+        }
+
+        PublishRunning();
+        _ = Task.Run(() => RunAsync(key, draft, invocation, run));
+        return null;
+    }
+
+    // Anota la corrida como en curso si esa clave no lo está; si lo está, devuelve la que ya estaba.
+    private Run? Reserve(string key, Run run)
+    {
+        lock (_gate)
+        {
+            if (_running.TryGetValue(key, out Run? current))
+            {
+                return current;
+            }
+
+            _running[key] = run;
+            return null;
+        }
     }
 
     public bool Cancel(Guid runId)
