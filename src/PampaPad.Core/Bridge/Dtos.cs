@@ -13,7 +13,7 @@ public sealed record NoData;
 
 /// <summary>log.read (05 §11): cuántas entradas y los filtros. Level es el mínimo: warning trae warning y error.</summary>
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
-public sealed record LogReadRequest(int? Count = null, LogLevel? Level = null, Trigger? RequestedBy = null, Guid? RunId = null);
+public sealed record LogReadRequest(int? Count = null, LogLevel? Level = null, Trigger? RequestedBy = null, Guid? RunId = null, string? Script = null);
 
 public sealed record LogReadResponse(IReadOnlyList<LogEntry> Entries);
 

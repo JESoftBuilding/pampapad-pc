@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { scriptEndSchema } from "./contract.scripts";
 
 // El contrato del puente del lado de la página (01 §5): espejo de src/PampaPad.Core/Bridge/Dtos.cs y RequestNames.cs. contract.test.ts
 // valida contra estos esquemas cada muestra de contract.samples.json, que escribe tests/PampaPad.Tests/Contract.cs. Lo que C# deja en
@@ -101,6 +102,8 @@ export const logEntrySchema = z.object({
   code: z.string().optional(),
   requestedBy: triggerSchema.optional(),
   runId: z.string().optional(),
+  script: z.string().optional(),
+  end: scriptEndSchema.optional(),
 });
 
 // "failed" incluye un paso que la cancelación alcanzó antes de correr: notRun queda para uno que nunca se intentó (hallazgo de E3-5).
@@ -132,6 +135,7 @@ export const requests = {
       level: logLevelSchema.optional(),
       requestedBy: triggerSchema.optional(),
       runId: z.string().optional(),
+      script: z.string().optional(),
     }),
     response: z.object({ entries: z.array(logEntrySchema) }),
   },

@@ -12,8 +12,17 @@ public enum LogLevel
     Error,
 }
 
-/// <summary>Una línea del registro. RequestedBy y RunId juntan las líneas de una misma ejecución y dicen quién la disparó (05 §9).</summary>
-public sealed record LogEntry(DateTimeOffset At, LogLevel Level, string Module, string Message, string? Code = null, Trigger? RequestedBy = null, Guid? RunId = null);
+/// <summary>
+/// Una línea del registro. RequestedBy y RunId juntan las líneas de una misma ejecución y dicen quién la disparó (05 §9). Script va en
+/// cada línea de una corrida de un script y End sólo en la que la cierra (etapa 8): al final y con valor por defecto, las líneas
+/// viejas se siguen leyendo.
+/// </summary>
+public sealed record LogEntry(
+    DateTimeOffset At, LogLevel Level, string Module, string Message, string? Code = null, Trigger? RequestedBy = null, Guid? RunId = null,
+    string? Script = null, ScriptEnd? End = null);
+
+/// <summary>Cómo terminó una corrida de un script, en su línea de cierre. ExitCode es null si no llegó a salir solo; Message, su última línea.</summary>
+public sealed record ScriptEnd(bool Ok, int? ExitCode, long DurationMs, string? Message);
 
 /// <summary>Lo último que pasó: las últimas 500 entradas en memoria y un archivo por día, una línea JSON por entrada, 14 días (05 §9).</summary>
 public sealed class Log : IAsyncDisposable
@@ -48,9 +57,10 @@ public sealed class Log : IAsyncDisposable
 
     public static string FileName(DateOnly day) => day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) + ".jsonl";
 
-    public void Write(LogLevel level, string module, string message, string? code = null, Trigger? requestedBy = null, Guid? runId = null)
+    public void Write(
+        LogLevel level, string module, string message, string? code = null, Trigger? requestedBy = null, Guid? runId = null, string? script = null, ScriptEnd? end = null)
     {
-        var entry = new LogEntry(_clock.GetLocalNow(), level, module, message, code, requestedBy, runId);
+        var entry = new LogEntry(_clock.GetLocalNow(), level, module, message, code, requestedBy, runId, script, end);
         Remember(entry);
         _pending.Writer.TryWrite(new Item(entry, null));
     }

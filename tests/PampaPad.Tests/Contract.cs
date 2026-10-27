@@ -193,6 +193,7 @@ public class Contract
         new(At, LogLevel.Info, "obs", "enlace con OBS: Ready (lectura inicial completa)"),
         new(At.AddSeconds(4), LogLevel.Info, "dispatcher", "marca-short terminó bien en 18 ms.", null, Trigger.Key, ShortRunId),
         new(At.AddSeconds(9), LogLevel.Warning, "dispatcher", "marca-fin falló en el paso 1 (obs.marker): Estás en pausa: la marca no entró.", ErrorCodes.MarkerPaused, Trigger.Hotkey, PausedRunId),
+        new(At.AddSeconds(12), LogLevel.Info, "scripts", "bancocam terminó con 0 en 2.4 s: cámara lista", null, Trigger.Key, RunId, "bancocam", new ScriptEnd(true, 0, 2400, "cámara lista")),
     ];
 
     private static ActionFinishedView SampleFinished() => new(

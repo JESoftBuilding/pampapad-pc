@@ -494,6 +494,21 @@
               "code": "marker_paused",
               "requestedBy": "hotkey",
               "runId": "5c1b2f0e-3d4a-4b6c-9e8f-a1b2c3d4e5f6"
+            },
+            {
+              "at": "2026-10-14T23:30:12-03:00",
+              "level": "info",
+              "module": "scripts",
+              "message": "bancocam terminó con 0 en 2.4 s: cámara lista",
+              "requestedBy": "key",
+              "runId": "0f8fad5b-d9cb-469f-a165-70867728950e",
+              "script": "bancocam",
+              "end": {
+                "ok": true,
+                "exitCode": 0,
+                "durationMs": 2400,
+                "message": "cámara lista"
+              }
             }
           ]
         }
