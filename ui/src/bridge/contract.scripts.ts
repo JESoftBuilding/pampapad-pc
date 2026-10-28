@@ -71,9 +71,21 @@ export const scriptsRequests = {
   "scripts.delete": { request: z.strictObject({ id: z.string() }), response: z.object({ backupPath: z.string() }) },
   "scripts.reveal": { request: z.strictObject({ id: z.string().optional() }), response: z.object({}) },
   "library.reveal": { request: z.strictObject({}), response: z.object({}) },
+  // Contesta el runId en el acto: las líneas y el final llegan por script.output.
+  "scripts.test": { request: z.strictObject({ id: z.string() }), response: z.object({ runId: z.string() }) },
 } as const;
+
+// El evento script.output (ScriptOutputEvent en C#): un renglón con su salida, o el final con la línea de cierre. notice es el aviso
+// del corte en 2000 líneas, que no es del script.
+export const scriptOutputSchema = z.object({
+  runId: z.string(),
+  line: z.string().optional(),
+  stream: z.enum(["stdout", "stderr", "notice"]).optional(),
+  end: scriptEndSchema.optional(),
+});
 
 export type ScriptEnd = z.output<typeof scriptEndSchema>;
 export type ScriptRun = z.output<typeof scriptRunSchema>;
 export type ScriptView = z.output<typeof scriptViewSchema>;
 export type ScriptManifest = z.output<typeof scriptManifestSchema>;
+export type ScriptOutput = z.output<typeof scriptOutputSchema>;

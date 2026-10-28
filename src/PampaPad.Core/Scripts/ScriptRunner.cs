@@ -172,7 +172,7 @@ public sealed class ScriptRunner(Library library, Log log, TimeProvider clock, s
     {
         Invocation invocation = request.Invocation;
         bool fine = ok ?? code is null;
-        var result = new ScriptResult(ended.ExitCode, ended.Message ?? (fine ? null : message), ended.Duration);
+        var result = new ScriptResult(ended.ExitCode, ended.Message ?? (fine ? null : message), ended.Duration, fine);
         log.Write(level, Module, message, code, invocation.RequestedBy, invocation.RunId, request.Id,
             new ScriptEnd(fine, result.ExitCode, (long)result.Duration.TotalMilliseconds, result.Message));
         if (counted)
@@ -233,7 +233,7 @@ public sealed class ScriptRunner(Library library, Log log, TimeProvider clock, s
             process.StandardError.Close();
         }
 
-        if (streams.Output.ListenerError is { } error)
+        if ((streams.Output.ListenerError ?? streams.Errors.ListenerError) is { } error)
         {
             log.Write(LogLevel.Error, Module, $"{id}: quien escuchaba su salida tiró ({error.Message}): se lo dejó de llamar y se siguió leyendo.", ErrorCodes.InternalError, invocation.RequestedBy, invocation.RunId, id);
         }
@@ -267,7 +267,7 @@ public sealed class ScriptRunner(Library library, Log log, TimeProvider clock, s
         public Streams(Process process, System.Action<string>? onLine)
         {
             Output = new ScriptOutput(onLine);
-            Errors = new ScriptOutput(null);
+            Errors = new ScriptOutput(onLine is null ? null : line => onLine(ScriptRequest.ErrorMark + line));
             Reading = Task.WhenAll(Output.ReadAsync(process.StandardOutput, _stop.Token), Errors.ReadAsync(process.StandardError, _stop.Token));
         }
 

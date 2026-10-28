@@ -8,7 +8,7 @@ public sealed record ScriptRunParameters(string? Script, bool? Wait, int? Timeou
 /// del paso (02 §10, problema 6, con el código de la falla): la acción no corre, como con cualquier problema (02 §4.4), aunque su onlyIf
 /// lo fuera a saltear. Se mira en el disco en cada revisión.
 /// </summary>
-public sealed class ScriptRun(ScriptRunner runner, Library library) : StepType<ScriptRunParameters>
+public sealed class ScriptRun(ScriptRunner runner, Library library, ScriptOutputSink? output = null) : StepType<ScriptRunParameters>
 {
     public const string TypeId = "script.run";
 
@@ -48,7 +48,20 @@ public sealed class ScriptRun(ScriptRunner runner, Library library) : StepType<S
     protected override async Task<StepResult> RunAsync(ScriptRunParameters p, Invocation invocation, CancellationToken ct)
     {
         TimeSpan? timeout = p.TimeoutSec is int seconds ? TimeSpan.FromSeconds(seconds) : null;
-        Result<ScriptResult> result = await runner.RunAsync(new ScriptRequest(p.Script ?? "", p.Wait, timeout, invocation), ct).ConfigureAwait(false);
+        var request = new ScriptRequest(p.Script ?? "", p.Wait, timeout, invocation);
+
+        // La salida en vivo es sólo de una prueba de la ventana (scripts.test y action.test): una acción guardada no la publica.
+        if (invocation.RequestedBy == Trigger.Window && output is { } sink)
+        {
+            Guid runId = invocation.RunId;
+            request = request with
+            {
+                OnLine = line => sink.Line(runId, line.TrimStart(ScriptRequest.ErrorMark[0]), line.StartsWith(ScriptRequest.ErrorMark, StringComparison.Ordinal)),
+                OnFinished = end => sink.End(runId, new ScriptEnd(end.Ok, end.ExitCode, (long)end.Duration.TotalMilliseconds, end.Message)),
+            };
+        }
+
+        Result<ScriptResult> result = await runner.RunAsync(request, ct).ConfigureAwait(false);
         return result.Ok ? new StepResult(null, result.Value!.Message) : new StepResult(result.Failure);
     }
 }

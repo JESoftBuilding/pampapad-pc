@@ -48,11 +48,10 @@ public static class BridgePolicy
     public const string McpOff = "El MCP está apagado en Ajustes";
 
     // Los pedidos que no corren con una toma en curso, vengan de quien vengan: guardar cambiaría las teclas en plena toma (04 §3, regla de
-    // grabación: las doce teclas no cambian de función) y probar corre pasos de verdad. scripts.test todavía no tiene constante en
-    // RequestNames: entra con su pantalla, en la etapa 8, y la prueba de humo exige un manejador por cada constante.
+    // grabación: las doce teclas no cambian de función) y probar corre pasos de verdad (action.test y scripts.test).
     // scripts.write, scripts.import y scripts.delete se suman en la etapa 8 (decisión 37: con una toma no se guarda).
     private static readonly HashSet<string> NotWhileTake =
-        [RequestNames.ConfigSave, RequestNames.ActionTest, "scripts.test", RequestNames.ScriptsWrite, RequestNames.ScriptsImport, RequestNames.ScriptsDelete];
+        [RequestNames.ConfigSave, RequestNames.ActionTest, RequestNames.ScriptsTest, RequestNames.ScriptsWrite, RequestNames.ScriptsImport, RequestNames.ScriptsDelete];
 
     public static Failure? Check(string request, RequestKind kind, IReadOnlySet<Caller> callers, Caller caller, PolicyContext context)
     {

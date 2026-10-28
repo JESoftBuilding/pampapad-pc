@@ -75,3 +75,6 @@ public sealed record ScriptsDeleteResponse(string BackupPath);
 
 /// <summary>scripts.reveal: con el id abre la carpeta del script; sin id, scripts/.</summary>
 public sealed record ScriptsRevealRequest(string? Id = null);
+
+/// <summary>scripts.test: el id del script. Contesta el runId en el acto, como action.test (ActionTestResponse).</summary>
+public sealed record ScriptsTestRequest(string Id);

@@ -68,9 +68,11 @@ internal sealed partial class Composition : IAsyncDisposable
         var obs = new ObsClient(obsFiles.Address, obsFiles.Password, state, log, clock, () => windows.IsProcessRunning("obs64"));
 
         // El Dispatcher publica la biblioteca en el estado al construirse y en cada recarga, junto con los problemas de los pasos y de los atajos.
+        // La salida en vivo de una prueba de la ventana: script.run la escribe y ComposeBridge la publica como script.output (etapa 8).
         Dispatcher? dispatcher = null;
+        var output = new ScriptOutputSink();
         (IReadOnlyList<IStepType> catalog, IReadOnlyList<ConditionType> conditions, Executor executor, ScriptRunner scripts) =
-            ComposeChains(library, state, obs, windows, log, clock, target => dispatcher!.Go(target));
+            ComposeChains(library, state, obs, windows, log, clock, target => dispatcher!.Go(target), output);
         var preflight = new Preflight(conditions, library, state, log, clock);
 
         // El umbral de mantener sale de console.holdMs de la biblioteca; si no está, es un segundo (02 §4.10).
@@ -120,7 +122,7 @@ internal sealed partial class Composition : IAsyncDisposable
         // Las últimas corridas de cada script salen de las líneas de cierre del registro (etapa 8): se lee antes de que corra ninguno.
         var scriptsSources = new ScriptsSources(
             library, scripts, new ScriptRuns(log, Path.Combine(localFolder, "log"), clock), new ShellDialogs(ui, () => composition._window), library.BackupFolder, clock);
-        composition.ComposeBridge(state, library, dispatcher, executor, catalog, conditions, windows, settings, ui, localFolder, scriptsSources);
+        composition.ComposeBridge(state, library, dispatcher, executor, catalog, conditions, windows, settings, ui, localFolder, scriptsSources, output);
 
         if (!headless)
         {

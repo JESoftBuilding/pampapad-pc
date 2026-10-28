@@ -131,6 +131,7 @@ public class Contract
                     Envelope.Response(16, new ScriptsDeleteResponse(@"C:\Users\Emmanuel\AppData\Roaming\PampaPad\backup\scripts\viejo-20261027-153000"))),
                 [RequestNames.ScriptsReveal] = Pair(Envelope.Request(17, RequestNames.ScriptsReveal, new ScriptsRevealRequest("bancocam")), Envelope.Response(17, new NoData())),
                 [RequestNames.LibraryReveal] = Pair(Envelope.Request(18, RequestNames.LibraryReveal, new NoData()), Envelope.Response(18, new NoData())),
+                [RequestNames.ScriptsTest] = Pair(Envelope.Request(19, RequestNames.ScriptsTest, new ScriptsTestRequest("bancocam")), Envelope.Response(19, new ActionTestResponse(RunId))),
             },
             ["events"] = new JsonObject
             {
@@ -138,6 +139,7 @@ public class Contract
                 [EventNames.Log] = Node(Envelope.Event(EventNames.Log, state.Seq, entries[1])),
                 [EventNames.ActionFinished] = Node(Envelope.Event(EventNames.ActionFinished, state.Seq, SampleFinished())),
                 [EventNames.ConfigChanged] = Node(Envelope.Event(EventNames.ConfigChanged, state.Seq, new ConfigChangedView(config, SampleFingerprint))),
+                [EventNames.ScriptOutput] = Node(Envelope.Event(EventNames.ScriptOutput, state.Seq, new ScriptOutputEvent(RunId, "cámara lista", ScriptOutputSink.Stdout))),
             },
             ["error"] = Node(Envelope.Error(5, new Failure(ErrorCodes.UnknownRequest, "No existe el pedido config.sav.", "request"))),
 

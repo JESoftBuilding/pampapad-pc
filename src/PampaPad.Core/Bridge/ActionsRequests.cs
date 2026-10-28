@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace PampaPad.Core;
 
 /// <summary>
@@ -17,6 +19,21 @@ public static class ActionsRequests
             RequestNames.ActionTest, RequestKind.Execute, Doors.Window, (request, caller, _) => Task.FromResult(Test(sources, request, caller)));
         bridge.Register<OptionsListRequest, OptionsListResponse>(
             RequestNames.OptionsList, RequestKind.Read, Doors.WindowAndMcp, (request, _, _) => Task.FromResult(Options(sources, request)));
+        bridge.Register<ScriptsTestRequest, ActionTestResponse>(
+            RequestNames.ScriptsTest, RequestKind.Execute, Doors.Window, (request, caller, _) => Task.FromResult(TestScript(sources, request.Id ?? "", caller)));
+    }
+
+    // Probar un script es probar un borrador de un paso, sin id: usa DraftKey, así que no corre junto con la prueba de una acción sin id
+    // (plan de la etapa 8, decisión 1). Va acá y no en ScriptsRequests porque necesita el despachador. Lo que falta se niega antes de lanzar.
+    private static Result<ActionTestResponse> TestScript(EditSources sources, string id, Caller caller)
+    {
+        if (sources.Library.ReadScript(id) is { Ok: false, Failure: { } missing })
+        {
+            return missing with { Where = "id" };
+        }
+
+        Step step = JsonSerializer.Deserialize<Step>(JsonSerializer.Serialize(new { type = ScriptRun.TypeId, script = id, wait = true }), Json.Options)!;
+        return Test(sources, new ActionTestRequest(new Action { Name = $"Probar {id}", Steps = [step] }), caller);
     }
 
     private static Result<OptionsListResponse> Options(EditSources sources, OptionsListRequest request)

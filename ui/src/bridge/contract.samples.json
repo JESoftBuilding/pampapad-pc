@@ -951,6 +951,22 @@
         "ok": true,
         "data": {}
       }
+    },
+    "scripts.test": {
+      "request": {
+        "id": 19,
+        "request": "scripts.test",
+        "data": {
+          "id": "bancocam"
+        }
+      },
+      "response": {
+        "id": 19,
+        "ok": true,
+        "data": {
+          "runId": "0f8fad5b-d9cb-469f-a165-70867728950e"
+        }
+      }
     }
   },
   "events": {
@@ -1090,6 +1106,15 @@
           ]
         },
         "fingerprint": "2794f40e573b3b53bffad440a4c6bc8d988493d2f15bcaed0ed3e845ed927083"
+      }
+    },
+    "script.output": {
+      "event": "script.output",
+      "seq": 42,
+      "data": {
+        "runId": "0f8fad5b-d9cb-469f-a165-70867728950e",
+        "line": "cámara lista",
+        "stream": "stdout"
       }
     }
   },

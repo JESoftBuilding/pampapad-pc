@@ -4,7 +4,7 @@ namespace PampaPad.Core;
 /// Lo que necesitan los pasos de cadenas, además de OBS: la biblioteca (scripts y páginas), las ventanas, quien corre los scripts y quien
 /// cambia de página. GoToPage es Dispatcher.Go, que se arma después del catálogo (01 §4.3): por eso llega como función.
 /// </summary>
-public sealed record Chains(Library Library, IWindows Windows, ScriptRunner Scripts, Func<string, Failure?> GoToPage);
+public sealed record Chains(Library Library, IWindows Windows, ScriptRunner Scripts, Func<string, Failure?> GoToPage, ScriptOutputSink? Output = null);
 
 /// <summary>
 /// El menú fijo de pasos (Decidido 8): una línea por tipo, y cada uno recibe por constructor sólo lo que usa. La marca va primera.
@@ -24,7 +24,7 @@ public static class Catalog
             new ObsRequestStep(obs, state),
             new WaitTime(clock),
             new WaitWindow(chains.Windows, clock),
-            new ScriptRun(chains.Scripts, chains.Library),
+            new ScriptRun(chains.Scripts, chains.Library, chains.Output),
             new PageGo(chains.Library, chains.GoToPage),
         ];
     }

@@ -23,22 +23,24 @@ public static class RequestNames
     public const string ScriptsDelete = "scripts.delete";
     public const string ScriptsReveal = "scripts.reveal";
     public const string LibraryReveal = "library.reveal";
+    public const string ScriptsTest = "scripts.test";
 
     public static IReadOnlyList<string> All { get; } =
         [AppSnapshot, LogRead, ActionCancel, WindowReady, ConfigSave, LibraryReload, HotkeysSuspend, ActionTest, OptionsList, WindowDirty, ScriptsList, ScriptsRead, ScriptsWrite, ScriptsImport,
-        ScriptsDelete, ScriptsReveal, LibraryReveal];
+        ScriptsDelete, ScriptsReveal, LibraryReveal, ScriptsTest];
 
     /// <summary>Los que atiende la cáscara (AppRequests, 01 §3.2): el núcleo los nombra pero no los registra.</summary>
     public static IReadOnlyList<string> Shell { get; } = [WindowReady, WindowDirty];
 }
 
-/// <summary>Los eventos del puente (05, Términos). script.output entra con los scripts, en la etapa 5.</summary>
+/// <summary>Los eventos del puente (05, Términos). script.output, la salida en vivo de una prueba, entra con la pantalla Scripts (etapa 8).</summary>
 public static class EventNames
 {
     public const string State = "state";
     public const string Log = "log";
     public const string ActionFinished = "action.finished";
     public const string ConfigChanged = "config.changed";
+    public const string ScriptOutput = "script.output";
 
-    public static IReadOnlyList<string> All { get; } = [State, Log, ActionFinished, ConfigChanged];
+    public static IReadOnlyList<string> All { get; } = [State, Log, ActionFinished, ConfigChanged, ScriptOutput];
 }
