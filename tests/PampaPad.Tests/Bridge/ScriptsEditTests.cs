@@ -144,6 +144,52 @@ public sealed class ScriptsEditTests : IAsyncLifetime
         Assert.True(Directory.Exists(folder));
     }
 
+    // El disco no distingue mayúsculas: "Hola" encuentra la carpeta hola, y lo que corre como hola tiene que verse igual (E-MCP-4). En
+    // scripts.read, "Hola" sale con status problem (id_invalid va antes que running): por eso se mira Running.
+    [Fact]
+    public async Task A_script_running_as_hola_is_seen_running_from_Hola_and_removing_it_is_refused()
+    {
+        string folder = _rig.AddPs1("hola", ScriptRig.LaunchesPing, """, "timeoutSec": 30""");
+        using var cancel = new CancellationTokenSource();
+        Task<Result<ScriptResult>> running = _rig.RunAsync("hola", cancel.Token);
+        await ScriptRig.ChildAsync(folder);
+
+        bool seen = _rig.Runner.Running.Contains("Hola");
+        string code = await FailAsync("scripts.delete", """{"id":"Hola"}""");
+        await cancel.CancelAsync();
+        await running.WaitAsync(TimeSpan.FromSeconds(20));
+
+        Assert.True(seen);
+        Assert.Equal(ErrorCodes.Cancelled, code);
+        Assert.True(Directory.Exists(folder));
+    }
+
+    [Fact]
+    public async Task A_script_in_use_as_bancocam_is_not_removed_as_Bancocam()
+    {
+        string folder = _rig.AddCmd("bancocam", "@echo off\n");
+        File.WriteAllText(Path.Combine(_rig.LibraryFolder, "config.json"), """
+            { "version": 1, "actions": [ { "id": "ir-al-banco", "name": "Ir al banco", "steps": [ { "type": "script.run", "script": "bancocam" } ] } ] }
+            """);
+        _rig.Library.Load();
+
+        Assert.Equal(ErrorCodes.ConfigInvalid, await FailAsync("scripts.delete", """{"id":"Bancocam"}"""));
+        Assert.True(Directory.Exists(folder));
+    }
+
+    [Fact]
+    public async Task Write_with_a_null_tag_is_invalid_data_and_the_manifest_stays()
+    {
+        string folder = _rig.AddCmd("hola", "@echo off\n");
+        byte[] before = File.ReadAllBytes(Path.Combine(folder, "script.json"));
+
+        using JsonDocument reply = await AskAsync("scripts.write", $$"""{"id":"hola","manifest":{"entry":"hola.cmd","tags":[null]},"expectedFingerprint":"{{Fingerprint(folder)}}"}""");
+
+        Assert.Equal(ErrorCodes.InvalidData, reply.RootElement.GetProperty("error").GetProperty("code").GetString());
+        Assert.Equal("manifest.tags[0]", reply.RootElement.GetProperty("error").GetProperty("where").GetString());
+        Assert.Equal(before, File.ReadAllBytes(Path.Combine(folder, "script.json")));
+    }
+
     [Fact]
     public async Task Delete_moves_the_folder_to_the_backup()
     {

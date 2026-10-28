@@ -20,7 +20,7 @@ public static class ActionsRequests
         bridge.Register<OptionsListRequest, OptionsListResponse>(
             RequestNames.OptionsList, RequestKind.Read, Doors.WindowAndMcp, (request, _, _) => Task.FromResult(Options(sources, request)));
         bridge.Register<ScriptsTestRequest, ActionTestResponse>(
-            RequestNames.ScriptsTest, RequestKind.Execute, Doors.Window, (request, caller, _) => Task.FromResult(TestScript(sources, request.Id, caller)), RequestChecks.ScriptsTest);
+            RequestNames.ScriptsTest, RequestKind.Execute, Doors.WindowAndMcp, (request, caller, _) => Task.FromResult(TestScript(sources, request.Id, caller)), RequestChecks.ScriptsTest);
     }
 
     // Probar un script es probar un borrador de un paso, sin id: usa DraftKey, así que no corre junto con la prueba de una acción sin id

@@ -200,3 +200,19 @@ test("sin OBS, la escena se escribe a mano y el campo dice por qué", async ({ p
   const saves = (await calls(page, "config.save")) as SaveCall[];
   expect(saves[0].config.actions.at(-1)).toEqual({ id: "pantalla", name: "Pantalla", steps: [{ type: "obs.scene", scene: "Pantalla" }] });
 });
+
+test("un action.finished de una corrida que no lanzó esta pantalla, como una del MCP, no cierra la prueba", async ({ page }) => {
+  await stopped(page);
+  await page.getByRole("list", { name: "Acciones" }).getByRole("button", { name: /Marca: short/ }).click();
+  await page.getByRole("button", { name: "Probar" }).click();
+
+  await emit(
+    page,
+    "action.finished",
+    { actionId: "marca-short", runId: "11111111-2222-4333-8444-555555555555", requestedBy: "mcp", ok: false, stepNumber: 1, stepType: "obs.marker", failure: { code: "cancelled", message: "Ajena." }, durationMs: 40, steps: [{ outcome: "failed", message: "Ajena." }] },
+    43,
+  );
+
+  await expect(page.getByRole("button", { name: "Cancelar la prueba" })).toBeVisible();
+  await expect(page.getByText("Ajena.")).toHaveCount(0);
+});

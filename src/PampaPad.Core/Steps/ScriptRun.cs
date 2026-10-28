@@ -50,8 +50,8 @@ public sealed class ScriptRun(ScriptRunner runner, Library library, ScriptOutput
         TimeSpan? timeout = p.TimeoutSec is int seconds ? TimeSpan.FromSeconds(seconds) : null;
         var request = new ScriptRequest(p.Script ?? "", p.Wait, timeout, invocation);
 
-        // La salida en vivo es sólo de una prueba de la ventana (scripts.test y action.test): una acción guardada no la publica.
-        if (invocation.RequestedBy == Trigger.Window && output is { } sink)
+        // La salida en vivo es sólo de una prueba (scripts.test y action.test), de la ventana o del MCP: una acción guardada no la publica.
+        if (invocation.RequestedBy is Trigger.Window or Trigger.Mcp && output is { } sink)
         {
             Guid runId = invocation.RunId;
             request = request with

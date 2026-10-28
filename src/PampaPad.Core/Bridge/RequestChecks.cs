@@ -14,7 +14,8 @@ public static class RequestChecks
     public static Failure? ActionTest(ActionTestRequest request) => Missing(request.Action, "action") ?? Action(request.Action, "action");
 
     public static Failure? ScriptsWrite(ScriptsWriteRequest request) =>
-        Missing(request.Id, "id") ?? Missing(request.Manifest, "manifest") ?? Missing(request.ExpectedFingerprint, "expectedFingerprint");
+        Missing(request.Id, "id") ?? Missing(request.Manifest, "manifest") ?? Missing(request.ExpectedFingerprint, "expectedFingerprint")
+        ?? NullIn(request.Manifest!.Tags, "manifest.tags");
 
     public static Failure? ScriptsTest(ScriptsTestRequest request) => Missing(request.Id, "id");
 

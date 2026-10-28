@@ -194,3 +194,19 @@ test("con la ficha cambiada, abrir otro script e Importar se apagan hasta guarda
   await expect(list(page).getByRole("button", { name: /suelto\.cmd/ })).toBeEnabled();
   await expect(page.getByRole("button", { name: "Importar" })).toBeEnabled();
 });
+
+test("la salida de una corrida que no lanzó esta pantalla, como una del MCP, no entra en la prueba", async ({ page }) => {
+  await stopped(page);
+  await openBancocam(page);
+  await page.getByRole("button", { name: "Probar" }).click();
+  await expect(page.getByRole("button", { name: "Cancelar la prueba" })).toBeVisible();
+
+  const foreign = "11111111-2222-4333-8444-555555555555";
+  await emit(page, "script.output", { runId: foreign, line: "de otra corrida", stream: "stdout" }, 100);
+  await emit(page, "script.output", { runId: foreign, end: { ok: true, durationMs: 10, message: "ajena terminada" } }, 101);
+  await emit(page, "script.output", { runId, line: "cámara lista", stream: "stdout" }, 102);
+
+  await expect(page.getByRole("list", { name: "Salida de la prueba" }).getByRole("listitem")).toHaveText(["cámara lista"]);
+  await expect(page.getByText("ajena terminada")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Cancelar la prueba" })).toBeVisible();
+});

@@ -24,7 +24,7 @@ public sealed class ScriptsTestTests : IAsyncLifetime
         _dispatcher = new Dispatcher(_rig.Library, _state, executor, new Gestures(TimeProvider.System, Gestures.HoldFrom(null), Gestures.DefaultFreshness), _rig.Log);
         var notifier = new Notifier(_state, _rig.Library, _rig.Log, _ => Interlocked.Increment(ref _notices), _ => Interlocked.Increment(ref _notices));
         _dispatcher.Finished += notifier.OnFinished;
-        _bridge = new Bridge(_state, _rig.Log);
+        _bridge = new Bridge(_state, _rig.Log) { McpAllowed = () => true };
         _hooks = Requests.RegisterAll(
             _bridge,
             new StatusSources("9.9.9", _state, _rig.Library, _dispatcher, _rig.Log, [_step], [], () => new SettingsView(false, null, null)),
@@ -74,13 +74,16 @@ public sealed class ScriptsTestTests : IAsyncLifetime
         Assert.Equal(0, Volatile.Read(ref _notices));
     }
 
-    [Fact]
-    public async Task With_a_take_in_progress_it_is_refused_and_nothing_runs()
+    // La puerta nueva no saltea la toma: ni la ventana ni el MCP corren nada mientras se graba (E-MCP-4).
+    [Theory]
+    [InlineData(Caller.Window)]
+    [InlineData(Caller.Mcp)]
+    public async Task With_a_take_in_progress_it_is_refused_and_nothing_runs(Caller caller)
     {
         string folder = _rig.AddCmd("escribe", "@echo off\necho x> \"%~dp0corrio.txt\"\n");
         _state.Update(s => s with { Obs = s.Obs with { Recording = RecordingState.Recording } });
 
-        using JsonDocument reply = await AskAsync("scripts.test", """{"id":"escribe"}""");
+        using JsonDocument reply = await AskAsync("scripts.test", """{"id":"escribe"}""", caller);
         await Task.Delay(300);
 
         Assert.Equal(ErrorCodes.ReadOnlyWhileRecording, reply.RootElement.GetProperty("error").GetProperty("code").GetString());
@@ -154,6 +157,33 @@ public sealed class ScriptsTestTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task From_the_mcp_it_answers_the_run_id_and_the_output_arrives_by_script_output()
+    {
+        _rig.AddCmd("hola", "@echo off\necho uno\necho dos\n");
+
+        Guid runId = await TestAsync("hola", Caller.Mcp);
+        ScriptEnd end = await EndAsync(runId);
+
+        Assert.Equal(["uno", "dos"], _events.Where(e => e.RunId == runId && e.End is null).Select(e => e.Line));
+        Assert.True(end.Ok);
+        Assert.Contains(_rig.Log.Recent(), entry => entry.RequestedBy == Trigger.Mcp && entry.Message == "scripts.test: ok");
+    }
+
+    [Fact]
+    public async Task A_run_from_the_mcp_that_fails_does_not_sound_and_leaves_no_last_failure()
+    {
+        _rig.AddCmd("falla", "@echo off\necho se rompio\nexit /b 3\n");
+
+        Guid runId = await TestAsync("falla", Caller.Mcp);
+        ScriptEnd end = await EndAsync(runId);
+        await Poll.Until(() => _state.Current.Running.Count == 0);
+
+        Assert.False(end.Ok);
+        Assert.Equal(0, Volatile.Read(ref _notices));
+        Assert.Null(_state.Current.LastFailure);
+    }
+
+    [Fact]
     public void The_sink_cuts_at_2000_lines_per_run_with_one_notice_and_still_sends_the_end()
     {
         var sink = new ScriptOutputSink();
@@ -175,9 +205,9 @@ public sealed class ScriptsTestTests : IAsyncLifetime
         Assert.Equal(ScriptOutputSink.Stderr, published[^1].Stream);
     }
 
-    private async Task<Guid> TestAsync(string id)
+    private async Task<Guid> TestAsync(string id, Caller caller = Caller.Window)
     {
-        using JsonDocument reply = await AskAsync("scripts.test", $$"""{"id":"{{id}}"}""");
+        using JsonDocument reply = await AskAsync("scripts.test", $$"""{"id":"{{id}}"}""", caller);
         Assert.True(reply.RootElement.GetProperty("ok").GetBoolean(), reply.RootElement.ToString());
         return reply.RootElement.GetProperty("data").GetProperty("runId").GetGuid();
     }
@@ -188,6 +218,6 @@ public sealed class ScriptsTestTests : IAsyncLifetime
         return _events.First(e => e.RunId == runId && e.End is not null).End!;
     }
 
-    private async Task<JsonDocument> AskAsync(string request, string data) =>
-        JsonDocument.Parse(await _bridge.HandleAsync($$"""{"id":1,"request":"{{request}}","data":{{data}}}""", Caller.Window, CancellationToken.None));
+    private async Task<JsonDocument> AskAsync(string request, string data, Caller caller = Caller.Window) =>
+        JsonDocument.Parse(await _bridge.HandleAsync($$"""{"id":1,"request":"{{request}}","data":{{data}}}""", caller, CancellationToken.None));
 }
