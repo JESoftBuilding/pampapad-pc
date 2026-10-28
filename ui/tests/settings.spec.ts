@@ -144,6 +144,18 @@ test("el borrador de Esta PC cuenta en window.dirty y sobrevive a ir a Teclas y 
   expect((await calls(page, "window.dirty")).at(-1)).toEqual({ dirty: true });
 });
 
+test("si settings.save falla y config.save pasa, la barra dice cuál y queda el borrador de Esta PC", async ({ page }) => {
+  await answer(page, "settings.save", { ok: false, error: { code: "x", message: "No se pudo." } });
+  await page.getByRole("switch", { name: "Callar el sonido con una toma en curso" }).click();
+  await page.getByRole("switch", { name: "Arrancar con Windows" }).click();
+  await page.getByRole("button", { name: "Guardar", exact: true }).click();
+
+  await expect(page.getByText("No se guardó Esta PC: No se pudo.")).toBeVisible();
+  await expect(page.getByText("Cambios sin guardar en: Esta PC", { exact: true })).toBeVisible();
+  expect(await calls(page, "config.save")).toHaveLength(1);
+  await expect(page.getByRole("switch", { name: "Arrancar con Windows" })).toHaveAttribute("aria-checked", "false");
+});
+
 test("Saltear esta versión manda update.skip", async ({ page }) => {
   await setState(page, { update: { phase: "available", version: "0.7.0" } });
   await page.getByRole("button", { name: "Saltear esta versión" }).click();
