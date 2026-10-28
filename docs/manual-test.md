@@ -390,4 +390,9 @@ Al terminar: `hotkeysEnabled` otra vez en `false` (o borrar la clave) y `git -C 
   - Probar del script de prueba: las tres líneas en vivo; Quitar lo movió al respaldo local con sus dos archivos;
   - Ajustes: bajar una página y volverla a subir, y agregar un atajo general grabado con la captura y quitarlo: `config.json` igual byte a byte al final;
   - con 201 scripts, `scripts.list` tardó 977 ms la primera vez y 17 ms la segunda (criterio de 05 §4.3: menos de 1 s); el filtro, 19 ms (criterio: menos de 100 ms).
-- **Lo que queda para Emmanuel:** las filas 1 a 8. Importar no se repasó por CDP: abre el diálogo de Windows, que no se maneja desde la página.
+- **Lo que repasó Emmanuel, el 2026-10-28** (10:47 a 12:18), con la v0.7.0 instalada y la biblioteca real, no con la copia de desarrollo: ya estaba instalada y la 6 y la 7 la pedían. Sumó una fila 9: Scripts → Importar `D:\repos\pampapad-construccion\E8-12-importar\hola.cmd` → Probar → Quitar. El registro es `%APPDATA%\PampaPad\log\2026-10-28.jsonl`.
+  - Fila 2: la primera prueba de `bancocam` salió con 1 (scrcpy no abrió la ventana: el celular no estaba listo); la segunda, con 0 en 6,8 s.
+  - Fila 5: la captura suspendió y reanudó los atajos y al guardar, "Atajos tomados: 10". Para sacar la fila apretó "Quitar atajo", que deja la fila sin combinación, y Guardar se negó con `Falta "hotkey".`: los dos arreglos de la rama `arreglos-pantalla`.
+  - Fila 9: `hola` apareció, Probar dio sus tres líneas y Quitar lo movió al respaldo sin preguntar; la pantalla no decía adónde (arreglado en la misma rama).
+  - Fila 6: el arranque con Windows quedó encendido (la entrada de PampaPad, habilitada en `StartupApproved`). La 3, la 4 y la 7 no dejan rastro en el registro; `script.json` quedó igual.
+  - Al terminar, `git status` de la biblioteca vacío.
