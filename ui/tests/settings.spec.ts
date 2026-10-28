@@ -132,6 +132,18 @@ test("con una toma en curso config.save se niega y settings.save pasa: la barra 
   await expect(page.getByRole("switch", { name: "Callar el sonido con una toma en curso" })).toHaveAttribute("aria-checked", "false");
 });
 
+test("el borrador de Esta PC cuenta en window.dirty y sobrevive a ir a Teclas y volver", async ({ page }) => {
+  await page.getByRole("switch", { name: "Arrancar con Windows" }).click();
+  await expect.poll(async () => (await calls(page, "window.dirty")).at(-1)).toEqual({ dirty: true });
+
+  await page.getByRole("navigation", { name: "Pantallas" }).getByRole("link", { name: /Teclas/ }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Teclas" })).toBeVisible();
+  await page.getByRole("navigation", { name: "Pantallas" }).getByRole("link", { name: /Ajustes/ }).click();
+
+  await expect(page.getByRole("switch", { name: "Arrancar con Windows" })).toHaveAttribute("aria-checked", "false");
+  expect((await calls(page, "window.dirty")).at(-1)).toEqual({ dirty: true });
+});
+
 test("Saltear esta versión manda update.skip", async ({ page }) => {
   await setState(page, { update: { phase: "available", version: "0.7.0" } });
   await page.getByRole("button", { name: "Saltear esta versión" }).click();
