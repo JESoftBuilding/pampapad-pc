@@ -8,7 +8,7 @@ import { Field } from "@/ui/field";
 import { Input } from "@/ui/input";
 import { Select } from "@/ui/select";
 import type { OptionItem } from "../common/useOptions";
-import { HotkeyCapture } from "./HotkeyCapture";
+import { HotkeyCapture } from "../common/HotkeyCapture";
 
 type Props = {
   page: Page;
@@ -113,7 +113,12 @@ export function KeyEditor({ page, position, current, actions, scripts, problems,
           ))}
         </Select>
       </Field>
-      <HotkeyCapture key={`${page.id}|${position}`} value={current?.hotkey} onChange={(hotkey) => onChange({ hotkey })} bridge={bridge} disabledReason={busyReason} taken={takenBy} />
+      <HotkeyCapture
+        key={`${page.id}|${position}`}
+        id="key-hotkey"
+        label="Atajo de teclado"
+        hint="Vale mientras esta página es la base. Esc cancela la captura."
+        value={current?.hotkey} onChange={(hotkey) => onChange({ hotkey })} bridge={bridge} disabledReason={busyReason} taken={takenBy} />
       <dl className="grid grid-cols-[8rem_1fr] gap-x-4 text-sm">
         <dt className="text-muted">La ejecuta</dt>
         <dd>{editable ? "La PC" : "La consola sola"}</dd>

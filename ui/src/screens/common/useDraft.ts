@@ -60,9 +60,10 @@ export function useDraft(bridge: Bridge, view: SnapshotView) {
     setSaveState({ kind: "idle" });
   }, []);
 
-  const save = useCallback(async () => {
+  /** Devuelve si se guardó: la barra de Ajustes dice de qué lado falló. */
+  const save = useCallback(async (): Promise<boolean> => {
     if (edit === undefined) {
-      return;
+      return false;
     }
 
     const sent = edit.draft;
@@ -70,7 +71,7 @@ export function useDraft(bridge: Bridge, view: SnapshotView) {
     const reply = await bridge.request("config.save", { config: sent, expectedFingerprint: edit.base.fingerprint });
     if (!reply.ok) {
       setSaveState({ kind: "failed", failure: reply.error });
-      return;
+      return false;
     }
 
     // Lo que quedó escrito es lo que la foto trae si ya llegó (en forma canónica); si no, el borrador tal cual.
@@ -81,6 +82,7 @@ export function useDraft(bridge: Bridge, view: SnapshotView) {
       base: { config: written, fingerprint: reply.data.fingerprint },
     }));
     setSaveState({ kind: "saved", problems: reply.data.problems });
+    return true;
   }, [bridge, edit, snapshot]);
 
   const discard = useCallback(() => {

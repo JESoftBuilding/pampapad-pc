@@ -127,3 +127,23 @@ export function removeStep<A extends ActionLike>(action: A, index: number): A {
 export function sameConfig(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
+
+/**
+ * Callar el sonido con una toma en curso (console.muteSoundWhileRecording, 02 §4.10). Verdadero es el valor por defecto y no se escribe:
+ * se quita el campo y, si el bloque console queda vacío, el bloque. Lo desconocido del bloque se conserva.
+ */
+export function setMuteSound<C extends ConfigLike & { console?: Record<string, unknown> }>(config: C, mute: boolean): C {
+  const block: Record<string, unknown> = { ...(config.console ?? {}) };
+  if (mute) {
+    delete block.muteSoundWhileRecording;
+  } else {
+    block.muteSoundWhileRecording = false;
+  }
+
+  const next: C = { ...config, console: block };
+  if (Object.keys(block).length === 0) {
+    delete next.console;
+  }
+
+  return next;
+}

@@ -7,7 +7,8 @@ import { ActionsScreen } from "@/screens/actions/Actions";
 import { KeysScreen } from "@/screens/keys/Keys";
 import { ScriptsScreen } from "@/screens/scripts/Scripts";
 import { useScriptDraft } from "@/screens/scripts/useScriptDraft";
-import { Placeholder } from "@/screens/Placeholder";
+import { SettingsScreen } from "@/screens/settings/Settings";
+import { useLocalDraft } from "@/screens/settings/useLocalDraft";
 import type { ScreenProps } from "@/screens/screen";
 import { StatusScreen } from "@/screens/status/Status";
 
@@ -19,12 +20,7 @@ export const screens: ScreenRow[] = [
   { hash: "actions", title: "Acciones", Component: ActionsScreen },
   { hash: "scripts", title: "Scripts", Component: ScriptsScreen },
   { hash: "status", title: "Estado", Component: StatusScreen },
-  {
-    hash: "settings",
-    title: "Ajustes",
-    stage: 8,
-    Component: () => <Placeholder title="Ajustes" stage={8} note="Mientras tanto, los ajustes de esta PC van a mano en local.json." />,
-  },
+  { hash: "settings", title: "Ajustes", Component: SettingsScreen },
 ];
 
 /** La de "Abrir PampaPad" y la de un hash que no es de ninguna pantalla: Teclas (05 §3), desde la etapa 7. */
@@ -41,9 +37,10 @@ export function App({ bridge }: { bridge: Bridge }) {
   const view = useSnapshot(bridge);
   // Un solo borrador por ventana (05 §11 define un solo window.dirty): pasar de una pantalla a otra no descarta lo editado.
   const editor = useDraft(bridge, view);
-  // El borrador de la ficha de un script vive acá por lo mismo: navegar no lo pierde.
+  // El de la ficha de un script y el de "Esta PC" en Ajustes viven acá por lo mismo: navegar no los pierde.
   const script = useScriptDraft(bridge);
-  const dirty = editor.dirty || script.dirty;
+  const local = useLocalDraft(bridge, view);
+  const dirty = editor.dirty || script.dirty || local.dirty;
   const announced = useRef(false);
 
   useEffect(() => {
@@ -71,7 +68,7 @@ export function App({ bridge }: { bridge: Bridge }) {
   const screen = screens.find((row) => row.hash === current) ?? screens[0];
   return (
     <Frame screens={screens} current={screen.hash} title={screen.title} view={view}>
-      <screen.Component bridge={bridge} view={view} editor={editor} script={script} />
+      <screen.Component bridge={bridge} view={view} editor={editor} script={script} local={local} />
     </Frame>
   );
 }
