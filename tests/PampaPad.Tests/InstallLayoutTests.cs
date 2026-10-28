@@ -31,6 +31,16 @@ public class InstallLayoutTests
     }
 
     [Fact]
+    public void The_mcp_command_points_to_the_mcp_inside_current_and_a_copy_outside_current_has_none()
+    {
+        var current = Path.Combine(Root, "current") + Path.DirectorySeparatorChar;
+        var bin = Path.Combine(Root, "src", "PampaPad.App", "bin", "Debug", "net10.0-windows") + Path.DirectorySeparatorChar;
+
+        Assert.Equal($"claude mcp add --scope user pampapad -- \"{Path.Combine(Root, "current", "PampaPad.Mcp.exe")}\"", InstallLayout.McpCommand(current));
+        Assert.Null(InstallLayout.McpCommand(bin));
+    }
+
+    [Fact]
     public void The_launcher_is_named_like_the_pack_title_in_publish_ps1()
     {
         var script = File.ReadAllText(Path.Combine(Architecture.RepoRoot(), "build", "publish.ps1"));

@@ -20,6 +20,9 @@ public sealed record LocalData
     /// <summary>Si esta copia toma los atajos globales. Sin valor, la instalada sí y la de desarrollo no (05 §10).</summary>
     public bool? HotkeysEnabled { get; init; }
 
+    /// <summary>"Permitir que Claude maneje PampaPad" (05 §4.5). Sin valor, encendido (decisión 40, MCP-5).</summary>
+    public bool? McpEnabled { get; init; }
+
     [JsonExtensionData]
     public Dictionary<string, JsonElement> Unknown { get; init; } = [];
 }
@@ -34,6 +37,9 @@ public sealed class LocalSettings(string path, Log log)
     private Failure? _unreadable;
 
     public LocalData Current => Volatile.Read(ref _current);
+
+    /// <summary>Si el MCP puede pedir. El puente lo llama en cada pedido: apagarlo en Ajustes vale en el acto, sin reiniciar.</summary>
+    public bool McpAllowed() => Current.McpEnabled ?? true;
 
     /// <summary>Lee el archivo. Si falla, deja los valores por defecto en memoria, lo anota y bloquea los guardados.</summary>
     public Result Load()

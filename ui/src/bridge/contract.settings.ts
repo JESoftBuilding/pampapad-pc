@@ -8,12 +8,19 @@ export const settingsViewSchema = z.object({
   skippedVersion: z.string().optional(),
   startWithWindows: z.enum(["unavailable", "on", "off"]),
   obs: z.object({ address: z.string(), password: z.string() }).optional(),
+  // El interruptor del MCP y el comando para registrarlo en Claude Code; mcpCommand falta en una copia sin instalar (etapa MCP).
+  mcpEnabled: z.boolean(),
+  mcpCommand: z.string().optional(),
 });
 
 export const settingsRequests = {
   // Sólo lo que cambió; skippedVersion "" borra la versión salteada. Contesta los ajustes como quedaron.
   "settings.save": {
-    request: z.strictObject({ startWithWindows: z.boolean().optional(), skippedVersion: z.string().optional() }),
+    request: z.strictObject({
+      startWithWindows: z.boolean().optional(),
+      skippedVersion: z.string().optional(),
+      mcpEnabled: z.boolean().optional(),
+    }),
     response: settingsViewSchema,
   },
   // La fase de la actualización llega por state.

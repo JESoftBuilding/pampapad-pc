@@ -71,7 +71,8 @@ internal sealed partial class Composition
         IReadOnlyList<ConditionType> conditions, IWindows windows, SynchronizationContext ui, string localFolder, ScriptsSources scripts,
         ScriptOutputSink output, SettingsSources settings)
     {
-        var bridge = new Bridge(state, Log);
+        // El interruptor de Ajustes se lee en cada pedido del MCP (E-MCP-3).
+        var bridge = new Bridge(state, Log) { McpAllowed = settings.Local.McpAllowed };
         _bridgeEvents = Requests.RegisterAll(
             bridge,
             new StatusSources(

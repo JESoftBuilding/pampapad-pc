@@ -92,7 +92,7 @@ public class Contract
         LogEntry[] entries = SampleLog();
         (StepTypeView[] stepTypes, ConditionTypeView[] conditionTypes) = Catalogs();
         var snapshot = new AppSnapshot("0.2.1", Migrations.CurrentVersion, config, SampleFingerprint, state, stepTypes, conditionTypes, SampleSettings);
-        var settingsSaved = SampleSettings with { StartWithWindows = StartupStatus.Off };
+        var settingsSaved = SampleSettings with { StartWithWindows = StartupStatus.Off, McpEnabled = false };
         Problem savedWarning = new("pages[0].keys[0].shortLabel", ProblemCodes.ShortLabelInvalid, "shortLabel lleva una o dos líneas de hasta 6 caracteres.", Severity.Warning);
 
         return new JsonObject
@@ -133,7 +133,7 @@ public class Contract
                 [RequestNames.ScriptsReveal] = Pair(Envelope.Request(17, RequestNames.ScriptsReveal, new ScriptsRevealRequest("bancocam")), Envelope.Response(17, new NoData())),
                 [RequestNames.LibraryReveal] = Pair(Envelope.Request(18, RequestNames.LibraryReveal, new NoData()), Envelope.Response(18, new NoData())),
                 [RequestNames.SettingsSave] = Pair(
-                    Envelope.Request(20, RequestNames.SettingsSave, new SettingsSaveRequest(StartWithWindows: false, SkippedVersion: "")), Envelope.Response(20, settingsSaved)),
+                    Envelope.Request(20, RequestNames.SettingsSave, new SettingsSaveRequest(StartWithWindows: false, SkippedVersion: "", McpEnabled: false)), Envelope.Response(20, settingsSaved)),
                 [RequestNames.UpdateCheck] = Pair(Envelope.Request(21, RequestNames.UpdateCheck, new NoData()), Envelope.Response(21, new NoData())),
                 [RequestNames.UpdateSkip] = Pair(Envelope.Request(22, RequestNames.UpdateSkip, new NoData()), Envelope.Response(22, new NoData())),
                 [RequestNames.ScriptsTest] = Pair(Envelope.Request(19, RequestNames.ScriptsTest, new ScriptsTestRequest("bancocam")), Envelope.Response(19, new ActionTestResponse(RunId))),
@@ -160,7 +160,8 @@ public class Contract
         };
     }
 
-    private static readonly SettingsView SampleSettings = new(true, "COM20", null, StartupStatus.On, new ObsSettingsView("127.0.0.1:4455"));
+    private static readonly SettingsView SampleSettings = new(
+        true, "COM20", null, StartupStatus.On, new ObsSettingsView("127.0.0.1:4455"), McpEnabled: true, McpCommand: @"claude mcp add --scope user pampapad -- ""C:\Users\Emmanuel\AppData\Local\PampaPad\current\PampaPad.Mcp.exe""");
 
     private static readonly string SampleFingerprint = Fingerprints.Of("config.json de la muestra"u8);
 

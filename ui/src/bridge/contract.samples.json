@@ -459,7 +459,9 @@
             "obs": {
               "address": "127.0.0.1:4455",
               "password": "la guardada en OBS"
-            }
+            },
+            "mcpEnabled": true,
+            "mcpCommand": "claude mcp add --scope user pampapad -- \"C:\\Users\\Emmanuel\\AppData\\Local\\PampaPad\\current\\PampaPad.Mcp.exe\""
           }
         }
       }
@@ -963,7 +965,8 @@
         "request": "settings.save",
         "data": {
           "startWithWindows": false,
-          "skippedVersion": ""
+          "skippedVersion": "",
+          "mcpEnabled": false
         }
       },
       "response": {
@@ -976,7 +979,9 @@
           "obs": {
             "address": "127.0.0.1:4455",
             "password": "la guardada en OBS"
-          }
+          },
+          "mcpEnabled": false,
+          "mcpCommand": "claude mcp add --scope user pampapad -- \"C:\\Users\\Emmanuel\\AppData\\Local\\PampaPad\\current\\PampaPad.Mcp.exe\""
         }
       }
     },

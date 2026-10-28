@@ -134,7 +134,9 @@ internal sealed partial class Composition : IAsyncDisposable
                 settings.Current.ConsolePort,
                 settings.Current.SkippedVersion,
                 SettingsView.Startup(startup.IsEnabled),
-                new ObsSettingsView(obsFiles.Address().Authority)));
+                new ObsSettingsView(obsFiles.Address().Authority),
+                settings.McpAllowed(),
+                InstallLayout.McpCommand(AppContext.BaseDirectory)));
         composition.ComposeBridge(state, library, dispatcher, executor, catalog, conditions, windows, ui, localFolder, scriptsSources, output, settingsSources);
 
         if (!headless)

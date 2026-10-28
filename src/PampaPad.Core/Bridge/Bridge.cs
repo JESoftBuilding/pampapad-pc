@@ -14,8 +14,8 @@ public sealed class Bridge(StateStore state, Log log)
     private Action<string>[] _sinks = [];
 
     /// <summary>
-    /// Si el MCP puede pedir. Hasta que exista el interruptor "Permitir que Claude maneje PampaPad" de Ajustes (05 §4.5; su clave de
-    /// local.json no tiene nombre, pregunta abierta 16), no puede: toda llamada mcp da no_permission.
+    /// Si el MCP puede pedir, leído en cada pedido. La composición lo ata a LocalSettings.McpAllowed, el interruptor de Ajustes (05 §4.5);
+    /// sin asignar, no puede: toda llamada mcp da no_permission.
     /// </summary>
     public Func<bool> McpAllowed { get; init; } = static () => false;
 

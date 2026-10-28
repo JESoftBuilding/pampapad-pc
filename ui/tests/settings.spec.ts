@@ -109,7 +109,7 @@ test("callar el sonido en verdadero quita el campo, y el bloque si queda vacío,
 });
 
 test("el arranque con Windows manda settings.save y la tarjeta muestra lo que devuelve", async ({ page }) => {
-  await answer(page, "settings.save", { ok: true, data: { hotkeysEnabled: true, startWithWindows: "off", skippedVersion: "0.7.0" } });
+  await answer(page, "settings.save", { ok: true, data: { hotkeysEnabled: true, startWithWindows: "off", skippedVersion: "0.7.0", mcpEnabled: true } });
   await page.getByRole("switch", { name: "Arrancar con Windows" }).click();
   await expect(page.getByText("Cambios sin guardar en: Esta PC")).toBeVisible();
   await page.getByRole("button", { name: "Guardar", exact: true }).click();
