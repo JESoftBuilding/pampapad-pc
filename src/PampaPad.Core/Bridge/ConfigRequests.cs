@@ -14,7 +14,7 @@ public static class ConfigRequests
         ArgumentNullException.ThrowIfNull(bridge);
         ArgumentNullException.ThrowIfNull(sources);
         bridge.Register<ConfigSaveRequest, ConfigSaveResponse>(
-            RequestNames.ConfigSave, RequestKind.Write, Doors.Window, (request, caller, ct) => SaveAsync(sources, request, caller, ct));
+            RequestNames.ConfigSave, RequestKind.Write, Doors.Window, (request, caller, ct) => SaveAsync(sources, request, caller, ct), RequestChecks.ConfigSave);
         bridge.Register<NoData, LibraryReloadResponse>(
             RequestNames.LibraryReload, RequestKind.Write, Doors.WindowAndTray, (_, caller, ct) => ReloadAsync(sources, caller, ct));
     }

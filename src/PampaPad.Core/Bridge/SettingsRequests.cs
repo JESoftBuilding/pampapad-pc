@@ -22,7 +22,7 @@ public static class SettingsRequests
         ArgumentNullException.ThrowIfNull(bridge);
         ArgumentNullException.ThrowIfNull(sources);
         bridge.Register<SettingsSaveRequest, SettingsView>(RequestNames.SettingsSave, RequestKind.WindowOnly, Doors.WindowAndTray,
-            (request, _, ct) => SaveAsync(sources, request, ct));
+            (request, _, ct) => SaveAsync(sources, request, ct), RequestChecks.SettingsSave);
         bridge.Register<NoData, NoData>(RequestNames.UpdateCheck, RequestKind.WindowOnly, Doors.WindowAndTray,
             (_, _, ct) => CallAsync(sources.CheckUpdate, "Buscar una actualización", ct));
         bridge.Register<NoData, NoData>(RequestNames.UpdateSkip, RequestKind.WindowOnly, Doors.WindowAndTray,

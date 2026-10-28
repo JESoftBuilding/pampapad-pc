@@ -27,7 +27,7 @@ public static class ScriptsRequests
         bridge.Register<ScriptsReadRequest, ScriptsReadResponse>(RequestNames.ScriptsRead, RequestKind.Read, Doors.WindowAndMcp,
             (request, _, _) => Task.FromResult(Read(sources, request.Id ?? "")));
         bridge.Register<ScriptsWriteRequest, ScriptsWriteResponse>(RequestNames.ScriptsWrite, RequestKind.Write, Doors.WindowAndMcp,
-            (request, _, _) => Task.FromResult(ScriptEdits.Write(sources, request)));
+            (request, _, _) => Task.FromResult(ScriptEdits.Write(sources, request)), RequestChecks.ScriptsWrite);
         bridge.Register<NoData, ScriptsImportResponse>(RequestNames.ScriptsImport, RequestKind.Write, Doors.Window,
             (_, _, _) => ScriptEdits.ImportAsync(sources));
         bridge.Register<ScriptsDeleteRequest, ScriptsDeleteResponse>(RequestNames.ScriptsDelete, RequestKind.Write, Doors.Window,
