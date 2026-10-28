@@ -73,7 +73,12 @@ export function SettingsScreen({ bridge, view, editor, local }: ScreenProps) {
       <HotkeysCard config={config} setDraft={editor.setDraft} bridge={bridge} busyReason={editor.busyReason} highlighted={highlighted} />
       <AlertsCard config={config} setDraft={editor.setDraft} />
       <ObsCard settings={local.shown} state={view.state} />
-      <DataCard folder={view.state?.library.folder} onReveal={() => void run("library.reveal")} onReload={() => void editor.reload()} />
+      <DataCard
+        folder={view.state?.library.folder}
+        reloadBlocked={editor.dirty ? "Recargar tira los cambios sin guardar de la biblioteca: primero guardá o descartá." : undefined}
+        onReveal={() => void run("library.reveal")}
+        onReload={() => void editor.reload()}
+      />
       <ProgramCard
         settings={local.shown}
         version={view.snapshot.version}

@@ -211,3 +211,11 @@ test("un problema de un atajo general en Estado lleva a su fila en Ajustes", asy
   await expect(page.locator("#atajo-1")).toHaveAttribute("aria-current", "true");
   await expect(page.locator("#atajo-1")).toBeInViewport();
 });
+
+test("con cambios de la biblioteca sin guardar, Recargar se apaga y dice por qué", async ({ page }) => {
+  await expect(page.getByRole("button", { name: "Recargar" })).toBeEnabled();
+  await page.getByRole("switch", { name: "Callar el sonido con una toma en curso" }).click();
+
+  await expect(page.getByRole("button", { name: "Recargar" })).toBeDisabled();
+  await expect(page.getByText("Recargar tira los cambios sin guardar de la biblioteca: primero guardá o descartá.")).toBeVisible();
+});
