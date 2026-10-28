@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fromKeyPress, parseHotkey, usedBy, type KeyPress } from "./hotkeys";
+import { fromKeyPress, parseHotkey, usedBy, usedByGeneral, type KeyPress } from "./hotkeys";
 
 function press(code: string, modifiers: Partial<KeyPress> = {}): KeyPress {
   return { key: code, code, ctrlKey: false, shiftKey: false, altKey: false, metaKey: false, ...modifiers };
@@ -78,5 +78,26 @@ describe("usedBy", () => {
   it("escrita distinto pero igual cuenta: se compara con la misma normalización de la gramática", () => {
     expect(usedBy(config, "grabacion", 5, "ctrl+alt+shift+d")).toBe("la tecla 6 de Grabación");
     expect(usedBy(config, "grabacion", 5, "alt+shift+ctrl+g")).toBe("un atajo general");
+  });
+});
+
+describe("usedByGeneral", () => {
+  const config = {
+    pages: [
+      { id: "grabacion", name: "Grabación", keys: [{ position: 3, hotkey: "Ctrl+Alt+M" }] },
+      { id: "sala", name: "Sala", keys: [{ position: 6, hotkey: "Ctrl+Shift+L" }] },
+    ],
+    hotkeys: [{ hotkey: "Ctrl+Alt+B" }, { hotkey: "Ctrl+Alt+P" }],
+  };
+
+  it("encuentra una tecla de cualquier página", () => {
+    expect(usedByGeneral(config, 0, "ctrl+shift+l")).toBe("la tecla 6 de Sala");
+    expect(usedByGeneral(config, 0, "Ctrl+Alt+M")).toBe("la tecla 3 de Grabación");
+  });
+
+  it("encuentra otro atajo general, y el que se edita no cuenta contra sí mismo", () => {
+    expect(usedByGeneral(config, 0, "Ctrl+Alt+P")).toBe("el atajo general 2");
+    expect(usedByGeneral(config, 1, "Ctrl+Alt+P")).toBeNull();
+    expect(usedByGeneral(config, 2, "Ctrl+Alt+F1")).toBeNull();
   });
 });

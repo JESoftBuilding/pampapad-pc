@@ -5,7 +5,10 @@ import { Frame, type NavItem } from "@/Frame";
 import { useDraft } from "@/screens/common/useDraft";
 import { ActionsScreen } from "@/screens/actions/Actions";
 import { KeysScreen } from "@/screens/keys/Keys";
-import { Placeholder } from "@/screens/Placeholder";
+import { ScriptsScreen } from "@/screens/scripts/Scripts";
+import { useScriptDraft } from "@/screens/scripts/useScriptDraft";
+import { SettingsScreen } from "@/screens/settings/Settings";
+import { useLocalDraft } from "@/screens/settings/useLocalDraft";
 import type { ScreenProps } from "@/screens/screen";
 import { StatusScreen } from "@/screens/status/Status";
 
@@ -15,19 +18,9 @@ export type ScreenRow = NavItem & { Component: ComponentType<ScreenProps> };
 export const screens: ScreenRow[] = [
   { hash: "keys", title: "Teclas", Component: KeysScreen },
   { hash: "actions", title: "Acciones", Component: ActionsScreen },
-  {
-    hash: "scripts",
-    title: "Scripts",
-    stage: 8,
-    Component: () => <Placeholder title="Scripts" stage={8} note="Los scripts entran en las acciones con la etapa 5; su pantalla, en la 8." />,
-  },
+  { hash: "scripts", title: "Scripts", Component: ScriptsScreen },
   { hash: "status", title: "Estado", Component: StatusScreen },
-  {
-    hash: "settings",
-    title: "Ajustes",
-    stage: 8,
-    Component: () => <Placeholder title="Ajustes" stage={8} note="Mientras tanto, los ajustes de esta PC van a mano en local.json." />,
-  },
+  { hash: "settings", title: "Ajustes", Component: SettingsScreen },
 ];
 
 /** La de "Abrir PampaPad" y la de un hash que no es de ninguna pantalla: Teclas (05 §3), desde la etapa 7. */
@@ -44,6 +37,10 @@ export function App({ bridge }: { bridge: Bridge }) {
   const view = useSnapshot(bridge);
   // Un solo borrador por ventana (05 §11 define un solo window.dirty): pasar de una pantalla a otra no descarta lo editado.
   const editor = useDraft(bridge, view);
+  // El de la ficha de un script y el de "Esta PC" en Ajustes viven acá por lo mismo: navegar no los pierde.
+  const script = useScriptDraft(bridge);
+  const local = useLocalDraft(bridge, view);
+  const dirty = editor.dirty || script.dirty || local.dirty;
   const announced = useRef(false);
 
   useEffect(() => {
@@ -65,13 +62,13 @@ export function App({ bridge }: { bridge: Bridge }) {
   // window.dirty (05 §11): la cáscara pregunta al cerrar sólo si hay cambios sin guardar. Vive acá y no en una pantalla: si no, al
   // navegar se mandaría dirty false con el borrador todavía sin guardar.
   useEffect(() => {
-    void bridge.request("window.dirty", { dirty: editor.dirty });
-  }, [bridge, editor.dirty]);
+    void bridge.request("window.dirty", { dirty });
+  }, [bridge, dirty]);
 
   const screen = screens.find((row) => row.hash === current) ?? screens[0];
   return (
     <Frame screens={screens} current={screen.hash} title={screen.title} view={view}>
-      <screen.Component bridge={bridge} view={view} editor={editor} />
+      <screen.Component bridge={bridge} view={view} editor={editor} script={script} local={local} />
     </Frame>
   );
 }

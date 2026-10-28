@@ -39,7 +39,12 @@ public sealed class Bridge(StateStore state, Log log)
         }
     }
 
-    public void Register<TReq, TRes>(string name, RequestKind kind, IReadOnlySet<Caller> callers, Func<TReq, Caller, CancellationToken, Task<Result<TRes>>> handler)
+    /// <summary>
+    /// check, si lo hay, corre con el pedido deserializado y antes del manejador: lo que devuelve vuelve como error y el manejador no corre
+    /// (los pedidos que escriben, RequestChecks).
+    /// </summary>
+    public void Register<TReq, TRes>(
+        string name, RequestKind kind, IReadOnlySet<Caller> callers, Func<TReq, Caller, CancellationToken, Task<Result<TRes>>> handler, Func<TReq, Failure?>? check = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentNullException.ThrowIfNull(callers);
@@ -62,6 +67,12 @@ public sealed class Bridge(StateStore state, Log log)
             if (request is null)
             {
                 return new Outcome(null, new Failure(ErrorCodes.InvalidData, $"{name} necesita datos.", "data"));
+            }
+
+            if (check?.Invoke(request) is { } invalid)
+            {
+                log.Warning("bridge", $"Datos que no sirven para {name}: {invalid.Message}", invalid.Code);
+                return new Outcome(null, invalid);
             }
 
             Result<TRes> result = await handler(request, caller, ct).ConfigureAwait(false);

@@ -454,7 +454,12 @@
           ],
           "settings": {
             "hotkeysEnabled": true,
-            "consolePort": "COM20"
+            "consolePort": "COM20",
+            "startWithWindows": "on",
+            "obs": {
+              "address": "127.0.0.1:4455",
+              "password": "la guardada en OBS"
+            }
           }
         }
       }
@@ -494,6 +499,21 @@
               "code": "marker_paused",
               "requestedBy": "hotkey",
               "runId": "5c1b2f0e-3d4a-4b6c-9e8f-a1b2c3d4e5f6"
+            },
+            {
+              "at": "2026-10-14T23:30:12-03:00",
+              "level": "info",
+              "module": "scripts",
+              "message": "bancocam terminó con 0 en 2.4 s: cámara lista",
+              "requestedBy": "key",
+              "runId": "0f8fad5b-d9cb-469f-a165-70867728950e",
+              "script": "bancocam",
+              "end": {
+                "ok": true,
+                "exitCode": 0,
+                "durationMs": 2400,
+                "message": "cámara lista"
+              }
             }
           ]
         }
@@ -690,6 +710,315 @@
           ]
         }
       }
+    },
+    "scripts.list": {
+      "request": {
+        "id": 12,
+        "request": "scripts.list",
+        "data": {}
+      },
+      "response": {
+        "id": 12,
+        "ok": true,
+        "data": {
+          "scripts": [
+            {
+              "id": "bancocam",
+              "name": "Cámara del banco",
+              "description": "Abre scrcpy con el celu del banco.",
+              "entry": "bancocam.cmd",
+              "wait": true,
+              "timeoutSec": 15,
+              "contract": 1,
+              "tags": [
+                "banco"
+              ],
+              "status": "ready",
+              "problems": [],
+              "usedBy": [
+                {
+                  "action": "ir-al-banco",
+                  "actionName": "Ir al banco",
+                  "where": "actions[0].steps[1].script",
+                  "places": [
+                    {
+                      "kind": "key",
+                      "where": "pages[0].keys[0].action",
+                      "page": "banco",
+                      "pageName": "Banco",
+                      "position": 3,
+                      "label": "Banco"
+                    },
+                    {
+                      "kind": "hotkey",
+                      "where": "hotkeys[0].action",
+                      "hotkey": "Ctrl+Shift+Alt+F2"
+                    }
+                  ]
+                }
+              ],
+              "lastRun": {
+                "at": "2026-10-14T23:30:12-03:00",
+                "requestedBy": "key",
+                "end": {
+                  "ok": true,
+                  "exitCode": 0,
+                  "durationMs": 2400,
+                  "message": "cámara lista"
+                }
+              }
+            },
+            {
+              "id": "suelto.cmd",
+              "name": "suelto.cmd",
+              "wait": true,
+              "timeoutSec": 15,
+              "tags": [],
+              "status": "noManifest",
+              "problems": [
+                {
+                  "code": "manifest_missing",
+                  "message": "\"suelto.cmd\" es un archivo suelto: un script es una carpeta scripts\\<id> con su script.json."
+                }
+              ],
+              "usedBy": []
+            }
+          ]
+        }
+      }
+    },
+    "scripts.read": {
+      "request": {
+        "id": 13,
+        "request": "scripts.read",
+        "data": {
+          "id": "bancocam"
+        }
+      },
+      "response": {
+        "id": 13,
+        "ok": true,
+        "data": {
+          "script": {
+            "id": "bancocam",
+            "name": "Cámara del banco",
+            "description": "Abre scrcpy con el celu del banco.",
+            "entry": "bancocam.cmd",
+            "wait": true,
+            "timeoutSec": 15,
+            "contract": 1,
+            "tags": [
+              "banco"
+            ],
+            "status": "ready",
+            "problems": [],
+            "usedBy": [
+              {
+                "action": "ir-al-banco",
+                "actionName": "Ir al banco",
+                "where": "actions[0].steps[1].script",
+                "places": [
+                  {
+                    "kind": "key",
+                    "where": "pages[0].keys[0].action",
+                    "page": "banco",
+                    "pageName": "Banco",
+                    "position": 3,
+                    "label": "Banco"
+                  },
+                  {
+                    "kind": "hotkey",
+                    "where": "hotkeys[0].action",
+                    "hotkey": "Ctrl+Shift+Alt+F2"
+                  }
+                ]
+              }
+            ],
+            "lastRun": {
+              "at": "2026-10-14T23:30:12-03:00",
+              "requestedBy": "key",
+              "end": {
+                "ok": true,
+                "exitCode": 0,
+                "durationMs": 2400,
+                "message": "cámara lista"
+              }
+            }
+          },
+          "manifest": {
+            "entry": "bancocam.cmd",
+            "name": "Cámara del banco",
+            "inventado": true
+          },
+          "files": [
+            {
+              "name": "bancocam.cmd",
+              "size": 412,
+              "modified": "2026-10-11T23:30:00-03:00"
+            },
+            {
+              "name": "script.json",
+              "size": 96,
+              "modified": "2026-10-11T23:30:00-03:00"
+            }
+          ],
+          "fingerprint": "3aed4eeba8413dcf2840a313b9546d8ffe0c4b324269c04fbe12b582b2caab34",
+          "runs": [
+            {
+              "at": "2026-10-14T23:30:12-03:00",
+              "requestedBy": "key",
+              "end": {
+                "ok": true,
+                "exitCode": 0,
+                "durationMs": 2400,
+                "message": "cámara lista"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "scripts.write": {
+      "request": {
+        "id": 14,
+        "request": "scripts.write",
+        "data": {
+          "id": "bancocam",
+          "manifest": {
+            "entry": "bancocam.cmd",
+            "name": "Cámara del banco",
+            "timeoutSec": 20,
+            "inventado": true
+          },
+          "expectedFingerprint": "2794f40e573b3b53bffad440a4c6bc8d988493d2f15bcaed0ed3e845ed927083"
+        }
+      },
+      "response": {
+        "id": 14,
+        "ok": true,
+        "data": {
+          "fingerprint": "3aed4eeba8413dcf2840a313b9546d8ffe0c4b324269c04fbe12b582b2caab34"
+        }
+      }
+    },
+    "scripts.import": {
+      "request": {
+        "id": 15,
+        "request": "scripts.import",
+        "data": {}
+      },
+      "response": {
+        "id": 15,
+        "ok": true,
+        "data": {
+          "id": "bancocam-2"
+        }
+      }
+    },
+    "scripts.delete": {
+      "request": {
+        "id": 16,
+        "request": "scripts.delete",
+        "data": {
+          "id": "viejo"
+        }
+      },
+      "response": {
+        "id": 16,
+        "ok": true,
+        "data": {
+          "backupPath": "C:\\Users\\Emmanuel\\AppData\\Roaming\\PampaPad\\backup\\scripts\\viejo-20261027-153000"
+        }
+      }
+    },
+    "scripts.reveal": {
+      "request": {
+        "id": 17,
+        "request": "scripts.reveal",
+        "data": {
+          "id": "bancocam"
+        }
+      },
+      "response": {
+        "id": 17,
+        "ok": true,
+        "data": {}
+      }
+    },
+    "library.reveal": {
+      "request": {
+        "id": 18,
+        "request": "library.reveal",
+        "data": {}
+      },
+      "response": {
+        "id": 18,
+        "ok": true,
+        "data": {}
+      }
+    },
+    "settings.save": {
+      "request": {
+        "id": 20,
+        "request": "settings.save",
+        "data": {
+          "startWithWindows": false,
+          "skippedVersion": ""
+        }
+      },
+      "response": {
+        "id": 20,
+        "ok": true,
+        "data": {
+          "hotkeysEnabled": true,
+          "consolePort": "COM20",
+          "startWithWindows": "off",
+          "obs": {
+            "address": "127.0.0.1:4455",
+            "password": "la guardada en OBS"
+          }
+        }
+      }
+    },
+    "update.check": {
+      "request": {
+        "id": 21,
+        "request": "update.check",
+        "data": {}
+      },
+      "response": {
+        "id": 21,
+        "ok": true,
+        "data": {}
+      }
+    },
+    "update.skip": {
+      "request": {
+        "id": 22,
+        "request": "update.skip",
+        "data": {}
+      },
+      "response": {
+        "id": 22,
+        "ok": true,
+        "data": {}
+      }
+    },
+    "scripts.test": {
+      "request": {
+        "id": 19,
+        "request": "scripts.test",
+        "data": {
+          "id": "bancocam"
+        }
+      },
+      "response": {
+        "id": 19,
+        "ok": true,
+        "data": {
+          "runId": "0f8fad5b-d9cb-469f-a165-70867728950e"
+        }
+      }
     }
   },
   "events": {
@@ -829,6 +1158,15 @@
           ]
         },
         "fingerprint": "2794f40e573b3b53bffad440a4c6bc8d988493d2f15bcaed0ed3e845ed927083"
+      }
+    },
+    "script.output": {
+      "event": "script.output",
+      "seq": 42,
+      "data": {
+        "runId": "0f8fad5b-d9cb-469f-a165-70867728950e",
+        "line": "cámara lista",
+        "stream": "stdout"
       }
     }
   },

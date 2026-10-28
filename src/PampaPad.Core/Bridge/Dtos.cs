@@ -13,7 +13,7 @@ public sealed record NoData;
 
 /// <summary>log.read (05 §11): cuántas entradas y los filtros. Level es el mínimo: warning trae warning y error.</summary>
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
-public sealed record LogReadRequest(int? Count = null, LogLevel? Level = null, Trigger? RequestedBy = null, Guid? RunId = null);
+public sealed record LogReadRequest(int? Count = null, LogLevel? Level = null, Trigger? RequestedBy = null, Guid? RunId = null, string? Script = null);
 
 public sealed record LogReadResponse(IReadOnlyList<LogEntry> Entries);
 
@@ -104,9 +104,6 @@ public sealed record ConditionTypeView(string Id, string Name, IReadOnlyList<Fie
         return new ConditionTypeView(type.Id, type.Name, type.Fields);
     }
 }
-
-/// <summary>Los ajustes de esta PC que la página muestra. HotkeysEnabled dice si esta copia tomó los atajos (05 §10).</summary>
-public sealed record SettingsView(bool HotkeysEnabled, string? ConsolePort, string? SkippedVersion);
 
 /// <summary>El estado tal como viaja: el de AppState, con el tiempo grabado en milisegundos y el enlace con OBS con guion bajo.</summary>
 public sealed record StateView(

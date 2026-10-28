@@ -87,6 +87,24 @@ describe("realBridge", () => {
     expect(!result.ok && result.error.code).toBe("no_response");
   });
 
+  it("scripts.import espera el diálogo de Windows hasta 10 minutos, no 30 s", async () => {
+    vi.useFakeTimers();
+    const host = fakeWebview();
+    const bridge = createRealBridge(host.webview);
+    let settled = false;
+
+    const reply = bridge.request("scripts.import", {}).then((result) => {
+      settled = true;
+      return result;
+    });
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(10 * 60_000 - 30_000);
+
+    const result = await reply;
+    expect(!result.ok && result.error.code).toBe("no_response");
+  });
+
   it("una respuesta que no tiene la forma del contrato vuelve como invalid_data", async () => {
     const host = fakeWebview();
     const bridge = createRealBridge(host.webview);

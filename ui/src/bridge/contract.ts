@@ -1,10 +1,13 @@
 import { z } from "zod";
+import { triggerSchema } from "./contract.base";
+import { scriptEndSchema, scriptOutputSchema, scriptsRequests } from "./contract.scripts";
+import { settingsRequests, settingsViewSchema } from "./contract.settings";
 
 // El contrato del puente del lado de la página (01 §5): espejo de src/PampaPad.Core/Bridge/Dtos.cs y RequestNames.cs. contract.test.ts
 // valida contra estos esquemas cada muestra de contract.samples.json, que escribe tests/PampaPad.Tests/Contract.cs. Lo que C# deja en
 // null no viaja (Json.cs omite los nulos): acá es opcional, nunca null.
 
-export const triggerSchema = z.enum(["key", "hotkey", "window", "mcp", "tray", "internal"]);
+export { triggerSchema };
 export const severitySchema = z.enum(["error", "warning"]);
 export const logLevelSchema = z.enum(["info", "warning", "error"]);
 // Con guion bajo, convertido a mano en ObsView.LinkName: pregunta abierta 59, escrito (b).
@@ -90,7 +93,7 @@ export const snapshotSchema = z.object({
   state: stateSchema,
   stepTypes: z.array(z.object({ id: z.string(), name: z.string(), group: z.string(), fields: z.array(fieldSchema) })),
   conditionTypes: z.array(z.object({ id: z.string(), name: z.string(), fields: z.array(fieldSchema) })),
-  settings: z.object({ hotkeysEnabled: z.boolean(), consolePort: z.string().optional(), skippedVersion: z.string().optional() }),
+  settings: settingsViewSchema,
 });
 
 export const logEntrySchema = z.object({
@@ -101,6 +104,8 @@ export const logEntrySchema = z.object({
   code: z.string().optional(),
   requestedBy: triggerSchema.optional(),
   runId: z.string().optional(),
+  script: z.string().optional(),
+  end: scriptEndSchema.optional(),
 });
 
 // "failed" incluye un paso que la cancelación alcanzó antes de correr: notRun queda para uno que nunca se intentó (hallazgo de E3-5).
@@ -132,6 +137,7 @@ export const requests = {
       level: logLevelSchema.optional(),
       requestedBy: triggerSchema.optional(),
       runId: z.string().optional(),
+      script: z.string().optional(),
     }),
     response: z.object({ entries: z.array(logEntrySchema) }),
   },
@@ -155,6 +161,8 @@ export const requests = {
       unavailable: z.string().optional(),
     }),
   },
+  ...scriptsRequests,
+  ...settingsRequests,
 } as const;
 
 export const events = {
@@ -162,6 +170,7 @@ export const events = {
   log: logEntrySchema,
   "action.finished": actionFinishedSchema,
   "config.changed": z.object({ config: configSchema, fingerprint: z.string() }),
+  "script.output": scriptOutputSchema,
 } as const;
 
 export const errorEnvelopeSchema = z.object({ id: z.number().int(), ok: z.literal(false), error: failureSchema, data: z.unknown().optional() });

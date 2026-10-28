@@ -18,11 +18,12 @@ public static class LogQuery
                 ErrorCodes.InvalidData, $"count va de 1 a {Log.MemoryLimit}: es lo que el registro guarda en memoria (05 §9).", "count");
         }
 
-        // Filtrar por acción y por script (05 §4.4) pide campos que LogEntry no tiene: entra cuando los tenga.
+        // Filtrar por acción (05 §4.4) pide un campo que LogEntry no tiene: entra cuando lo tenga.
         IEnumerable<LogEntry> matching = recent
             .Where(entry => request.Level is not { } level || entry.Level >= level)
             .Where(entry => request.RequestedBy is not { } by || entry.RequestedBy == by)
-            .Where(entry => request.RunId is not { } run || entry.RunId == run);
+            .Where(entry => request.RunId is not { } run || entry.RunId == run)
+            .Where(entry => request.Script is not { } script || entry.Script == script);
         return new LogReadResponse([.. matching.TakeLast(count)]);
     }
 }

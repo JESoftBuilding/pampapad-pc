@@ -51,6 +51,14 @@ public class LogQueryTests
         Assert.Equal(new[] { "1" }, Read(recent, new LogReadRequest(RunId: runId)).Entries.Select(entry => entry.Message));
     }
 
+    [Fact]
+    public void The_script_is_exact()
+    {
+        LogEntry[] recent = [Entry(1, LogLevel.Info) with { Script = "hola" }, Entry(2, LogLevel.Info), Entry(3, LogLevel.Info) with { Script = "hola-2" }];
+
+        Assert.Equal(new[] { "1" }, Read(recent, new LogReadRequest(Script: "hola")).Entries.Select(entry => entry.Message));
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]

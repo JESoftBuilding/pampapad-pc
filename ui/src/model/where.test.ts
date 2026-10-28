@@ -38,3 +38,11 @@ describe("linkFor", () => {
     expect(whereOfAction(config, "nadie")).toBeUndefined();
   });
 });
+
+describe("linkFor de un atajo general", () => {
+  it("hotkeys[1].hotkey lleva a la tarjeta de atajos generales de Ajustes, con su índice", () => {
+    const withHotkeys = { ...config, hotkeys: [{ hotkey: "Ctrl+Alt+B" }, { hotkey: "Ctrl+Alt+P" }] };
+    expect(linkFor("hotkeys[1].hotkey", withHotkeys)).toBe("#/settings?hotkey=1");
+    expect(linkFor("hotkeys[5].hotkey", withHotkeys)).toBeUndefined();
+  });
+});

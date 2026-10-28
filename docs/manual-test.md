@@ -359,3 +359,35 @@ Al terminar: en `%APPDATA%\PampaPad-dev\local.json`, `hotkeysEnabled` en `false`
   - **Fila 10:** el campo se llama "Programa", no "Proceso"; "La usan" suma el atajo general `Ctrl+Shift+Alt+F9`, que también usa `marca-short`.
   - **Fila 11:** el paso 1 falló porque `bancocam` no pudo abrir scrcpy (el celular no estaba conectado), así que los pasos 2 y 3 no corrieron. Sin sonido, sin cartel y sin cambio en el ícono, como se esperaba.
   - **Fila 15:** "Salir" es el del menú del ícono de la bandeja; con la X es la fila 14.
+
+## Etapa 8: las pantallas Scripts y Ajustes
+
+Se repasa con la copia de desarrollo de la rama `etapa-8` (worktree `D:\Conocimiento\Sistemas\electronica\pampapad-pc-etapa-8`), armada con la página, sobre la biblioteca real. La real la versiona git: antes de empezar, `git -C D:\Conocimiento status --short -- Areas/marca-personal/pampapad` tiene que estar vacío, y si algo sale mal se vuelve con `git -C D:\Conocimiento checkout -- Areas/marca-personal/pampapad`. Las filas 6 y 7 piden la versión instalada (después de E8-12): la copia de desarrollo dice "no disponible" en el arranque con Windows y en la actualización.
+
+Desde la raíz del worktree:
+
+```powershell
+pnpm.cmd -C ui build
+$env:PAMPAPAD_LIBRARY = 'D:\Conocimiento\Areas\marca-personal\pampapad'
+dotnet run --project src\PampaPad.App
+```
+
+| N | Qué hacer | Qué tiene que pasar |
+|---|---|---|
+| 1 | "Abrir PampaPad" → Scripts | La lista con "Cámara del banco" (`bancocam`), el contador ("1 script · 1 en uso") y la última corrida ("nunca" si no corrió en 14 días) |
+| 2 | Con el celular conectado y desbloqueado y OBS sin grabar: abrir `bancocam` → Probar | La salida aparece en vivo y termina con su código; scrcpy abre la ventana `bancocam` (cerrarla). Sin sonido ni cartel |
+| 3 | En la ficha, cambiar el tope a 20 → Guardar la ficha; después volverlo a 30 → Guardar la ficha | "Guardado." las dos veces; después de la primera, `git diff` muestra sólo `timeoutSec`; después de la segunda, el diff queda vacío |
+| 4 | Cambiar el nombre en la ficha sin guardar y cerrar la ventana con la X | El diálogo "Hay cambios sin guardar"; con "Seguir editando" la ventana queda; después Descartar |
+| 5 | Con los atajos encendidos en la copia de desarrollo (`hotkeysEnabled` en `%APPDATA%\PampaPad-dev\local.json`) y la instalada cerrada: Ajustes → Atajos generales → Agregar atajo → Grabar atajo → Ctrl+Shift+Alt+P; elegir "Marca: short" → Guardar | El campo toma `Ctrl+Shift+Alt+P`; el registro dice "Atajos suspendidos…" y "Atajos reanudados."; al guardar, "Atajos tomados: 10". Después Quitar → Guardar, y `git diff` queda vacío |
+| 6 | Ya instalada la v0.7.0: Ajustes → Programa → apagar "Arrancar con Windows"; mirar el Administrador de tareas → Aplicaciones de arranque; volver a encenderlo | PampaPad desaparece de la lista o queda deshabilitado, y vuelve al encenderlo |
+| 7 | Ya instalada: Programa → Buscar actualización | "Al día" o la versión nueva, sin errores |
+| 8 | Páginas: Subir "Escenas" → Guardar; después Subir "Grabación" → Guardar | El orden cambia en Teclas; al final `git diff` queda vacío |
+
+Al terminar: `hotkeysEnabled` otra vez en `false` (o borrar la clave) y `git -C D:\Conocimiento status --short -- Areas/marca-personal/pampapad` vacío.
+
+- **Lo que repasó Claude solo, el 2026-10-28**, con la ventana real por CDP sobre una copia de la biblioteca de ejemplo con un script de prueba (`D:\repos\pampapad-construccion\E8-11-biblioteca`; informe en `E8-11-repaso.txt`):
+  - la ficha de `bancocam` guardada con otro tope y vuelta al de antes: `script.json` igual byte a byte;
+  - Probar del script de prueba: las tres líneas en vivo; Quitar lo movió al respaldo local con sus dos archivos;
+  - Ajustes: bajar una página y volverla a subir, y agregar un atajo general grabado con la captura y quitarlo: `config.json` igual byte a byte al final;
+  - con 201 scripts, `scripts.list` tardó 977 ms la primera vez y 17 ms la segunda (criterio de 05 §4.3: menos de 1 s); el filtro, 19 ms (criterio: menos de 100 ms).
+- **Lo que queda para Emmanuel:** las filas 1 a 8. Importar no se repasó por CDP: abre el diálogo de Windows, que no se maneja desde la página.

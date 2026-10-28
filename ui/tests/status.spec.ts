@@ -96,14 +96,6 @@ test("una línea nueva en vivo no vuelve a montar las filas ya pintadas: la fila
   expect(await rowHandle?.evaluate((row) => row.isConnected)).toBe(true);
 });
 
-test("las pantallas que todavía no existen dicen en qué etapa llegan", async ({ page }) => {
-  await page.getByRole("navigation", { name: "Pantallas" }).getByRole("link", { name: /Scripts/ }).click();
-
-  await expect(page).toHaveURL(/#\/scripts$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Scripts" })).toBeVisible();
-  await expect(page.getByText("Esta pantalla llega en la etapa 8.")).toBeVisible();
-});
-
 test("un problema de una tecla lleva a Teclas, con su página y su posición", async ({ page }) => {
   await page.getByRole("link", { name: "pages[0].keys[1].hotkey" }).click();
 

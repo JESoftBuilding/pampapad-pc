@@ -68,9 +68,11 @@ internal sealed partial class Composition : IAsyncDisposable
         var obs = new ObsClient(obsFiles.Address, obsFiles.Password, state, log, clock, () => windows.IsProcessRunning("obs64"));
 
         // El Dispatcher publica la biblioteca en el estado al construirse y en cada recarga, junto con los problemas de los pasos y de los atajos.
+        // La salida en vivo de una prueba de la ventana: script.run la escribe y ComposeBridge la publica como script.output (etapa 8).
         Dispatcher? dispatcher = null;
-        (IReadOnlyList<IStepType> catalog, IReadOnlyList<ConditionType> conditions, Executor executor) =
-            ComposeChains(library, state, obs, windows, log, clock, target => dispatcher!.Go(target));
+        var output = new ScriptOutputSink();
+        (IReadOnlyList<IStepType> catalog, IReadOnlyList<ConditionType> conditions, Executor executor, ScriptRunner scripts) =
+            ComposeChains(library, state, obs, windows, log, clock, target => dispatcher!.Go(target), output);
         var preflight = new Preflight(conditions, library, state, log, clock);
 
         // El umbral de mantener sale de console.holdMs de la biblioteca; si no está, es un segundo (02 §4.10).
@@ -117,7 +119,23 @@ internal sealed partial class Composition : IAsyncDisposable
 
         // El puente con todos sus pedidos, después de las fuentes de entrada y el Notifier (01 §4.3). Fuera del if de la bandeja:
         // la prueba de humo comprueba que cada pedido tenga manejador (01 §3.2).
-        composition.ComposeBridge(state, library, dispatcher, executor, catalog, conditions, windows, settings, ui, localFolder);
+        // Las últimas corridas de cada script salen de las líneas de cierre del registro (etapa 8): se lee antes de que corra ninguno.
+        var scriptsSources = new ScriptsSources(
+            library, scripts, new ScriptRuns(log, Path.Combine(localFolder, "log"), clock), new ShellDialogs(ui, () => composition._window), library.BackupFolder, clock);
+        // Lo de esta PC de Ajustes, también sin ventana (etapa 8). En una copia sin instalar no hay arranque ni actualización que tocar.
+        var startup = new StartWithWindows(updater.IsInstalled);
+        var settingsSources = new SettingsSources(
+            settings,
+            startup,
+            updater.IsInstalled ? updater.CheckAsync : null,
+            updater.IsInstalled ? updater.SkipAsync : null,
+            () => new SettingsView(
+                composition._hotkeys is not null,
+                settings.Current.ConsolePort,
+                settings.Current.SkippedVersion,
+                SettingsView.Startup(startup.IsEnabled),
+                new ObsSettingsView(obsFiles.Address().Authority)));
+        composition.ComposeBridge(state, library, dispatcher, executor, catalog, conditions, windows, ui, localFolder, scriptsSources, output, settingsSources);
 
         if (!headless)
         {
