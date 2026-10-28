@@ -16,6 +16,7 @@ export const captureTimeoutText = "Se acabó el tiempo, volvé a grabar.";
  * taken dice dónde ya se usa una combinación ("la tecla 6 de Grabación", "un atajo general"): esa no se acepta y la captura sigue.
  * La usan Teclas y los atajos generales de Ajustes: id, label y hint son de cada uno. Siempre reanuda: si se desmonta mientras espera
  * la respuesta de suspender, al volver reanuda y sale; y a los 25 s cierra sola, antes de que el programa reanude solo a los 30.
+ * clearable apaga "Quitar atajo" donde la combinación es obligatoria (los atajos generales: la fila se saca con su propio Quitar).
  */
 export function HotkeyCapture({
   id,
@@ -26,6 +27,7 @@ export function HotkeyCapture({
   bridge,
   disabledReason,
   taken,
+  clearable = true,
 }: {
   id: string;
   label: string;
@@ -35,6 +37,7 @@ export function HotkeyCapture({
   bridge: Bridge;
   disabledReason?: string;
   taken: (hotkey: string) => string | null;
+  clearable?: boolean;
 }) {
   const [capturing, setCapturing] = useState(false);
   const [notice, setNotice] = useState<string>();
@@ -157,13 +160,15 @@ export function HotkeyCapture({
   return (
     <Field label={label} htmlFor={id} hint={disabledReason ?? hint} error={notice}>
       <div className="flex flex-wrap items-center gap-2">
-        <Input id={id} className="w-48" value={text} onChange={(event) => setText(event.target.value)} onBlur={onTyped} placeholder="Ctrl+Shift+Alt+F8" />
+        <Input id={id} className="w-48" value={text} onChange={(event) => setText(event.target.value)} onBlur={onTyped} placeholder="Sin atajo" />
         <Button size="sm" variant="outline" onClick={() => void start()} disabled={capturing || disabledReason !== undefined}>
           Grabar atajo
         </Button>
-        <Button size="sm" variant="ghost" onClick={() => onChange(undefined)} disabled={value === undefined}>
-          Quitar atajo
-        </Button>
+        {clearable && (
+          <Button size="sm" variant="ghost" onClick={() => onChange(undefined)} disabled={value === undefined}>
+            Quitar atajo
+          </Button>
+        )}
       </div>
       {capturing && (
         <div ref={box} tabIndex={0} onKeyDown={onKeyDown} onBlur={stop} className="rounded-md border border-accent bg-background px-3 py-2 text-sm text-accent outline-none">

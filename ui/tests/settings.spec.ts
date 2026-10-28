@@ -78,6 +78,17 @@ test("agregar un atajo general grabado con la captura, y la combinación repetid
   expect(await calls(page, "hotkeys.suspend")).toEqual([{ suspended: true }, { suspended: false }]);
 });
 
+// Repaso de la etapa 8, fila 5: "Quitar atajo" al lado de "Quitar" dejaba la fila sin combinación en vez de sacarla.
+test("una fila de atajo general tiene un solo Quitar, que la saca entera, y el campo vacío no muestra una combinación", async ({ page }) => {
+  await page.getByRole("button", { name: "Agregar atajo" }).click();
+  const hotkeys = card(page, "Atajos de teclado generales");
+
+  await expect(page.getByLabel("Atajo general 1")).toHaveAttribute("placeholder", "Sin atajo");
+  await expect(hotkeys.getByRole("button", { name: /Quitar/ })).toHaveCount(1);
+  await hotkeys.getByRole("button", { name: "Quitar" }).click();
+  await expect(page.getByLabel("Atajo general 1")).toHaveCount(0);
+});
+
 test("callar el sonido en falso lo escribe en el bloque console", async ({ page }) => {
   await page.getByRole("switch", { name: "Callar el sonido con una toma en curso" }).click();
   await page.getByRole("button", { name: "Guardar", exact: true }).click();

@@ -119,6 +119,21 @@ test("Quitar está apagado si el script está en uso, y dice quién lo usa", asy
   await expect(page.getByText("Lo usan: Ir al banco.")).toBeVisible();
 });
 
+// Repaso de la etapa 8, fila 9: Quitar no pide confirmación porque va al respaldo, y por eso tiene que decir adónde.
+test("Quitar un script dice en qué carpeta del respaldo quedó", async ({ page }) => {
+  // En las muestras no hay ninguno que se pueda quitar: bancocam está en uso y suelto.cmd es un archivo suelto.
+  const viejo = { id: "viejo", name: "Viejo", entry: "viejo.cmd", wait: true, timeoutSec: 15, contract: 1, tags: [], status: "ready", problems: [], usedBy: [] };
+  await answer(page, "scripts.list", { ok: true, data: { scripts: [viejo] } });
+  await answer(page, "scripts.read", { ok: true, data: { script: viejo, manifest: { entry: "viejo.cmd", name: "Viejo" }, files: [], fingerprint: "f", runs: [] } });
+  await page.goto("/#/settings");
+  await page.goto("/#/scripts");
+  await list(page).getByRole("button", { name: /Viejo/ }).click();
+  await page.getByRole("button", { name: "Quitar", exact: true }).click();
+
+  await expect(page.getByRole("status")).toHaveText("Se quitó Viejo: quedó en el respaldo, en C:\\Users\\Emmanuel\\AppData\\Roaming\\PampaPad\\backup\\scripts\\viejo-20261027-153000");
+  expect(await calls(page, "scripts.delete")).toEqual([{ id: "viejo" }]);
+});
+
 test("Importar llama a scripts.import y vuelve a listar", async ({ page }) => {
   await expect(page.getByLabel("Contador")).toContainText("2 scripts");
   const listed = (await calls(page, "scripts.list")).length;

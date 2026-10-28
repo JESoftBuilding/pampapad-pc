@@ -79,6 +79,18 @@ test("grabar un atajo suspende los globales, toma la combinación del teclado y 
   expect(await calls(page, "hotkeys.suspend")).toEqual([{ suspended: true }, { suspended: false }]);
 });
 
+// En una tecla el atajo es optativo: "Quitar atajo" sigue acá aunque los atajos generales no lo tengan.
+test("Quitar atajo deja la tecla sin combinación y se apaga", async ({ page }) => {
+  await stopped(page);
+  await page.getByRole("button", { name: "Tecla 5", exact: true }).click();
+  await page.getByRole("button", { name: "Grabar atajo" }).click();
+  await page.keyboard.press("Control+Shift+Alt+F8");
+  await page.getByRole("button", { name: "Quitar atajo" }).click();
+
+  await expect(page.getByLabel("Atajo de teclado")).toHaveValue("");
+  await expect(page.getByRole("button", { name: "Quitar atajo" })).toBeDisabled();
+});
+
 test("Esc cancela la captura, reanuda los globales y deja el atajo como estaba", async ({ page }) => {
   await stopped(page);
   await page.getByRole("button", { name: "Tecla 5", exact: true }).click();

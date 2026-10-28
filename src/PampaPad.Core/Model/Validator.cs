@@ -97,7 +97,7 @@ public static partial class Validator
             string where = $"hotkeys[{index}]";
             if (binding.Hotkey is null)
             {
-                found.Add(Missing($"{where}.hotkey", "hotkey"));
+                found.Add(Error($"{where}.hotkey", ProblemCodes.FieldMissing, $"Al atajo general {index + 1} le falta la combinación."));
             }
             else
             {
@@ -106,7 +106,7 @@ public static partial class Validator
 
             if (binding.Action is null)
             {
-                found.Add(Missing($"{where}.action", "action"));
+                found.Add(Error($"{where}.action", ProblemCodes.FieldMissing, $"Al atajo general {index + 1} le falta la acción."));
             }
             else
             {
