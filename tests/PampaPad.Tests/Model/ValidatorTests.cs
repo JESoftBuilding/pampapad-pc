@@ -87,6 +87,15 @@ public class ValidatorTests
         Assert.Contains(ValidatePage("", hotkeys), problem => problem.Where == where && problem.Code == code && problem.Severity == Severity.Error);
     }
 
+    // Ajustes muestra sólo el mensaje: tiene que decir qué atajo y con palabras de la pantalla (repaso de la etapa 8, fila 5).
+    [Theory]
+    [InlineData("""{ "hotkey": "Ctrl+F5", "action": "x" }, { "action": "x" }""", "hotkeys[1].hotkey", "Al atajo general 2 le falta la combinación.")]
+    [InlineData("""{ "hotkey": "Ctrl+F5" }""", "hotkeys[0].action", "Al atajo general 1 le falta la acción.")]
+    public void A_missing_field_of_a_general_hotkey_says_which_one(string hotkeys, string where, string message)
+    {
+        Assert.Contains(ValidatePage("", hotkeys), problem => problem.Where == where && problem.Message == message);
+    }
+
     [Fact]
     public void A_key_cannot_repeat_a_general_hotkey()
     {
