@@ -51,6 +51,11 @@ export function ScriptsScreen({ bridge, editor, script: ficha }: ScreenProps) {
             {model.actionFailure.message}
           </p>
         )}
+        {model.removed !== undefined && (
+          <p role="status" className="break-all text-sm text-muted">
+            {model.removed}
+          </p>
+        )}
       </Card>
       <div className="grid gap-4 xl:grid-cols-[24rem_1fr]">
         <Card>
@@ -62,7 +67,7 @@ export function ScriptsScreen({ bridge, editor, script: ficha }: ScreenProps) {
             ficha={ficha}
             removeReason={removeReason}
             onSaved={() => void model.refresh()}
-            onRemove={() => open !== undefined && void model.remove(open.view.id)}
+            onRemove={() => open !== undefined && void model.remove(open.view.id, open.view.name)}
             onReveal={() => open !== undefined && void model.reveal(open.view.id)}
           />
           {open !== undefined && (

@@ -30,6 +30,8 @@ export function useScriptsModel(bridge: Bridge, ficha: ScriptEditor) {
   const [order, setOrder] = useState<ScriptOrder>("name");
   const [test, setTest] = useState<TestState>({ kind: "idle" });
   const [actionFailure, setActionFailure] = useState<Failure>();
+  // Quitar no pide confirmación porque va al respaldo local: por eso dice adónde (repaso de la etapa 8).
+  const [removed, setRemoved] = useState<string>();
   const outputs = useRef(new Map<string, Output>());
 
   const refresh = useCallback(async () => {
@@ -89,6 +91,7 @@ export function useScriptsModel(bridge: Bridge, ficha: ScriptEditor) {
   const act = useCallback(
     async (work: () => Promise<{ ok: boolean; error?: Failure }>) => {
       setActionFailure(undefined);
+      setRemoved(undefined);
       const reply = await work();
       if (!reply.ok) {
         setActionFailure(reply.error);
@@ -103,6 +106,7 @@ export function useScriptsModel(bridge: Bridge, ficha: ScriptEditor) {
   const importScripts = useCallback(async () => {
     const reply = await bridge.request("scripts.import", {});
     setActionFailure(reply.ok ? undefined : reply.error);
+    setRemoved(undefined);
     const list = await refresh();
     const imported = reply.ok && reply.data.id !== "" ? list?.find((script) => script.id === reply.data.id) : undefined;
     if (imported !== undefined) {
@@ -111,13 +115,17 @@ export function useScriptsModel(bridge: Bridge, ficha: ScriptEditor) {
   }, [bridge, ficha, refresh]);
 
   const remove = useCallback(
-    async (id: string) => {
-      if (await act(() => bridge.request("scripts.delete", { id }))) {
+    async (id: string, name: string) => {
+      setRemoved(undefined);
+      const reply = await bridge.request("scripts.delete", { id });
+      setActionFailure(reply.ok ? undefined : reply.error);
+      if (reply.ok) {
+        setRemoved(`Se quitó ${name}: quedó en el respaldo, en ${reply.data.backupPath}`);
         void ficha.select(undefined);
         await refresh();
       }
     },
-    [act, bridge, ficha, refresh],
+    [bridge, ficha, refresh],
   );
 
   const reveal = useCallback((id?: string) => act(() => bridge.request("scripts.reveal", id === undefined ? {} : { id })), [act, bridge]);
@@ -139,6 +147,7 @@ export function useScriptsModel(bridge: Bridge, ficha: ScriptEditor) {
     remove,
     reveal,
     actionFailure,
+    removed,
   };
 }
 
