@@ -47,7 +47,7 @@ export function ScriptFilters({ model }: { model: ScriptsModel }) {
 }
 
 /** Una fila por script: estado, nombre con el id debajo, descripción, entrada, tope y cómo terminó la última corrida. Sin ficha, en gris. */
-export function ScriptList({ scripts, selected, onSelect }: { scripts: ScriptView[]; selected?: string; onSelect: (script: ScriptView) => void }) {
+export function ScriptList({ scripts, selected, locked = false, onSelect }: { scripts: ScriptView[]; selected?: string; locked?: boolean; onSelect: (script: ScriptView) => void }) {
   const now = new Date();
   return (
     <ul aria-label="Scripts" className="space-y-1">
@@ -56,6 +56,7 @@ export function ScriptList({ scripts, selected, onSelect }: { scripts: ScriptVie
           <button
             type="button"
             aria-pressed={script.id === selected}
+            disabled={locked && script.id !== selected}
             onClick={() => onSelect(script)}
             className={cn(
               "w-full rounded-md border-l-2 px-2 py-1.5 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/60",

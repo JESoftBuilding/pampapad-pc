@@ -151,3 +151,31 @@ test("editar la ficha, ir a Teclas y volver deja el borrador, y window.dirty sig
   await expect(page.getByLabel("Nombre")).toHaveValue("Cámara nueva");
   expect((await calls(page, "window.dirty")).at(-1)).toEqual({ dirty: true });
 });
+
+test("después de guardar, la ficha toma la fila nueva de la lista: el título no queda viejo", async ({ page }) => {
+  // La lista que vuelve después de guardar trae el nombre nuevo.
+  await page.evaluate(async () => {
+    type Row = { id: string; name: string };
+    const fake = (window as unknown as { pampapadFake: { request(name: string, data: unknown): Promise<{ data: { scripts: Row[] } }>; answer(name: string, reply: unknown): void } }).pampapadFake;
+    const reply = await fake.request("scripts.list", {});
+    fake.answer("scripts.list", { ok: true, data: { scripts: reply.data.scripts.map((row) => (row.id === "bancocam" ? { ...row, name: "Cámara nueva" } : row)) } });
+  });
+  await openBancocam(page);
+  await page.getByLabel("Nombre").fill("Cámara nueva");
+  await page.getByRole("button", { name: "Guardar la ficha" }).click();
+
+  await expect(page.getByRole("heading", { level: 2, name: "Cámara nueva" })).toBeVisible();
+});
+
+test("con la ficha cambiada, abrir otro script e Importar se apagan hasta guardar o descartar", async ({ page }) => {
+  await openBancocam(page);
+  await page.getByLabel("Nombre").fill("Cambiado");
+
+  await expect(page.getByText("Guardá o descartá los cambios de la ficha primero.")).toBeVisible();
+  await expect(list(page).getByRole("button", { name: /suelto\.cmd/ })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Importar" })).toBeDisabled();
+
+  await page.getByRole("button", { name: "Descartar" }).click();
+  await expect(list(page).getByRole("button", { name: /suelto\.cmd/ })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Importar" })).toBeEnabled();
+});

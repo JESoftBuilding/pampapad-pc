@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { countText } from "@/model/scripts";
 import type { ScreenProps } from "@/screens/screen";
 import { Button } from "@/ui/button";
@@ -11,6 +12,14 @@ import { useScriptsModel } from "./useScriptsModel";
 export function ScriptsScreen({ bridge, editor, script: ficha }: ScreenProps) {
   const model = useScriptsModel(bridge, ficha);
   const open = ficha.open;
+  const { refreshView } = ficha;
+  useEffect(() => {
+    if (model.scripts !== undefined) {
+      refreshView(model.scripts);
+    }
+  }, [model.scripts, refreshView]);
+  // Abrir otro script o importar descartaría la ficha sin avisar: mientras tenga cambios, primero se guarda o se descarta.
+  const lockReason = ficha.dirty ? "Guardá o descartá los cambios de la ficha primero." : undefined;
   const testing = model.test.kind === "starting" || (model.test.kind === "running" && model.test.output.end === undefined);
   const removeReason =
     open === undefined
@@ -28,7 +37,7 @@ export function ScriptsScreen({ bridge, editor, script: ficha }: ScreenProps) {
           <p className="mr-auto text-sm" aria-label="Contador">
             {model.scripts === undefined ? "Pidiendo los scripts…" : countText(model.scripts)}
           </p>
-          <Button variant="outline" onClick={() => void model.importScripts()}>
+          <Button variant="outline" disabled={lockReason !== undefined} title={lockReason} onClick={() => void model.importScripts()}>
             Importar
           </Button>
           <Button variant="outline" onClick={() => void model.reveal()}>
@@ -45,7 +54,8 @@ export function ScriptsScreen({ bridge, editor, script: ficha }: ScreenProps) {
       </Card>
       <div className="grid gap-4 xl:grid-cols-[24rem_1fr]">
         <Card>
-          <ScriptList scripts={model.shown} selected={open?.view.id} onSelect={(view) => void ficha.select(view)} />
+          {lockReason !== undefined && <p className="mb-2 text-xs text-muted">{lockReason}</p>}
+          <ScriptList scripts={model.shown} selected={open?.view.id} locked={lockReason !== undefined} onSelect={(view) => void ficha.select(view)} />
         </Card>
         <Card className="space-y-4">
           <ScriptCard

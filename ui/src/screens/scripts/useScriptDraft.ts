@@ -78,7 +78,15 @@ export function useScriptDraft(bridge: Bridge) {
   /** Recargar la ficha: lee otra vez del disco y tira el borrador (la salida de config_changed_on_disk). */
   const reload = useCallback(() => (open === undefined ? Promise.resolve() : select(open.view)), [open, select]);
 
-  return { open, select, setManifest, dirty, save, saveState, discard, reload };
+  /** La fila nueva de la lista reemplaza la abierta: después de guardar o de una corrida, el título y "Lo usan" no quedan viejos. */
+  const refreshView = useCallback((views: ScriptView[]) => {
+    setOpen((current) => {
+      const fresh = current === undefined ? undefined : views.find((view) => view.id === current.view.id);
+      return current === undefined || fresh === undefined || fresh === current.view ? current : { ...current, view: fresh };
+    });
+  }, []);
+
+  return { open, select, setManifest, dirty, save, saveState, discard, reload, refreshView };
 }
 
 /** Lo que devuelve useScriptDraft: App lo llama una vez y lo pasa a las pantallas por ScreenProps. */
