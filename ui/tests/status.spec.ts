@@ -97,10 +97,10 @@ test("una línea nueva en vivo no vuelve a montar las filas ya pintadas: la fila
 });
 
 test("las pantallas que todavía no existen dicen en qué etapa llegan", async ({ page }) => {
-  await page.getByRole("navigation", { name: "Pantallas" }).getByRole("link", { name: /Scripts/ }).click();
+  await page.getByRole("navigation", { name: "Pantallas" }).getByRole("link", { name: /Ajustes/ }).click();
 
-  await expect(page).toHaveURL(/#\/scripts$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Scripts" })).toBeVisible();
+  await expect(page).toHaveURL(/#\/settings$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Ajustes" })).toBeVisible();
   await expect(page.getByText("Esta pantalla llega en la etapa 8.")).toBeVisible();
 });
 

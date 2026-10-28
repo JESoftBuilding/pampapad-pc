@@ -5,6 +5,8 @@ import { Frame, type NavItem } from "@/Frame";
 import { useDraft } from "@/screens/common/useDraft";
 import { ActionsScreen } from "@/screens/actions/Actions";
 import { KeysScreen } from "@/screens/keys/Keys";
+import { ScriptsScreen } from "@/screens/scripts/Scripts";
+import { useScriptDraft } from "@/screens/scripts/useScriptDraft";
 import { Placeholder } from "@/screens/Placeholder";
 import type { ScreenProps } from "@/screens/screen";
 import { StatusScreen } from "@/screens/status/Status";
@@ -15,12 +17,7 @@ export type ScreenRow = NavItem & { Component: ComponentType<ScreenProps> };
 export const screens: ScreenRow[] = [
   { hash: "keys", title: "Teclas", Component: KeysScreen },
   { hash: "actions", title: "Acciones", Component: ActionsScreen },
-  {
-    hash: "scripts",
-    title: "Scripts",
-    stage: 8,
-    Component: () => <Placeholder title="Scripts" stage={8} note="Los scripts entran en las acciones con la etapa 5; su pantalla, en la 8." />,
-  },
+  { hash: "scripts", title: "Scripts", Component: ScriptsScreen },
   { hash: "status", title: "Estado", Component: StatusScreen },
   {
     hash: "settings",
@@ -44,6 +41,9 @@ export function App({ bridge }: { bridge: Bridge }) {
   const view = useSnapshot(bridge);
   // Un solo borrador por ventana (05 §11 define un solo window.dirty): pasar de una pantalla a otra no descarta lo editado.
   const editor = useDraft(bridge, view);
+  // El borrador de la ficha de un script vive acá por lo mismo: navegar no lo pierde.
+  const script = useScriptDraft(bridge);
+  const dirty = editor.dirty || script.dirty;
   const announced = useRef(false);
 
   useEffect(() => {
@@ -65,13 +65,13 @@ export function App({ bridge }: { bridge: Bridge }) {
   // window.dirty (05 §11): la cáscara pregunta al cerrar sólo si hay cambios sin guardar. Vive acá y no en una pantalla: si no, al
   // navegar se mandaría dirty false con el borrador todavía sin guardar.
   useEffect(() => {
-    void bridge.request("window.dirty", { dirty: editor.dirty });
-  }, [bridge, editor.dirty]);
+    void bridge.request("window.dirty", { dirty });
+  }, [bridge, dirty]);
 
   const screen = screens.find((row) => row.hash === current) ?? screens[0];
   return (
     <Frame screens={screens} current={screen.hash} title={screen.title} view={view}>
-      <screen.Component bridge={bridge} view={view} editor={editor} />
+      <screen.Component bridge={bridge} view={view} editor={editor} script={script} />
     </Frame>
   );
 }
