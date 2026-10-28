@@ -90,6 +90,18 @@ public sealed class Bridge(StateStore state, Log log)
 
     public async Task<string> HandleAsync(string messageJson, Caller caller, CancellationToken ct)
     {
+        (string reply, string name, string? code) = await DispatchAsync(messageJson, caller, ct).ConfigureAwait(false);
+        if (caller == Caller.Mcp)
+        {
+            // Cada pedido del MCP deja su línea, con cómo terminó (05 §7; plan de la etapa MCP, decisión 10).
+            log.Write(code is null ? LogLevel.Info : LogLevel.Warning, "mcp", $"{name}: {code ?? "ok"}", code, Trigger.Mcp);
+        }
+
+        return reply;
+    }
+
+    private async Task<(string Reply, string Name, string? Code)> DispatchAsync(string messageJson, Caller caller, CancellationToken ct)
+    {
         long id = 0;
         string name = "(sin nombre)";
         try
@@ -97,7 +109,7 @@ public sealed class Bridge(StateStore state, Log log)
             Result<IncomingRequest> parsed = Envelope.Parse(messageJson);
             if (!parsed.Ok)
             {
-                return Refuse(Envelope.IdOf(messageJson), parsed.Failure, caller);
+                return (Refuse(Envelope.IdOf(messageJson), parsed.Failure, caller), name, parsed.Failure.Code);
             }
 
             IncomingRequest request = parsed.Value!;
@@ -111,29 +123,29 @@ public sealed class Bridge(StateStore state, Log log)
 
             if (registration is null)
             {
-                return Refuse(id, new Failure(ErrorCodes.UnknownRequest, $"No existe el pedido {name}.", "request"), caller);
+                return (Refuse(id, new Failure(ErrorCodes.UnknownRequest, $"No existe el pedido {name}.", "request"), caller), name, ErrorCodes.UnknownRequest);
             }
 
             Failure? refused = BridgePolicy.Check(name, registration.Kind, registration.Callers, caller, PolicyContext.From(state.Current, McpAllowed()));
             if (refused is not null)
             {
-                return Refuse(id, refused, caller);
+                return (Refuse(id, refused, caller), name, refused.Code);
             }
 
             Outcome outcome = await registration.Invoke(request.Data, caller, ct).ConfigureAwait(false);
             return outcome.Failure is not null
-                ? Envelope.Error(id, outcome.Failure)
-                : Envelope.Response(id, outcome.Data ?? new NoData());
+                ? (Envelope.Error(id, outcome.Failure), name, outcome.Failure.Code)
+                : (Envelope.Response(id, outcome.Data ?? new NoData()), name, null);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            return Envelope.Error(id, new Failure(ErrorCodes.Cancelled, $"Se canceló {name}: se cerró quien lo pidió."));
+            return (Envelope.Error(id, new Failure(ErrorCodes.Cancelled, $"Se canceló {name}: se cerró quien lo pidió.")), name, ErrorCodes.Cancelled);
         }
         catch (Exception e)
         {
             // La línea lleva la excepción entera: con sólo el mensaje, un "Object reference not set" no dice dónde pasó.
             log.Error("bridge", $"El pedido {name} reventó: {e}", ErrorCodes.InternalError);
-            return Envelope.Error(id, new Failure(ErrorCodes.InternalError, $"El pedido {name} falló adentro del programa: {e.Message}"));
+            return (Envelope.Error(id, new Failure(ErrorCodes.InternalError, $"El pedido {name} falló adentro del programa: {e.Message}")), name, ErrorCodes.InternalError);
         }
     }
 

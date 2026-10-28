@@ -15,6 +15,9 @@ internal sealed partial class Composition
     private IDisposable? _bridgeEvents;
     private EditorWindow? _window;
 
+    // La tubería del MCP (E-MCP-2). Sólo en la composición con bandeja: la prueba de humo no la abre.
+    private PipeListener? _pipe;
+
     /// <summary>El puente con todos sus pedidos. La prueba de humo comprueba que cada nombre de RequestNames tenga manejador.</summary>
     public Bridge Bridge => _bridge ?? throw new InvalidOperationException("El puente lo arma Composition.Build.");
 

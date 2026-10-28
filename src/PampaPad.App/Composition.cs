@@ -164,6 +164,7 @@ internal sealed partial class Composition : IAsyncDisposable
             tray.StatusRequested += () => composition.OpenWindow(EditorWindow.StatusScreen);
             tray.ExitRequested += composition.RequestExit;
             composition.HookChains(tray, preflight, notifier, dispatcher);
+            composition._pipe = new PipeListener(composition.Bridge, log, PipeProtocol.Name(AppIdentity.Dev), AppIdentity.Version);
             tray.ReconnectRequested += (_, _) => obs.Reconnect();
             tray.ConsoleToggleRequested += () =>
                 composition._console?.Release(state.Current.Console.State != ConsoleLinkState.Released);
@@ -224,6 +225,11 @@ internal sealed partial class Composition : IAsyncDisposable
         {
             // El reloj de los gestos: sin él, un mantenido sólo saldría con el próximo estado que mande la placa.
             _loops.Add(_dispatcher.KeepTickingAsync(TimeProvider.System, _life.Token));
+        }
+
+        if (_pipe is not null)
+        {
+            _loops.Add(_pipe.RunAsync(_life.Token));
         }
 
         if (Tray is not null)
