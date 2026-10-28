@@ -58,6 +58,7 @@ export function HotkeysCard({ config, setDraft, bridge, busyReason, highlighted 
               bridge={bridge}
               disabledReason={busyReason}
               taken={(text) => usedByGeneral(config, index, text)}
+              clearable={false}
             />
             <Field label={`Acción del atajo ${index + 1}`} htmlFor={`general-action-${index}`}>
               <Select id={`general-action-${index}`} value={binding.action ?? ""} onChange={(event) => setDraft((current) => setBinding(current, index, { action: event.target.value }))}>
