@@ -102,7 +102,8 @@ public sealed class PipeListener(Bridge bridge, Log log, string pipeName, string
             outgoing.Writer.TryWrite(PipeProtocol.ServerHello(version));
             events = bridge.Subscribe(json =>
             {
-                if (Array.Exists(Forwarded, prefix => json.StartsWith(prefix, StringComparison.Ordinal)))
+                // Apagado, la tubería sigue saludando y negando pedidos, pero no deja salir nada.
+                if (bridge.McpAllowed() && Array.Exists(Forwarded, prefix => json.StartsWith(prefix, StringComparison.Ordinal)))
                 {
                     outgoing.Writer.TryWrite(json);
                 }

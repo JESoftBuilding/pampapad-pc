@@ -38,8 +38,11 @@ public sealed class LocalSettings(string path, Log log)
 
     public LocalData Current => Volatile.Read(ref _current);
 
-    /// <summary>Si el MCP puede pedir. El puente lo llama en cada pedido: apagarlo en Ajustes vale en el acto, sin reiniciar.</summary>
-    public bool McpAllowed() => Current.McpEnabled ?? true;
+    /// <summary>
+    /// Si el MCP puede pedir. El puente lo llama en cada pedido: apagarlo en Ajustes vale en el acto, sin reiniciar. Con local.json
+    /// ilegible falla cerrado: los valores por defecto dirían encendido aunque el archivo lo tuviera apagado.
+    /// </summary>
+    public bool McpAllowed() => Volatile.Read(ref _unreadable) is null && (Current.McpEnabled ?? true);
 
     /// <summary>Lee el archivo. Si falla, deja los valores por defecto en memoria, lo anota y bloquea los guardados.</summary>
     public Result Load()

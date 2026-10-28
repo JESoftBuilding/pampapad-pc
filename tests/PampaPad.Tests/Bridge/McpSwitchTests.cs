@@ -58,6 +58,21 @@ public sealed class McpSwitchTests : IAsyncLifetime
         Assert.Equal(BridgePolicy.McpOff, reply.RootElement.GetProperty("error").GetProperty("message").GetString());
     }
 
+    // Revisión de la tanda 1 (must): un local.json que no se lee deja los valores por defecto, y el del MCP es encendido. Falla cerrado.
+    [Theory]
+    [InlineData("""{ "version": 1, "mcpEnabled": "false" }""")]
+    [InlineData("""{ "version": 99, "mcpEnabled": false }""")]
+    [InlineData("""{ "version": 1, "mcpEnabled": fal""")]
+    public async Task An_unreadable_local_json_switches_the_mcp_off(string text)
+    {
+        File.WriteAllText(LocalPath, text);
+        Assert.False(_local.Load().Ok);
+
+        using JsonDocument reply = await AskAsync("test.read", "{}", Caller.Mcp);
+
+        Assert.Equal(ErrorCodes.NoPermission, Code(reply));
+    }
+
     [Fact]
     public async Task Changing_it_from_the_window_counts_on_the_next_request_without_restarting()
     {

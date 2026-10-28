@@ -20,12 +20,13 @@ public sealed class PipeListenerTests : IAsyncLifetime
     private readonly CancellationTokenSource _life = new();
     private Task _running = Task.CompletedTask;
     private int _reached;
+    private volatile bool _mcpAllowed = true;
 
     public PipeListenerTests()
     {
         var executor = new Executor([], [], TimeProvider.System);
         _dispatcher = new Dispatcher(_rig.Library, _state, executor, new Gestures(TimeProvider.System, Gestures.HoldFrom(null), Gestures.DefaultFreshness), _rig.Log);
-        _bridge = new Bridge(_state, _rig.Log) { McpAllowed = () => true };
+        _bridge = new Bridge(_state, _rig.Log) { McpAllowed = () => _mcpAllowed };
         _hooks = Requests.RegisterAll(_bridge, new StatusSources("9.9.9", _state, _rig.Library, _dispatcher, _rig.Log, [], [], () => new SettingsView(false, null, null)));
 
         // Contesta quién pidió: el que llega al manejador, no el que diga el mensaje.
@@ -165,6 +166,22 @@ public sealed class PipeListenerTests : IAsyncLifetime
         string received = (await open.ReadAsync())!;
 
         Assert.StartsWith("""{"event":"action.finished",""", received);
+    }
+
+    // Revisión de la tanda 1 (must): con el interruptor apagado la tubería saluda y niega cada pedido, pero no reenvía eventos.
+    [Fact]
+    public async Task Switched_off_no_event_goes_down_the_pipe()
+    {
+        _mcpAllowed = false;
+        await using var client = await ConnectAsync();
+        await client.HelloAsync();
+        await Poll.Until(() => Subscribers() == 1);
+
+        _bridge.Publish(EventNames.ScriptOutput, new WhoAsked("secreto"));
+        _bridge.Publish(EventNames.ActionFinished, new WhoAsked("fin"));
+        string first = await client.AskAsync("""{"id":7,"request":"test.who","data":{}}""");
+
+        Assert.StartsWith("""{"id":7,"ok":false""", first);
     }
 
     [Fact]
