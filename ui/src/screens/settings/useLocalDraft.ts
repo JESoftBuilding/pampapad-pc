@@ -61,6 +61,9 @@ export function useLocalDraft(bridge: Bridge, view: SnapshotView) {
     return true;
   }, [bridge, changes]);
 
+  // update.skip contesta {} y no hay evento de ajustes: la versión salteada pasa a la base acá, o no se ve hasta reabrir.
+  const markSkipped = useCallback((version: string) => setSaved(base === undefined ? undefined : { ...base, skippedVersion: version }), [base]);
+
   const discard = useCallback(() => {
     setChanges({});
     setSaveState({ kind: "idle" });
@@ -76,7 +79,7 @@ export function useLocalDraft(bridge: Bridge, view: SnapshotView) {
           skippedVersion: changes.skippedVersion === undefined ? base.skippedVersion : changes.skippedVersion === "" ? undefined : changes.skippedVersion,
         };
 
-  return { shown, set, dirty, save, saveState, discard };
+  return { shown, set, dirty, save, saveState, discard, markSkipped };
 }
 
 /** Lo que devuelve useLocalDraft: App lo llama una vez y lo pasa a las pantallas por ScreenProps. */

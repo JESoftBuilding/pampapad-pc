@@ -156,11 +156,14 @@ test("si settings.save falla y config.save pasa, la barra dice cuál y queda el 
   await expect(page.getByRole("switch", { name: "Arrancar con Windows" })).toHaveAttribute("aria-checked", "false");
 });
 
-test("Saltear esta versión manda update.skip", async ({ page }) => {
+test("Saltear esta versión manda update.skip y la tarjeta muestra la salteada con el botón para olvidarla", async ({ page }) => {
   await setState(page, { update: { phase: "available", version: "0.7.0" } });
   await page.getByRole("button", { name: "Saltear esta versión" }).click();
+  await setState(page, { update: { phase: "idle" } });
 
   expect(await calls(page, "update.skip")).toEqual([{}]);
+  await expect(page.getByText("Versión salteada: 0.7.0")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Olvidar la versión salteada" })).toBeVisible();
 });
 
 test("la captura que se desmonta en pleno await reanuda los atajos", async ({ page }) => {

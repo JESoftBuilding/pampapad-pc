@@ -60,6 +60,10 @@ export function SettingsScreen({ bridge, view, editor, local }: ScreenProps) {
   const run = async (name: "update.check" | "update.skip" | "library.reveal") => {
     const reply = await bridge.request(name, {});
     setProgramFailure(reply.ok ? undefined : reply.error.message);
+    const update = view.state?.update;
+    if (reply.ok && name === "update.skip" && update?.phase === "available" && update.version !== undefined) {
+      local.markSkipped(update.version);
+    }
   };
 
   const config = editor.draft;
