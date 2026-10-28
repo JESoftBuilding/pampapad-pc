@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { triggerSchema } from "./contract.base";
 import { scriptEndSchema, scriptOutputSchema, scriptsRequests } from "./contract.scripts";
+import { settingsRequests, settingsViewSchema } from "./contract.settings";
 
 // El contrato del puente del lado de la página (01 §5): espejo de src/PampaPad.Core/Bridge/Dtos.cs y RequestNames.cs. contract.test.ts
 // valida contra estos esquemas cada muestra de contract.samples.json, que escribe tests/PampaPad.Tests/Contract.cs. Lo que C# deja en
@@ -92,7 +93,7 @@ export const snapshotSchema = z.object({
   state: stateSchema,
   stepTypes: z.array(z.object({ id: z.string(), name: z.string(), group: z.string(), fields: z.array(fieldSchema) })),
   conditionTypes: z.array(z.object({ id: z.string(), name: z.string(), fields: z.array(fieldSchema) })),
-  settings: z.object({ hotkeysEnabled: z.boolean(), consolePort: z.string().optional(), skippedVersion: z.string().optional() }),
+  settings: settingsViewSchema,
 });
 
 export const logEntrySchema = z.object({
@@ -161,6 +162,7 @@ export const requests = {
     }),
   },
   ...scriptsRequests,
+  ...settingsRequests,
 } as const;
 
 export const events = {

@@ -454,7 +454,12 @@
           ],
           "settings": {
             "hotkeysEnabled": true,
-            "consolePort": "COM20"
+            "consolePort": "COM20",
+            "startWithWindows": "on",
+            "obs": {
+              "address": "127.0.0.1:4455",
+              "password": "la guardada en OBS"
+            }
           }
         }
       }
@@ -948,6 +953,53 @@
       },
       "response": {
         "id": 18,
+        "ok": true,
+        "data": {}
+      }
+    },
+    "settings.save": {
+      "request": {
+        "id": 20,
+        "request": "settings.save",
+        "data": {
+          "startWithWindows": false,
+          "skippedVersion": ""
+        }
+      },
+      "response": {
+        "id": 20,
+        "ok": true,
+        "data": {
+          "hotkeysEnabled": true,
+          "consolePort": "COM20",
+          "startWithWindows": "off",
+          "obs": {
+            "address": "127.0.0.1:4455",
+            "password": "la guardada en OBS"
+          }
+        }
+      }
+    },
+    "update.check": {
+      "request": {
+        "id": 21,
+        "request": "update.check",
+        "data": {}
+      },
+      "response": {
+        "id": 21,
+        "ok": true,
+        "data": {}
+      }
+    },
+    "update.skip": {
+      "request": {
+        "id": 22,
+        "request": "update.skip",
+        "data": {}
+      },
+      "response": {
+        "id": 22,
         "ok": true,
         "data": {}
       }

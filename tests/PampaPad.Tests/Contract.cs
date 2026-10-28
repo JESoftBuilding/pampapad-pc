@@ -48,7 +48,7 @@ public class Contract
         await using var rig = new DispatcherRig(DispatcherRig.Example);
         var bridge = new Bridge(rig.State, rig.Log);
         using var runs = new ScriptRuns(rig.Log, Path.Combine(Path.GetTempPath(), "pampapad-sin-registro"), TimeProvider.System);
-        using IDisposable hooks = Requests.RegisterAll(bridge, Sources(rig), Edit(rig), new ScriptsSources(rig.Library, new ScriptRunner(rig.Library, rig.Log, TimeProvider.System, null), runs, new FakeShellDialogs(), rig.Library.BackupFolder, TimeProvider.System));
+        using IDisposable hooks = Requests.RegisterAll(bridge, Sources(rig), Edit(rig), new ScriptsSources(rig.Library, new ScriptRunner(rig.Library, rig.Log, TimeProvider.System, null), runs, new FakeShellDialogs(), rig.Library.BackupFolder, TimeProvider.System), Settings(rig));
 
         // Los de la cáscara (AppRequests) no se ven desde acá: van por RequestNames.Shell, y la prueba de humo los controla con el programa real.
         string[] windowRequests = [.. bridge.RegisteredFor(Caller.Window), .. RequestNames.Shell];
@@ -62,7 +62,7 @@ public class Contract
         await using var rig = new DispatcherRig(DispatcherRig.Example);
         var bridge = new Bridge(rig.State, rig.Log);
         using var runs = new ScriptRuns(rig.Log, Path.Combine(Path.GetTempPath(), "pampapad-sin-registro"), TimeProvider.System);
-        using IDisposable hooks = Requests.RegisterAll(bridge, Sources(rig), Edit(rig), new ScriptsSources(rig.Library, new ScriptRunner(rig.Library, rig.Log, TimeProvider.System, null), runs, new FakeShellDialogs(), rig.Library.BackupFolder, TimeProvider.System));
+        using IDisposable hooks = Requests.RegisterAll(bridge, Sources(rig), Edit(rig), new ScriptsSources(rig.Library, new ScriptRunner(rig.Library, rig.Log, TimeProvider.System, null), runs, new FakeShellDialogs(), rig.Library.BackupFolder, TimeProvider.System), Settings(rig));
 
         Assert.Equal(RequestNames.All.Order(StringComparer.Ordinal), bridge.Registered.Concat(RequestNames.Shell).Order(StringComparer.Ordinal));
     }
@@ -91,7 +91,8 @@ public class Contract
         StateView state = SampleState();
         LogEntry[] entries = SampleLog();
         (StepTypeView[] stepTypes, ConditionTypeView[] conditionTypes) = Catalogs();
-        var snapshot = new AppSnapshot("0.2.1", Migrations.CurrentVersion, config, SampleFingerprint, state, stepTypes, conditionTypes, new SettingsView(true, "COM20", null));
+        var snapshot = new AppSnapshot("0.2.1", Migrations.CurrentVersion, config, SampleFingerprint, state, stepTypes, conditionTypes, SampleSettings);
+        var settingsSaved = SampleSettings with { StartWithWindows = StartupStatus.Off };
         Problem savedWarning = new("pages[0].keys[0].shortLabel", ProblemCodes.ShortLabelInvalid, "shortLabel lleva una o dos líneas de hasta 6 caracteres.", Severity.Warning);
 
         return new JsonObject
@@ -131,6 +132,10 @@ public class Contract
                     Envelope.Response(16, new ScriptsDeleteResponse(@"C:\Users\Emmanuel\AppData\Roaming\PampaPad\backup\scripts\viejo-20261027-153000"))),
                 [RequestNames.ScriptsReveal] = Pair(Envelope.Request(17, RequestNames.ScriptsReveal, new ScriptsRevealRequest("bancocam")), Envelope.Response(17, new NoData())),
                 [RequestNames.LibraryReveal] = Pair(Envelope.Request(18, RequestNames.LibraryReveal, new NoData()), Envelope.Response(18, new NoData())),
+                [RequestNames.SettingsSave] = Pair(
+                    Envelope.Request(20, RequestNames.SettingsSave, new SettingsSaveRequest(StartWithWindows: false, SkippedVersion: "")), Envelope.Response(20, settingsSaved)),
+                [RequestNames.UpdateCheck] = Pair(Envelope.Request(21, RequestNames.UpdateCheck, new NoData()), Envelope.Response(21, new NoData())),
+                [RequestNames.UpdateSkip] = Pair(Envelope.Request(22, RequestNames.UpdateSkip, new NoData()), Envelope.Response(22, new NoData())),
                 [RequestNames.ScriptsTest] = Pair(Envelope.Request(19, RequestNames.ScriptsTest, new ScriptsTestRequest("bancocam")), Envelope.Response(19, new ActionTestResponse(RunId))),
             },
             ["events"] = new JsonObject
@@ -155,12 +160,17 @@ public class Contract
         };
     }
 
+    private static readonly SettingsView SampleSettings = new(true, "COM20", null, StartupStatus.On, new ObsSettingsView("127.0.0.1:4455"));
+
     private static readonly string SampleFingerprint = Fingerprints.Of("config.json de la muestra"u8);
 
     private static readonly string SavedFingerprint = Fingerprints.Of("config.json ya guardado"u8);
 
     private static StatusSources Sources(DispatcherRig rig) =>
         new("0.0.0", rig.State, rig.Library, rig.Dispatcher, rig.Log, [rig.Marker], [], () => new SettingsView(false, null, null));
+
+    private static SettingsSources Settings(DispatcherRig rig) =>
+        new(new LocalSettings(Path.Combine(Path.GetTempPath(), "pampapad-sin-local", "local.json"), rig.Log), new FakeStartup(null), null, null, () => new SettingsView(false, null, null));
 
     private static EditSources Edit(DispatcherRig rig) =>
         new(rig.Library, rig.State, rig.Log, rig.Executor, [rig.Marker], [], rig.Dispatcher, new FakeWindows(), rig.Hotkeys);

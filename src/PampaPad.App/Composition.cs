@@ -122,7 +122,20 @@ internal sealed partial class Composition : IAsyncDisposable
         // Las últimas corridas de cada script salen de las líneas de cierre del registro (etapa 8): se lee antes de que corra ninguno.
         var scriptsSources = new ScriptsSources(
             library, scripts, new ScriptRuns(log, Path.Combine(localFolder, "log"), clock), new ShellDialogs(ui, () => composition._window), library.BackupFolder, clock);
-        composition.ComposeBridge(state, library, dispatcher, executor, catalog, conditions, windows, settings, ui, localFolder, scriptsSources, output);
+        // Lo de esta PC de Ajustes, también sin ventana (etapa 8). En una copia sin instalar no hay arranque ni actualización que tocar.
+        var startup = new StartWithWindows(updater.IsInstalled);
+        var settingsSources = new SettingsSources(
+            settings,
+            startup,
+            updater.IsInstalled ? updater.CheckAsync : null,
+            updater.IsInstalled ? updater.SkipAsync : null,
+            () => new SettingsView(
+                composition._hotkeys is not null,
+                settings.Current.ConsolePort,
+                settings.Current.SkippedVersion,
+                SettingsView.Startup(startup.IsEnabled),
+                new ObsSettingsView(obsFiles.Address().Authority)));
+        composition.ComposeBridge(state, library, dispatcher, executor, catalog, conditions, windows, ui, localFolder, scriptsSources, output, settingsSources);
 
         if (!headless)
         {

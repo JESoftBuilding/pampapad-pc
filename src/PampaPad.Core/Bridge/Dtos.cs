@@ -105,9 +105,6 @@ public sealed record ConditionTypeView(string Id, string Name, IReadOnlyList<Fie
     }
 }
 
-/// <summary>Los ajustes de esta PC que la página muestra. HotkeysEnabled dice si esta copia tomó los atajos (05 §10).</summary>
-public sealed record SettingsView(bool HotkeysEnabled, string? ConsolePort, string? SkippedVersion);
-
 /// <summary>El estado tal como viaja: el de AppState, con el tiempo grabado en milisegundos y el enlace con OBS con guion bajo.</summary>
 public sealed record StateView(
     long Seq,

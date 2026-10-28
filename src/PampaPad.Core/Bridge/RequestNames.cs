@@ -24,10 +24,14 @@ public static class RequestNames
     public const string ScriptsReveal = "scripts.reveal";
     public const string LibraryReveal = "library.reveal";
     public const string ScriptsTest = "scripts.test";
+    public const string SettingsSave = "settings.save";
+    public const string UpdateCheck = "update.check";
+    public const string UpdateSkip = "update.skip";
 
     public static IReadOnlyList<string> All { get; } =
         [AppSnapshot, LogRead, ActionCancel, WindowReady, ConfigSave, LibraryReload, HotkeysSuspend, ActionTest, OptionsList, WindowDirty, ScriptsList, ScriptsRead, ScriptsWrite, ScriptsImport,
-        ScriptsDelete, ScriptsReveal, LibraryReveal, ScriptsTest];
+        ScriptsDelete, ScriptsReveal, LibraryReveal, ScriptsTest, SettingsSave, UpdateCheck,
+        UpdateSkip];
 
     /// <summary>Los que atiende la cáscara (AppRequests, 01 §3.2): el núcleo los nombra pero no los registra.</summary>
     public static IReadOnlyList<string> Shell { get; } = [WindowReady, WindowDirty];

@@ -47,6 +47,9 @@ internal sealed class Updater
 
     public Task<Result> DownloadAndApplyAsync(CancellationToken ct) => _cycle.DownloadAndApplyAsync(ct);
 
+    /// <summary>Saltear la versión ofrecida, desde la tarjeta Programa de Ajustes (05 §8).</summary>
+    public Task<Result> SkipAsync(CancellationToken ct) => _cycle.SkipAsync(ct);
+
     private async Task<Result<string?>> FindAsync(CancellationToken ct)
     {
         try
