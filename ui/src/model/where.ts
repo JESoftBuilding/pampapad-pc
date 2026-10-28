@@ -1,11 +1,11 @@
 // De la ubicación de un problema (pages[0].keys[2].hotkey) al enlace de la pieza que lo tiene (05 §4.4: "lleva a la tecla o a la
 // acción"). Las listas se nombran por índice en el archivo y la pantalla por id y posición, que no cambian al reordenar. La lista
-// general hotkeys se edita en Ajustes (etapa 8): no tiene enlace todavía. Puro y sin importar nada.
+// general hotkeys lleva a su tarjeta de Ajustes, por índice (etapa 8). Puro y sin importar nada.
 
 type KeyLike = { position?: number };
 type PageLike = { id?: string; keys?: KeyLike[] };
 type ActionLike = { id?: string };
-export type ConfigLike = { pages?: PageLike[]; actions?: ActionLike[] };
+export type ConfigLike = { pages?: PageLike[]; actions?: ActionLike[]; hotkeys?: unknown[] };
 
 export function linkFor(where: string, config: ConfigLike): string | undefined {
   const key = /^pages\[(\d+)\]\.keys\[(\d+)\]/.exec(where);
@@ -19,6 +19,11 @@ export function linkFor(where: string, config: ConfigLike): string | undefined {
   if (action !== null) {
     const id = config.actions?.[Number(action[1])]?.id;
     return id === undefined ? undefined : `#/actions?id=${encodeURIComponent(id)}`;
+  }
+
+  const hotkey = /^hotkeys\[(\d+)\]/.exec(where);
+  if (hotkey !== null) {
+    return config.hotkeys?.[Number(hotkey[1])] === undefined ? undefined : `#/settings?hotkey=${hotkey[1]}`;
   }
 
   return undefined;

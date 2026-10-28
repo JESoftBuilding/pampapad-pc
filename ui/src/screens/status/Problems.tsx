@@ -4,7 +4,7 @@ import { linkFor } from "@/model/where";
 import { Badge } from "@/ui/badge";
 import { Card, CardTitle } from "@/ui/card";
 
-/** Problemas de la configuración (05 §4.4): cada uno con su ubicación, que lleva a la tecla o a la acción; los de la lista general no tienen pantalla hasta Ajustes (etapa 8). */
+/** Problemas de la configuración (05 §4.4): cada uno con su ubicación, que lleva a la tecla o a la acción, y los de la lista general a su tarjeta de Ajustes. */
 export function Problems({ problems, library, config }: { problems: Problem[]; library: State["library"]; config: Config }) {
   return (
     <Card>

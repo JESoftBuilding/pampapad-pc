@@ -103,3 +103,24 @@ export function usedBy(config: HotkeyConfigLike, pageId: string, position: numbe
 
   return config.hotkeys?.some((binding) => binding.hotkey !== undefined && parseHotkey(binding.hotkey) === wanted) === true ? "un atajo general" : null;
 }
+
+/**
+ * Lo mismo para un atajo general, el index de hotkeys (02 §10, regla 9): una tecla de cualquier página ("la tecla 6 de Sala") u otro
+ * atajo general ("el atajo general 2", contado desde 1), o null. El que se edita no cuenta contra sí mismo.
+ */
+export function usedByGeneral(config: HotkeyConfigLike, index: number, text: string): string | null {
+  const wanted = parseHotkey(text);
+  if (wanted === null) {
+    return null;
+  }
+
+  for (const page of config.pages ?? []) {
+    const key = page.keys?.find((candidate) => candidate.hotkey !== undefined && parseHotkey(candidate.hotkey) === wanted);
+    if (key !== undefined) {
+      return `la tecla ${key.position} de ${page.name ?? page.id ?? "?"}`;
+    }
+  }
+
+  const other = (config.hotkeys ?? []).findIndex((binding, i) => i !== index && binding.hotkey !== undefined && parseHotkey(binding.hotkey) === wanted);
+  return other < 0 ? null : `el atajo general ${other + 1}`;
+}
