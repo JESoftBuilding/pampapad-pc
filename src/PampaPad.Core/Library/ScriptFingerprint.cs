@@ -18,6 +18,10 @@ public static class ScriptFingerprint
 
     private static readonly UTF8Encoding Utf8Bom = new(encoderShouldEmitUTF8Identifier: true);
 
+    // Sin el mejor encaje de Windows: lo que la página no tiene tira, en vez de quedar como "?" o como otra letra (✓ daba V).
+    private static readonly Encoding StrictOem =
+        Encoding.GetEncoding(ScriptLaunch.Oem.CodePage, EncoderFallback.ExceptionFallback, DecoderFallback.ReplacementFallback);
+
     public static bool IsText(string name) => TextExtensions.Contains(Path.GetExtension(name), StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
@@ -26,7 +30,7 @@ public static class ScriptFingerprint
     /// </summary>
     public static Encoding EncodingOf(string name) => Path.GetExtension(name).ToLowerInvariant() switch
     {
-        ".cmd" => ScriptLaunch.Oem,
+        ".cmd" => StrictOem,
         ".ps1" => Utf8Bom,
         _ => ScriptLaunch.Utf8,
     };
@@ -39,9 +43,18 @@ public static class ScriptFingerprint
             : EncodingOf(name).GetString(bytes);
     }
 
+    /// <summary>
+    /// Los bytes que se guardan. Un .cmd va con \r\n: cmd.exe con \n solo se pierde en goto y call :etiqueta. Lo que la página OEM no
+    /// tiene tira EncoderFallbackException.
+    /// </summary>
     public static byte[] Encode(string name, string text)
     {
         Encoding encoding = EncodingOf(name);
+        if (encoding == StrictOem)
+        {
+            text = text.ReplaceLineEndings("\r\n");
+        }
+
         return [.. encoding.GetPreamble(), .. encoding.GetBytes(text)];
     }
 

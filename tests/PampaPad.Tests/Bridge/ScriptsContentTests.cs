@@ -202,9 +202,98 @@ public sealed class ScriptsContentTests : IAsyncLifetime
         string reply = await _bridge.HandleAsync(
             $$"""{"id":1,"request":"scripts.write","data":{{Write("nuevo", "a.cmd", """[{"name":"a.cmd","text":"echo a"},{"name":"b.ps1","text":"echo b"}]""", "")}}}""", Caller.Mcp, cts.Token);
 
-        string folder = Path.Combine(Scripts, "nuevo");
-        string[] files = Directory.Exists(folder) ? [.. Directory.GetFiles(folder).Select(Path.GetFileName).Order(StringComparer.Ordinal)!] : [];
-        Assert.True(files.Length == 0 || files.SequenceEqual(["a.cmd", "b.ps1", "script.json"]), reply);
+        Assert.Contains("\"ok\":true", reply, StringComparison.Ordinal);
+        Assert.Equal(["a.cmd", "b.ps1", "script.json"], Directory.GetFiles(Path.Combine(Scripts, "nuevo")).Select(Path.GetFileName).Order(StringComparer.Ordinal));
+    }
+
+    // Revisión de la tanda 2 (must): un directorio con el nombre del tercer archivo hace fallar el disco a mitad de la escritura.
+    [Fact]
+    public async Task A_disk_failure_midway_puts_back_an_existing_script_and_removes_what_was_new()
+    {
+        string folder = _rig.AddCmd("hola", "@echo off\necho uno\n");
+        Directory.CreateDirectory(Path.Combine(folder, "b.ps1"));
+        Dictionary<string, byte[]> before = Snapshot(folder);
+
+        string code = await FailAsync("scripts.write", Write("hola", "hola.cmd", """[{"name":"hola.cmd","text":"echo dos"},{"name":"c.py","text":"print(1)"},{"name":"b.ps1","text":"echo b"}]""", ScriptFingerprint.Of(folder)), Caller.Mcp);
+
+        Assert.Equal(ErrorCodes.InternalError, code);
+        Assert.Equal(before, Snapshot(folder));
+        Assert.True(Directory.Exists(Path.Combine(folder, "b.ps1")));
+    }
+
+    [Fact]
+    public async Task A_disk_failure_midway_while_creating_leaves_no_folder()
+    {
+        // Un nombre de más de 255 caracteres pasa los chequeos y el disco lo rechaza al escribir, después de a.cmd.
+        string code = await FailAsync("scripts.write", Write("nuevo", "a.cmd", $$"""[{"name":"a.cmd","text":"echo a"},{"name":"{{new string('x', 300)}}.cmd","text":"echo b"}]""", ""), Caller.Mcp);
+
+        Assert.Equal(ErrorCodes.InternalError, code);
+        Assert.False(Directory.Exists(Path.Combine(Scripts, "nuevo")));
+    }
+
+    // Revisión de la tanda 2 (must): la ventana y el MCP guardan a la vez con la misma huella; uno pasa y el otro tiene que releer.
+    [Fact]
+    public async Task Two_writes_at_once_with_the_same_fingerprint_let_only_one_through()
+    {
+        string folder = _rig.AddCmd("hola", "@echo off\n");
+        for (int round = 0; round < 20; round++)
+        {
+            // Textos nuevos en cada vuelta: si el que gana deja el disco como estaba, la huella no cambia y el otro también pasa.
+            string read = ScriptFingerprint.Of(folder);
+            using var start = new ManualResetEventSlim();
+            Task<string>[] writes = [.. new[] { $"uno {round}", $"dos {round}" }.Select(text => Task.Run(async () =>
+            {
+                start.Wait();
+                using JsonDocument reply = await AskAsync("scripts.write", Write("hola", "hola.cmd", $$"""[{"name":"hola.cmd","text":"echo {{text}}"}]""", read), Caller.Mcp);
+                return reply.RootElement.TryGetProperty("error", out JsonElement error) ? error.GetProperty("code").GetString()! : "ok";
+            }))];
+            start.Set();
+
+            Assert.Equal([ErrorCodes.ConfigChangedOnDisk, "ok"], (await Task.WhenAll(writes)).Order(StringComparer.Ordinal));
+        }
+    }
+
+    // Revisión de la tanda 2 (should): la forma del id se pide al crear. Una carpeta que ya está con otro nombre sigue guardando su ficha.
+    [Fact]
+    public async Task The_window_still_saves_the_manifest_of_a_folder_whose_name_is_not_an_id()
+    {
+        string folder = _rig.AddCmd("Mi Script", "@echo off\n");
+
+        JsonElement written = await OkAsync("scripts.write", $$"""{"id":"Mi Script","manifest":{"entry":"Mi Script.cmd","name":"Mío"},"expectedFingerprint":"{{ScriptFingerprint.Of(folder)}}"}""");
+
+        Assert.Equal(ScriptFingerprint.Of(folder), written.GetProperty("fingerprint").GetString());
+    }
+
+    // Revisión de la tanda 2 (should): cmd.exe relee el .cmd mientras corre, así que reemplazarlo en pleno vuelo correría otra cosa.
+    [Fact]
+    public async Task The_files_of_a_script_that_is_running_are_not_replaced()
+    {
+        string folder = _rig.AddPs1("lento", ScriptRig.LaunchesPing, """, "timeoutSec": 30""");
+        using var cancel = new CancellationTokenSource();
+        Task<Result<ScriptResult>> running = _rig.RunAsync("lento", cancel.Token);
+        await ScriptRig.ChildAsync(folder);
+        byte[] before = IOFile.ReadAllBytes(Path.Combine(folder, "lento.ps1"));
+
+        string code = await FailAsync("scripts.write", Write("lento", "lento.ps1", """[{"name":"lento.ps1","text":"echo otro"}]""", ScriptFingerprint.Of(folder)), Caller.Mcp);
+        await cancel.CancelAsync();
+        await running.WaitAsync(TimeSpan.FromSeconds(20));
+
+        Assert.Equal(ErrorCodes.Cancelled, code);
+        Assert.Equal(before, IOFile.ReadAllBytes(Path.Combine(folder, "lento.ps1")));
+    }
+
+    // Revisión de la tanda 2 (should): un .cmd va en la página OEM. Lo que no entra ahí se rechaza, en vez de quedar como "?" o como otra
+    // letra; y va con \r\n, porque cmd.exe con \n solo se pierde en goto y call :etiqueta.
+    [Fact]
+    public async Task A_cmd_with_a_character_the_console_page_lacks_is_refused_and_one_with_lf_is_saved_with_crlf()
+    {
+        using JsonDocument refused = await AskAsync("scripts.write", Write("nuevo", "nuevo.cmd", """[{"name":"nuevo.cmd","text":"echo ✓ listo"}]""", ""), Caller.Mcp);
+        Assert.Equal("files[0].text", refused.RootElement.GetProperty("error").GetProperty("where").GetString());
+        Assert.False(Directory.Exists(Path.Combine(Scripts, "nuevo")));
+
+        await OkAsync("scripts.write", Write("nuevo", "nuevo.cmd", """[{"name":"nuevo.cmd","text":"@echo off\ngoto fin\n:fin\n"}]""", ""), Caller.Mcp);
+
+        Assert.Equal(ScriptLaunch.Oem.GetBytes("@echo off\r\ngoto fin\r\n:fin\r\n"), IOFile.ReadAllBytes(Path.Combine(Scripts, "nuevo", "nuevo.cmd")));
     }
 
     private static string Write(string id, string entry, string files, string fingerprint) =>

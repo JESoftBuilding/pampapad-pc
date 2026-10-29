@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 
 namespace PampaPad.Core;
@@ -23,11 +24,6 @@ public static partial class ScriptEdits
             return Result<ScriptsWriteResponse>.Fail(ErrorCodes.InvalidData, "scripts.write lleva la ficha en manifest.", "manifest");
         }
 
-        if (!ScriptFolder.IsId(id))
-        {
-            return Result<ScriptsWriteResponse>.Fail(ErrorCodes.InvalidData, $"\"{id}\" no es un id de script: van minúsculas, números y guiones, hasta {Validator.MaxIdLength} caracteres.", "id");
-        }
-
         if (sources.Library.Folder.Length == 0)
         {
             return Result<ScriptsWriteResponse>.Fail(ErrorCodes.ConfigInvalid, "No hay una carpeta de biblioteca donde escribir: elegí la carpeta de datos.");
@@ -40,6 +36,18 @@ public static partial class ScriptEdits
             if (found is { Loose: true } || (found is null && request.Files is null))
             {
                 return Result<ScriptsWriteResponse>.Fail(ErrorCodes.ScriptNotFound, $"No existe el script \"{id}\": falta la carpeta scripts\\{id}.", "id");
+            }
+
+            // La forma del id se pide al crear: una carpeta que ya está con otro nombre sigue guardando su ficha desde la ventana.
+            if (found is null && !ScriptFolder.IsId(id))
+            {
+                return Result<ScriptsWriteResponse>.Fail(ErrorCodes.InvalidData, $"\"{id}\" no es un id de script: van minúsculas, números y guiones, hasta {Validator.MaxIdLength} caracteres.", "id");
+            }
+
+            // cmd.exe relee el .cmd mientras corre: reemplazarlo en pleno vuelo correría otra cosa.
+            if (files.Count > 0 && found is not null && sources.Runner.Running.Contains(found.Id))
+            {
+                return Result<ScriptsWriteResponse>.Fail(ErrorCodes.Cancelled, $"El script \"{found.Id}\" está corriendo: esperá a que termine antes de cambiar sus archivos.", "id");
             }
 
             string folder = found?.Path ?? Path.Combine(sources.Library.Folder, ScriptFolder.FolderName, id);
@@ -110,7 +118,17 @@ public static partial class ScriptEdits
                 return new Failure(ErrorCodes.InvalidData, $"\"{name}\" está dos veces en files.", at + ".name");
             }
 
-            if (ScriptFingerprint.Encode(name, text).Length > ScriptFingerprint.MaxTextBytes)
+            byte[] bytes;
+            try
+            {
+                bytes = ScriptFingerprint.Encode(name, text);
+            }
+            catch (EncoderFallbackException)
+            {
+                return new Failure(ErrorCodes.InvalidData, $"\"{name}\" tiene caracteres que un .cmd no guarda en la página {ScriptLaunch.Oem.CodePage} de la consola: sacalos o usá un .ps1.", at + ".text");
+            }
+
+            if (bytes.Length > ScriptFingerprint.MaxTextBytes)
             {
                 return new Failure(ErrorCodes.InvalidData, $"\"{name}\" pasa de {ScriptFingerprint.MaxTextBytes / 1024} KB.", at + ".text");
             }
