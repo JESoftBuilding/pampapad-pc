@@ -396,3 +396,28 @@ Al terminar: `hotkeysEnabled` otra vez en `false` (o borrar la clave) y `git -C 
   - Fila 9: `hola` apareció, Probar dio sus tres líneas y Quitar lo movió al respaldo sin preguntar; la pantalla no decía adónde (arreglado en la misma rama).
   - Fila 6: el arranque con Windows quedó encendido (la entrada de PampaPad, habilitada en `StartupApproved`). La 3, la 4 y la 7 no dejan rastro en el registro; `script.json` quedó igual.
   - Al terminar, `git status` de la biblioteca vacío.
+
+## Etapa MCP: Claude maneja PampaPad desde Claude Code
+
+Se repasa con la v0.8.0 instalada (después de E-MCP-12) y la biblioteca real: el comando de la tarjeta Claude apunta a `current\PampaPad.Mcp.exe` de la instalación, y la copia de desarrollo dice "No disponible en la copia de desarrollo". Antes de empezar, `git -C D:\Conocimiento status --short -- Areas/marca-personal/pampapad` tiene que estar vacío.
+
+| N | Qué hacer | Qué tiene que pasar |
+|---|---|---|
+| 1 | "Abrir PampaPad" → Ajustes → tarjeta Claude | El interruptor "Permitir que Claude maneje PampaPad" encendido, "Mientras se graba: sólo lectura" y el comando `claude mcp add --scope user pampapad -- "C:\Users\Emmanuel\AppData\Local\PampaPad\current\PampaPad.Mcp.exe"`. Copiar dice que copió |
+| 2 | Pegar el comando en una terminal y correrlo | Claude Code dice que agregó el servidor `pampapad` a la configuración del usuario |
+| 3 | Abrir una sesión nueva de Claude Code → `/mcp` | `pampapad` conectado, con 9 herramientas |
+| 4 | Pedirle "leé el estado de PampaPad" | Usa `state_read` y cuenta OBS, la consola y la página. Puede pedir permiso la primera vez, como con cualquier MCP nuevo |
+| 5 | Permitirle siempre las herramientas de lectura; después pedirle "corré la acción ir-a-escenas" | Claude Code pide la aprobación antes de `action_run` aunque las de lectura ya estén permitidas. Aprobada, responde `ok` y la consola pasa a Escenas |
+| 6 | Con OBS grabando (Claude avisa antes; la grabación después se borra): pedirle "asigná la tecla 1 de Grabación a la acción marca-short" | Pide la aprobación y responde `read_only_while_recording`: grabando, sólo lectura. `git diff` vacío. Cortar la grabación |
+| 7 | Ajustes → apagar el interruptor → Guardar; pedirle a Claude que lea el estado; volver a encenderlo → Guardar | "El MCP está apagado en Ajustes"; encendido, vuelve a leer |
+
+Al terminar: el interruptor encendido y `git -C D:\Conocimiento status --short -- Areas/marca-personal/pampapad` vacío. Para sacarlo de Claude Code: `claude mcp remove --scope user pampapad`.
+
+- **Lo que repasó Claude solo, el 2026-10-29**, hablándole por la entrada estándar a `PampaPad.Mcp.exe` de Debug, sin registrarlo en Claude Code, con la copia de desarrollo sobre una copia de la biblioteca de ejemplo (`D:\repos\pampapad-construccion\E-MCP-11-biblioteca`; informe en `E-MCP-11-repaso.txt`). OBS estaba cerrado y la instalada abierta, sin tocarla:
+  - `initialize` en 360 ms desde lanzar el ejecutable; `tools/list` con las nueve, la marca en las cinco que cambian o ejecutan y la descripción más larga de 885 caracteres;
+  - `state_read` sin la biblioteca, y con `preflight` las siete comprobaciones `skipped` (OBS cerrado); `library_read` con la huella y con `options` la lista de scripts; `log_read`;
+  - `action_save` de una acción `wait.time` de 300 ms y `key_assign` en la tecla 1 de Grabación: el diff de `config.json` es sólo eso. Una huella vieja da `config_changed_on_disk`. `action_run` respondió `ok` en 344 ms con el paso en `ok` y 305 ms de duración. Vaciar la tecla dejó como único cambio la acción agregada: ninguna herramienta borra una acción;
+  - `script_write` creó un `.cmd` con sus saltos en CRLF; `scripts_read` lo devolvió con su texto y la misma huella; `script_test` dio `uno`, `dos` (por la salida de error) y `tres` con código 0. Quitada la carpeta, `script_not_found`;
+  - el registro muestra cada pedido con `requestedBy = mcp`;
+  - con `mcpEnabled: false` en `%APPDATA%\PampaPad-dev\local.json`, `state_read`, `library_read` y `action_run` dan "El MCP está apagado en Ajustes"; con el programa cerrado, `app_not_running` "PampaPad no está abierto" en 1 s;
+  - por la salida estándar, sólo JSON-RPC (24 líneas en las tres corridas) y nada por la de error.
