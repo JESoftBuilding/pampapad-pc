@@ -44,6 +44,12 @@ public static class SettingsRequests
             }
         }
 
+        if (request.McpEnabled is bool mcp
+            && await sources.Local.SaveAsync(data => data with { McpEnabled = mcp }, ct).ConfigureAwait(false) is { Ok: false, Failure: { } notSaved })
+        {
+            return notSaved;
+        }
+
         if (request.SkippedVersion is string skipped)
         {
             string? version = skipped.Length == 0 ? null : skipped;

@@ -160,6 +160,9 @@ public static partial class ScriptFolder
             : new Failure(ErrorCodes.ScriptNotFound, $"El entry \"{entry}\" del script \"{id}\" no queda dentro de scripts\\{id}: va el nombre de un archivo de esa carpeta.");
     }
 
+    /// <summary>Si id tiene la forma de un id de script: minúsculas, números y guiones, hasta Validator.MaxIdLength.</summary>
+    public static bool IsId(string? id) => id is { Length: > 0 } && id.Length <= Validator.MaxIdLength && IdFormat().IsMatch(id);
+
     // El formato de los otros ids (02 §4.2 y §9), con \z como en Validator.IdFormat.
     [GeneratedRegex(@"^[a-z0-9]+(-[a-z0-9]+)*\z")]
     private static partial Regex IdFormat();

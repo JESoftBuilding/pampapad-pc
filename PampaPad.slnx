@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/PampaPad.App/PampaPad.App.csproj" />
     <Project Path="src/PampaPad.Core/PampaPad.Core.csproj" />
+    <Project Path="src/PampaPad.Mcp/PampaPad.Mcp.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/PampaPad.Tests/PampaPad.Tests.csproj" />

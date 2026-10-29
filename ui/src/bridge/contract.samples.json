@@ -459,7 +459,9 @@
             "obs": {
               "address": "127.0.0.1:4455",
               "password": "la guardada en OBS"
-            }
+            },
+            "mcpEnabled": true,
+            "mcpCommand": "claude mcp add --scope user pampapad -- \"C:\\Users\\Emmanuel\\AppData\\Local\\PampaPad\\current\\PampaPad.Mcp.exe\""
           }
         }
       }
@@ -792,7 +794,8 @@
         "id": 13,
         "request": "scripts.read",
         "data": {
-          "id": "bancocam"
+          "id": "bancocam",
+          "content": true
         }
       },
       "response": {
@@ -854,7 +857,8 @@
             {
               "name": "bancocam.cmd",
               "size": 412,
-              "modified": "2026-10-11T23:30:00-03:00"
+              "modified": "2026-10-11T23:30:00-03:00",
+              "text": "@echo off\r\nscrcpy --window-title Banco\r\n"
             },
             {
               "name": "script.json",
@@ -890,7 +894,13 @@
             "timeoutSec": 20,
             "inventado": true
           },
-          "expectedFingerprint": "2794f40e573b3b53bffad440a4c6bc8d988493d2f15bcaed0ed3e845ed927083"
+          "expectedFingerprint": "2794f40e573b3b53bffad440a4c6bc8d988493d2f15bcaed0ed3e845ed927083",
+          "files": [
+            {
+              "name": "bancocam.cmd",
+              "text": "@echo off\r\nscrcpy --window-title Banco\r\n"
+            }
+          ]
         }
       },
       "response": {
@@ -963,7 +973,8 @@
         "request": "settings.save",
         "data": {
           "startWithWindows": false,
-          "skippedVersion": ""
+          "skippedVersion": "",
+          "mcpEnabled": false
         }
       },
       "response": {
@@ -976,7 +987,9 @@
           "obs": {
             "address": "127.0.0.1:4455",
             "password": "la guardada en OBS"
-          }
+          },
+          "mcpEnabled": false,
+          "mcpCommand": "claude mcp add --scope user pampapad -- \"C:\\Users\\Emmanuel\\AppData\\Local\\PampaPad\\current\\PampaPad.Mcp.exe\""
         }
       }
     },

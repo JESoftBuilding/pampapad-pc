@@ -37,6 +37,9 @@ public static class Doors
     public static IReadOnlySet<Caller> WindowAndMcp { get; } = new HashSet<Caller> { Caller.Window, Caller.Mcp };
 
     public static IReadOnlySet<Caller> WindowAndTray { get; } = new HashSet<Caller> { Caller.Window, Caller.Tray };
+
+    /// <summary>Los pedidos que la ventana no usa (plan de la etapa MCP).</summary>
+    public static IReadOnlySet<Caller> Mcp { get; } = new HashSet<Caller> { Caller.Mcp };
 }
 
 /// <summary>

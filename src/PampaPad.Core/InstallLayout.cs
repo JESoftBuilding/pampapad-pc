@@ -9,6 +9,10 @@ public static class InstallLayout
     /// <summary>El --packTitle de build/publish.ps1 más ".exe". Si cambia uno solo, InstallLayoutTests frena.</summary>
     public const string LauncherName = "PampaPad.exe";
 
+    /// <summary>El ejecutable del MCP, que la publicación deja en current junto al programa (05 §7). Es el $mcpExe de build/publish.ps1 y el
+    /// AssemblyName de PampaPad.Mcp: si cambia uno solo, InstallLayoutTests frena.</summary>
+    public const string McpName = "PampaPad.Mcp.exe";
+
     private const string ProgramFolder = "current";
 
     /// <summary>La ruta del ejecutable de arranque, o null si el programa no corre desde una carpeta current.</summary>
@@ -23,4 +27,10 @@ public static class InstallLayout
         var root = Path.GetDirectoryName(folder);
         return string.IsNullOrEmpty(root) ? null : Path.Combine(root, LauncherName);
     }
+
+    /// <summary>El comando que registra el MCP en Claude Code, con la ruta real de la instalación; null si no corre desde current (05 §7).</summary>
+    public static string? McpCommand(string appBaseDirectory) =>
+        LauncherPath(appBaseDirectory) is null
+            ? null
+            : $"claude mcp add --scope user pampapad -- \"{Path.Combine(appBaseDirectory, McpName)}\"";
 }

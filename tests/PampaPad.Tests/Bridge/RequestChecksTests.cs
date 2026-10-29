@@ -58,6 +58,7 @@ public sealed class RequestChecksTests : IAsyncLifetime
     [InlineData("scripts.write", """{"manifest":{"entry":"x.cmd"},"expectedFingerprint":""}""", "id")]
     [InlineData("scripts.write", """{"id":"nuevo","expectedFingerprint":""}""", "manifest")]
     [InlineData("scripts.write", """{"id":"nuevo","manifest":{"entry":"x.cmd"}}""", "expectedFingerprint")]
+    [InlineData("scripts.write", """{"id":"nuevo","manifest":{"entry":"x.cmd","tags":["banco",null]},"expectedFingerprint":""}""", "manifest.tags[1]")]
     [InlineData("settings.save", "{}", "data")]
     public async Task A_missing_field_or_a_null_in_a_list_is_invalid_data_with_where_and_nothing_is_written(string request, string data, string where)
     {

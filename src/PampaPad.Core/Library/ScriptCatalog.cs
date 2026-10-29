@@ -66,7 +66,7 @@ public static class ScriptCatalog
 
     private static bool Runs(Step step, string id) =>
         step.Type == ScriptRun.TypeId && step.Parameters.TryGetValue("script", out JsonElement script)
-        && script.ValueKind == JsonValueKind.String && script.GetString() == id;
+        && script.ValueKind == JsonValueKind.String && string.Equals(script.GetString(), id, StringComparison.OrdinalIgnoreCase);
 
     private static List<ScriptPlace> Places(Config config, string actionId)
     {

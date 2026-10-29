@@ -53,17 +53,24 @@ export const scriptManifestSchema = z.looseObject({
 export const scriptsRequests = {
   "scripts.list": { request: z.strictObject({}), response: z.object({ scripts: z.array(scriptViewSchema) }) },
   "scripts.read": {
-    request: z.strictObject({ id: z.string() }),
+    // content y text son del MCP: la ventana no edita código y no los pide.
+    request: z.strictObject({ id: z.string(), content: z.boolean().optional() }),
     response: z.object({
       script: scriptViewSchema,
       manifest: scriptManifestSchema.optional(),
-      files: z.array(z.object({ name: z.string(), size: z.number().int(), modified: z.string() })),
+      files: z.array(z.object({ name: z.string(), size: z.number().int(), modified: z.string(), text: z.string().optional() })),
       fingerprint: z.string(),
       runs: z.array(scriptRunSchema),
     }),
   },
   "scripts.write": {
-    request: z.strictObject({ id: z.string(), manifest: scriptManifestSchema, expectedFingerprint: z.string() }),
+    // files es del MCP (crear o reemplazar los archivos de texto); la ventana no lo manda.
+    request: z.strictObject({
+      id: z.string(),
+      manifest: scriptManifestSchema,
+      expectedFingerprint: z.string(),
+      files: z.array(z.object({ name: z.string(), text: z.string() })).optional(),
+    }),
     response: z.object({ fingerprint: z.string() }),
   },
   // Cancelar el diálogo de Windows contesta bien, con el id vacío.

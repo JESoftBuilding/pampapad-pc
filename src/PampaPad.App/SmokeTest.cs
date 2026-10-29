@@ -5,7 +5,8 @@ namespace PampaPad.App;
 /// <summary>
 /// --smoke-test: arma todo sin bandeja con la biblioteca de ejemplo y comprueba, en este orden, que cargue limpia (si no, sale con 2), que
 /// cada nombre de pedido tenga manejador (3; 01 §3.2), que app.snapshot traiga los tipos de paso y de condición que corre el programa (5),
-/// que la página esté al lado del ejecutable (4) y que el registro llegue al disco (1). Si todo está, sale con 0 (05 §9).
+/// que el interruptor del MCP rija en cada pedido (6), que la página esté al lado del ejecutable (4) y que el registro llegue al disco (1).
+/// Si todo está, sale con 0 (05 §9).
 /// </summary>
 internal static class SmokeTest
 {
@@ -30,6 +31,10 @@ internal static class SmokeTest
                 composition.StepTypes.Select(type => type.Id),
                 composition.ConditionTypes.Select(type => type.Id),
                 CancellationToken.None).GetAwaiter().GetResult();
+
+            // El interruptor del MCP como lo cablea la composición (revisión de la tanda 1 de la etapa MCP). Va después de la foto: deja el
+            // MCP apagado en el local.json de la carpeta temporal.
+            string? mcpSwitch = McpSwitchCheck.ProblemAsync(composition.Bridge, CancellationToken.None).GetAwaiter().GetResult();
             composition.Log.Info("smoke", $"Biblioteca de ejemplo: {exampleFolder}. Estado: {library.Status}; problemas: {problems.Count}; pedidos: {registered.Count}");
             composition.DisposeAsync().AsTask().GetAwaiter().GetResult();
             if (library.Status != LibraryStatus.Loaded || library.Problems.Count > 0 || problems.Count > 0)
@@ -54,6 +59,12 @@ internal static class SmokeTest
             {
                 Console.Error.WriteLine(snapshot);
                 return 5;
+            }
+
+            if (mcpSwitch is not null)
+            {
+                Console.Error.WriteLine(mcpSwitch);
+                return 6;
             }
 
             string page = Path.Combine(AppContext.BaseDirectory, "ui", "index.html");

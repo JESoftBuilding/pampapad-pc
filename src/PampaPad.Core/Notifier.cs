@@ -30,8 +30,9 @@ public sealed class Notifier(StateStore state, Library library, Log log, Action<
     public void OnFinished(ActionResult result)
     {
         // Una prueba de la ventana (action.test) se ve ahí mismo, paso por paso: ni suena, ni muestra un cartel, ni cambia el ícono de la
-        // bandeja, y tampoco borra la falla de una acción de verdad (05 §4.2, Propuesto).
-        if (result.RequestedBy == Trigger.Window)
+        // bandeja, y tampoco borra la falla de una acción de verdad (05 §4.2, Propuesto). Lo del MCP, igual: Claude recibe el resultado y lo
+        // cuenta en la sesión (plan de la etapa MCP, decisión 1).
+        if (result.RequestedBy is Trigger.Window or Trigger.Mcp)
         {
             return;
         }

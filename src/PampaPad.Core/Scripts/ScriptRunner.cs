@@ -25,8 +25,9 @@ public sealed class ScriptRunner(Library library, Log log, TimeProvider clock, s
     // acción), pero uno más largo hacía tirar al armar el tope, con el script ya lanzado y sin nada que lo cortara.
     private static readonly TimeSpan LongestLimit = TimeSpan.FromMilliseconds(uint.MaxValue - 1);
 
-    // Por id, cuántas corridas hay en curso: el mismo script puede correr dos veces a la vez desde dos acciones.
-    private readonly Dictionary<string, int> _running = new(StringComparer.Ordinal);
+    // Por id, cuántas corridas hay en curso: el mismo script puede correr dos veces a la vez desde dos acciones. Sin distinguir mayúsculas,
+    // como el disco: "Hola" encuentra la carpeta hola (ScriptFolder.Inspect), y tiene que verse corriendo.
+    private readonly Dictionary<string, int> _running = new(StringComparer.OrdinalIgnoreCase);
     private readonly Lock _gate = new();
 
     /// <summary>Los ids de los scripts que están corriendo ahora, también los lanzados sin esperar. Una copia: no cambia después.</summary>
@@ -36,7 +37,7 @@ public sealed class ScriptRunner(Library library, Log log, TimeProvider clock, s
         {
             lock (_gate)
             {
-                return _running.Keys.ToHashSet(StringComparer.Ordinal);
+                return _running.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
             }
         }
     }

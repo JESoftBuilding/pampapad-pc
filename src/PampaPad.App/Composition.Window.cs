@@ -15,6 +15,9 @@ internal sealed partial class Composition
     private IDisposable? _bridgeEvents;
     private EditorWindow? _window;
 
+    // La tubería del MCP (E-MCP-2). Sólo en la composición con bandeja: la prueba de humo no la abre.
+    private PipeListener? _pipe;
+
     /// <summary>El puente con todos sus pedidos. La prueba de humo comprueba que cada nombre de RequestNames tenga manejador.</summary>
     public Bridge Bridge => _bridge ?? throw new InvalidOperationException("El puente lo arma Composition.Build.");
 
@@ -66,9 +69,10 @@ internal sealed partial class Composition
     private void ComposeBridge(
         StateStore state, Library library, Dispatcher dispatcher, Executor executor, IReadOnlyList<IStepType> catalog,
         IReadOnlyList<ConditionType> conditions, IWindows windows, SynchronizationContext ui, string localFolder, ScriptsSources scripts,
-        ScriptOutputSink output, SettingsSources settings)
+        ScriptOutputSink output, SettingsSources settings, Preflight preflight)
     {
-        var bridge = new Bridge(state, Log);
+        // El interruptor de Ajustes se lee en cada pedido del MCP (E-MCP-3).
+        var bridge = new Bridge(state, Log) { McpAllowed = settings.Local.McpAllowed };
         _bridgeEvents = Requests.RegisterAll(
             bridge,
             new StatusSources(
@@ -80,7 +84,7 @@ internal sealed partial class Composition
                 catalog,
                 conditions,
                 settings.View),
-            new EditSources(library, state, Log, executor, catalog, conditions, dispatcher, windows, _hotkeys),
+            new EditSources(library, state, Log, executor, catalog, conditions, dispatcher, windows, _hotkeys, preflight),
             scripts,
             settings);
         output.Published += line => bridge.Publish(EventNames.ScriptOutput, line);

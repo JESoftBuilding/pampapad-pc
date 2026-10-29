@@ -19,10 +19,17 @@ public sealed record ObsSettingsView(string Address, string Password = ObsSettin
 
 /// <summary>
 /// Los ajustes de esta PC que la página muestra. HotkeysEnabled dice si esta copia tomó los atajos (05 §10). StartWithWindows sale de
-/// Windows al armar la foto, no de local.json (02 §2). Los dos del final, con su valor por defecto, entran en la etapa 8.
+/// Windows al armar la foto, no de local.json (02 §2). StartWithWindows y Obs, con su valor por defecto, entran en la etapa 8; McpEnabled y
+/// McpCommand, en la etapa MCP: el interruptor del MCP y el comando para registrarlo en Claude Code, null en una copia sin instalar (05 §7).
 /// </summary>
 public sealed record SettingsView(
-    bool HotkeysEnabled, string? ConsolePort, string? SkippedVersion, StartupStatus StartWithWindows = StartupStatus.Unavailable, ObsSettingsView? Obs = null)
+    bool HotkeysEnabled,
+    string? ConsolePort,
+    string? SkippedVersion,
+    StartupStatus StartWithWindows = StartupStatus.Unavailable,
+    ObsSettingsView? Obs = null,
+    bool McpEnabled = true,
+    string? McpCommand = null)
 {
     public static StartupStatus Startup(bool? enabled) => enabled switch
     {
@@ -32,5 +39,8 @@ public sealed record SettingsView(
     };
 }
 
-/// <summary>settings.save: sólo los campos que cambiaron. skippedVersion "" borra la versión salteada. Contesta el SettingsView nuevo.</summary>
-public sealed record SettingsSaveRequest(bool? StartWithWindows = null, string? SkippedVersion = null);
+/// <summary>
+/// settings.save: sólo los campos que cambiaron. skippedVersion "" borra la versión salteada. Contesta el SettingsView nuevo. mcpEnabled
+/// entra en la etapa MCP: el pedido sigue siendo sólo de la ventana, así el MCP no se puede prender a sí mismo.
+/// </summary>
+public sealed record SettingsSaveRequest(bool? StartWithWindows = null, string? SkippedVersion = null, bool? McpEnabled = null);

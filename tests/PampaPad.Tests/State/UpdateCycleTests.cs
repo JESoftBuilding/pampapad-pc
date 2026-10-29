@@ -134,6 +134,8 @@ public sealed class UpdateCycleTests : IAsyncLifetime
         Assert.Equal(1, _feed.Downloads);
         Assert.Equal(1, _feed.Applies);
         Assert.Equal(new UpdateState(UpdatePhase.Applying, "0.1.1"), Update);
+        Assert.Contains(_log.Recent(), entry => entry.Module == "update"
+            && entry.Message == "La versión 0.1.1 se instala al salir. Las sesiones de Claude con el MCP se reconectan desde /mcp");
     }
 
     [Fact]

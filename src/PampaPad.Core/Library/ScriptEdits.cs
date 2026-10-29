@@ -15,65 +15,6 @@ public static partial class ScriptEdits
     private static readonly Lock Gate = new();
 
     /// <summary>
-    /// Escribe sólo script.json, por AtomicWrite. Lo que el programa no conoce y está en el disco queda, aunque la página no lo mande.
-    /// entry tiene que ser un archivo de la carpeta y timeoutSec ir de 1 a 59: por debajo del tope de 60 s de una acción (decisión 35).
-    /// </summary>
-    public static Result<ScriptsWriteResponse> Write(ScriptsSources sources, ScriptsWriteRequest request)
-    {
-        ArgumentNullException.ThrowIfNull(sources);
-        ArgumentNullException.ThrowIfNull(request);
-        string id = request.Id ?? "";
-        if (request.Manifest is not { } manifest)
-        {
-            return Result<ScriptsWriteResponse>.Fail(ErrorCodes.InvalidData, "scripts.write lleva la ficha en manifest.", "manifest");
-        }
-
-        lock (Gate)
-        {
-            if (ScriptFolder.Inspect(sources.Library.Folder, id) is not { Loose: false } found)
-            {
-                return Result<ScriptsWriteResponse>.Fail(ErrorCodes.ScriptNotFound, $"No existe el script \"{id}\": falta la carpeta scripts\\{id}.", "id");
-            }
-
-            if (manifest.Entry is not { Length: > 0 } entry || ScriptFolder.ResolveEntry(found.Path, id, entry, out string path) is not null || !File.Exists(path))
-            {
-                return Result<ScriptsWriteResponse>.Fail(ErrorCodes.InvalidData, $"entry va el nombre de un archivo de scripts\\{id}, y \"{manifest.Entry}\" no está.", "manifest.entry");
-            }
-
-            if (manifest.TimeoutSec is int seconds && (seconds < 1 || seconds >= Executor.ActionTimeout.TotalSeconds))
-            {
-                return Result<ScriptsWriteResponse>.Fail(
-                    ErrorCodes.InvalidData, $"timeoutSec va en segundos, de 1 a {Executor.ActionTimeout.TotalSeconds - 1:0}: con {Executor.ActionTimeout.TotalSeconds:0} vence antes el tope de la acción.", "manifest.timeoutSec");
-            }
-
-            string file = Path.Combine(found.Path, ScriptFolder.ManifestName);
-            try
-            {
-                byte[]? onDisk = File.Exists(file) ? File.ReadAllBytes(file) : null;
-                if ((onDisk is null ? "" : Fingerprints.Of(onDisk)) != request.ExpectedFingerprint)
-                {
-                    return Result<ScriptsWriteResponse>.Fail(
-                        ErrorCodes.ConfigChangedOnDisk, $"La ficha de \"{id}\" cambió en el disco desde que se leyó: volvé a abrirla antes de guardar.", "expectedFingerprint");
-                }
-
-                Dictionary<string, JsonElement> extra = new(found.Manifest?.Extra ?? []);
-                foreach ((string key, JsonElement value) in manifest.Extra)
-                {
-                    extra[key] = value;
-                }
-
-                byte[] bytes = Utf8.GetBytes(JsonSerializer.Serialize(manifest with { Extra = extra }, Json.Options) + "\n");
-                AtomicWrite.Replace(file, bytes);
-                return new ScriptsWriteResponse(Fingerprints.Of(bytes));
-            }
-            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
-            {
-                return Result<ScriptsWriteResponse>.Fail(ErrorCodes.InternalError, $"No se pudo guardar la ficha de \"{id}\": {error.Message}", "id");
-            }
-        }
-    }
-
-    /// <summary>
     /// Pide los archivos al diálogo, crea scripts/&lt;id&gt;/, los copia y escribe una ficha mínima con el primero como entrada. El id sale
     /// del nombre del primero; si ya existe, suma -2, -3. Cancelar el diálogo contesta bien, con el id vacío, y no crea nada.
     /// </summary>
