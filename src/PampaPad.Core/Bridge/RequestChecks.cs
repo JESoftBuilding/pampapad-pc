@@ -21,6 +21,14 @@ public static class RequestChecks
 
     public static Failure? ActionRun(ActionRunRequest request) => Missing(request.Id, "id");
 
+    public static Failure? ActionSave(ActionSaveRequest request) =>
+        Missing(request.Action, "action") ?? Missing(request.Action!.Id, "action.id") ?? Missing(request.ExpectedFingerprint, "expectedFingerprint") ?? Action(request.Action, "action");
+
+    public static Failure? KeyAssign(KeyAssignRequest request) =>
+        Missing(request.Page, "page") ?? Missing(request.Position, "position") ?? Missing(request.ExpectedFingerprint, "expectedFingerprint")
+        ?? (request.Position is < 1 or > Validator.KeyCount ? new Failure(ErrorCodes.InvalidData, $"position va de 1 a {Validator.KeyCount}: no hay una tecla {request.Position}.", "position") : null)
+        ?? NullIn(request.ShortLabel, "shortLabel");
+
     public static Failure? SettingsSave(SettingsSaveRequest request) =>
         request is { StartWithWindows: null, SkippedVersion: null, McpEnabled: null }
             ? new Failure(ErrorCodes.InvalidData, "settings.save no trae ningún ajuste: van startWithWindows, skippedVersion o mcpEnabled.", "data")

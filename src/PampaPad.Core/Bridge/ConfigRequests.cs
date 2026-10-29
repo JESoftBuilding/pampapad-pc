@@ -6,6 +6,7 @@ namespace PampaPad.Core;
 /// misma configuración (ConfigCheck.Steps: page.go busca su página en la candidata) y se la da a Library.SaveAsync, que decide la huella,
 /// el resto de los problemas y el archivo. Lo que no frena se guarda y vuelve en la respuesta, con los atajos que Windows no dejó
 /// registrar: Library.Changed corre Dispatcher.Refresh antes de que SaveAsync vuelva, así que el estado ya los tiene.
+/// action.save y key.assign, los del MCP que cambian una pieza, van por el mismo camino (ConfigEdits; plan de la etapa MCP, E-MCP-6).
 /// </summary>
 public static class ConfigRequests
 {
@@ -14,25 +15,15 @@ public static class ConfigRequests
         ArgumentNullException.ThrowIfNull(bridge);
         ArgumentNullException.ThrowIfNull(sources);
         bridge.Register<ConfigSaveRequest, ConfigSaveResponse>(
-            RequestNames.ConfigSave, RequestKind.Write, Doors.Window, (request, caller, ct) => SaveAsync(sources, request, caller, ct), RequestChecks.ConfigSave);
+            RequestNames.ConfigSave, RequestKind.Write, Doors.Window, (request, caller, _) => ConfigEdits.SaveAsync(sources, request.Config, request.ExpectedFingerprint, caller), RequestChecks.ConfigSave);
+        bridge.Register<ActionSaveRequest, ConfigSaveResponse>(
+            RequestNames.ActionSave, RequestKind.Write, Doors.Mcp,
+            (request, caller, _) => ConfigEdits.EditAsync(sources, config => ConfigEdits.PutAction(config, request.Action), request.ExpectedFingerprint, caller), RequestChecks.ActionSave);
+        bridge.Register<KeyAssignRequest, ConfigSaveResponse>(
+            RequestNames.KeyAssign, RequestKind.Write, Doors.Mcp,
+            (request, caller, _) => ConfigEdits.EditAsync(sources, config => ConfigEdits.AssignKey(config, request), request.ExpectedFingerprint, caller), RequestChecks.KeyAssign);
         bridge.Register<NoData, LibraryReloadResponse>(
             RequestNames.LibraryReload, RequestKind.Write, Doors.WindowAndTray, (_, caller, ct) => ReloadAsync(sources, caller, ct));
-    }
-
-    private static async Task<Result<ConfigSaveResponse>> SaveAsync(EditSources sources, ConfigSaveRequest request, Caller caller, CancellationToken ct)
-    {
-        Config ordered = ConfigCanon.Order(request.Config, sources.Steps, sources.Conditions);
-        IReadOnlyList<Problem> fromSteps = ConfigCheck.Steps(ordered, sources.Executor, sources.Log);
-        Result saved = await sources.Library.SaveAsync(ordered, request.ExpectedFingerprint, fromSteps, ct).ConfigureAwait(false);
-        if (!saved.Ok)
-        {
-            sources.Log.Write(LogLevel.Warning, "bridge", $"No se guardó config.json: {saved.Failure.Message}", saved.Failure.Code, BridgePolicy.AsTrigger(caller));
-            return saved.Failure;
-        }
-
-        IReadOnlyList<Problem> remaining = sources.State.Current.Problems;
-        sources.Log.Write(LogLevel.Info, "bridge", $"Se guardó config.json ({remaining.Count} problemas que no frenan).", null, BridgePolicy.AsTrigger(caller));
-        return new ConfigSaveResponse(sources.Library.Fingerprint, remaining);
     }
 
     // Leer el archivo puede tardar: fuera del hilo que pide, como el "Recargar biblioteca" de la bandeja.

@@ -29,11 +29,13 @@ public static class RequestNames
     public const string UpdateSkip = "update.skip";
     public const string ActionRun = "action.run";
     public const string PreflightRun = "preflight.run";
+    public const string ActionSave = "action.save";
+    public const string KeyAssign = "key.assign";
 
     public static IReadOnlyList<string> All { get; } =
         [AppSnapshot, LogRead, ActionCancel, WindowReady, ConfigSave, LibraryReload, HotkeysSuspend, ActionTest, OptionsList, WindowDirty, ScriptsList, ScriptsRead, ScriptsWrite, ScriptsImport,
         ScriptsDelete, ScriptsReveal, LibraryReveal, ScriptsTest, SettingsSave, UpdateCheck,
-        UpdateSkip, ActionRun, PreflightRun];
+        UpdateSkip, ActionRun, PreflightRun, ActionSave, KeyAssign];
 
     /// <summary>Los que atiende la cáscara (AppRequests, 01 §3.2): el núcleo los nombra pero no los registra.</summary>
     public static IReadOnlyList<string> Shell { get; } = [WindowReady, WindowDirty];
