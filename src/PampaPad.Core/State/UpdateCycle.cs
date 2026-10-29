@@ -151,7 +151,8 @@ public sealed class UpdateCycle(
                 return BackToOffer(offer.Version, "No se pudo instalar", applied.Failure);
             }
 
-            log.Info("update", $"La versión {offer.Version} se instala al salir");
+            // Velopack mata lo que corre en current, también PampaPad.Mcp.exe, y Claude Code no reconecta solo un servidor stdio (05 §7).
+            log.Info("update", $"La versión {offer.Version} se instala al salir. Las sesiones de Claude con el MCP se reconectan desde /mcp");
             return Result.Success;
         }
         finally

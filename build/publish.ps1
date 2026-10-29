@@ -20,6 +20,11 @@ $releaseDir = Join-Path $artifacts 'releases'
 # StartWithWindows apunta ahi: InstallLayout.LauncherName es este valor mas ".exe", y InstallLayoutTests lo controla.
 $packTitle = 'PampaPad'
 
+# El MCP sale en la misma carpeta, asi queda en current\ junto a PampaPad.exe: es la ruta del comando que muestra Ajustes (05, seccion 7).
+# InstallLayout.McpName es este valor, y la prueba de humo espera exactamente estas herramientas; InstallLayoutTests controla las dos.
+$mcpExe = 'PampaPad.Mcp.exe'
+$mcpTools = @('state_read', 'library_read', 'scripts_read', 'log_read', 'action_save', 'key_assign', 'script_write', 'action_run', 'script_test')
+
 function Invoke-Dotnet {
     param([string]$Name, [string[]]$Arguments)
     Write-Host "== $Name"
@@ -75,6 +80,14 @@ Invoke-Dotnet 'publish' @(
     "-p:Version=$Version",
     '-o', $publishDir)
 
+Invoke-Dotnet 'publish mcp' @(
+    'publish', 'src/PampaPad.Mcp/PampaPad.Mcp.csproj',
+    '-c', 'Release',
+    '-r', 'win-x64',
+    '--self-contained', 'false',
+    "-p:Version=$Version",
+    '-o', $publishDir)
+
 # Ninguna DLL publicada lleva la ruta de la carpeta donde se compilo: la del programa de prueba de la etapa 0 la llevaba.
 Write-Host '== rutas'
 $leaks = @(Get-ChildItem $publishDir -Filter 'PampaPad*.dll' |
@@ -94,6 +107,16 @@ $smoke = Start-Process -FilePath (Join-Path $publishDir 'PampaPad.exe') -Argumen
 if ($smoke.ExitCode -ne 0) {
     Get-Content $smokeErr | Write-Host
     throw "La prueba de humo fallo con codigo $($smoke.ExitCode)"
+}
+
+# El MCP es de consola: su salida se lee directo. Tiene que listar las nueve herramientas y nada mas, porque por esa salida va el protocolo.
+Write-Host '== humo mcp'
+$listed = @(& (Join-Path $publishDir $mcpExe) --smoke-test)
+if ($LASTEXITCODE -ne 0) {
+    throw "La prueba de humo del MCP fallo con codigo $LASTEXITCODE"
+}
+if (($listed -join ',') -ne ($mcpTools -join ',')) {
+    throw "El MCP lista otras herramientas: $($listed -join ', ')"
 }
 
 # La version anterior hace falta para armar el paquete de diferencias. Va sin --pre, como lee el programa: las

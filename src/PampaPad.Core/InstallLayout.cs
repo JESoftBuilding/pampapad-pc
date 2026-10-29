@@ -9,7 +9,8 @@ public static class InstallLayout
     /// <summary>El --packTitle de build/publish.ps1 más ".exe". Si cambia uno solo, InstallLayoutTests frena.</summary>
     public const string LauncherName = "PampaPad.exe";
 
-    /// <summary>El ejecutable del MCP, que la publicación deja en current junto al programa (05 §7).</summary>
+    /// <summary>El ejecutable del MCP, que la publicación deja en current junto al programa (05 §7). Es el $mcpExe de build/publish.ps1 y el
+    /// AssemblyName de PampaPad.Mcp: si cambia uno solo, InstallLayoutTests frena.</summary>
     public const string McpName = "PampaPad.Mcp.exe";
 
     private const string ProgramFolder = "current";
