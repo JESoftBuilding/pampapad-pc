@@ -23,7 +23,26 @@ public static class ToolOutput
             $"\n[Recortado: la respuesta tenía {text.Length} caracteres y se muestran los primeros {cut}. Pedí menos: con un filtro, un id o una parte.]");
     }
 
-    public static string Clip(JsonNode node) => Clip(node.ToJsonString(Json.Compact));
+    // Lo que Claude necesita aunque el recorte se lleve la cola va adelante: la huella para guardar y cómo terminó la prueba.
+    private static readonly string[] First = ["end", "fingerprint"];
+
+    public static string Clip(JsonNode node)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+        if (node["data"] is JsonObject data)
+        {
+            foreach (string key in First)
+            {
+                if (data.TryGetPropertyValue(key, out JsonNode? value))
+                {
+                    data.Remove(key);
+                    data.Insert(0, key, value);
+                }
+            }
+        }
+
+        return Clip(node.ToJsonString(Json.Compact));
+    }
 
     /// <summary>La respuesta con su data reducida a las claves que pasan keep. Un error vuelve entero.</summary>
     public static JsonObject Trim(string reply, Func<string, bool> keep)

@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Text.Json.Nodes;
 using ModelContextProtocol.Server;
 using PampaPad.Core;
 
@@ -21,7 +22,7 @@ public sealed class ScriptsRead(PipeClient pipe)
     public async Task<string> ReadAsync(
         [Description("El id del script, el nombre de su carpeta en scripts/. Sin id, la lista.")] string? id = null,
         CancellationToken cancellationToken = default) =>
-        ToolOutput.Clip(id is null
+        ToolOutput.Clip(JsonNode.Parse(id is null
             ? await pipe.CallAsync(RequestNames.ScriptsList, new { }, PipeClient.RequestTimeout, cancellationToken).ConfigureAwait(false)
-            : await pipe.CallAsync(RequestNames.ScriptsRead, new { id, content = true }, PipeClient.RequestTimeout, cancellationToken).ConfigureAwait(false));
+            : await pipe.CallAsync(RequestNames.ScriptsRead, new { id, content = true }, PipeClient.RequestTimeout, cancellationToken).ConfigureAwait(false))!);
 }

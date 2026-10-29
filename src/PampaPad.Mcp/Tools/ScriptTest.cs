@@ -47,7 +47,8 @@ public sealed class ScriptTest(PipeClient pipe)
                 return ToolOutput.Clip(started);
             }
 
-            int timeoutSec = script["data"]?["script"]?["timeoutSec"]?.GetValue<int>() ?? DefaultTimeoutSec;
+            // Una ficha hecha a mano puede traer 0 o un negativo: CancelAfter tiraría con el script ya andando.
+            int timeoutSec = script["data"]?["script"]?["timeoutSec"]?.GetValue<int>() is int seconds and > 0 ? seconds : DefaultTimeoutSec;
             session.WaitUpTo(TimeSpan.FromSeconds(timeoutSec) + Margin);
             string runId = test["data"]!["runId"]!.GetValue<string>();
             var lines = new JsonArray();

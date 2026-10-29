@@ -179,6 +179,50 @@ public sealed class McpCallsTests
         Assert.Contains("Recortado", text[ToolOutput.MaxChars..], StringComparison.Ordinal);
     }
 
+    // Revisión de la tanda 3 (should): el recorte se lleva la cola, y sin la huella Claude no puede guardar ni sabe cómo terminó la prueba.
+    [Fact]
+    public async Task A_cut_answer_still_carries_the_fingerprint_of_a_read_and_the_end_of_a_script_test()
+    {
+        await using var rig = await McpRig.StartAsync();
+        var run = Guid.NewGuid();
+        string big = new('x', 70_000);
+        rig.App.Reply = request => request.GetProperty("request").GetString() switch
+        {
+            RequestNames.ScriptsRead => [FakePampaPad.Ok(request, "{\"script\":{\"id\":\"hola\",\"timeoutSec\":5},\"files\":[{\"name\":\"a.py\",\"text\":\"" + big + "\"}],\"fingerprint\":\"huella\"}")],
+            RequestNames.AppSnapshot => [FakePampaPad.Ok(request, "{\"config\":{\"pages\":\"" + big + "\"},\"fingerprint\":\"huella\",\"stepTypes\":[],\"conditionTypes\":[]}")],
+            _ =>
+            [
+                FakePampaPad.Ok(request, "{\"runId\":\"" + run + "\"}"),
+                .. Enumerable.Range(0, 2_000).Select(i => "{\"event\":\"script.output\",\"seq\":1,\"data\":{\"runId\":\"" + run + "\",\"line\":\"línea " + i + " " + new string('y', 30) + "\",\"stream\":\"stdout\"}}"),
+                "{\"event\":\"script.output\",\"seq\":1,\"data\":{\"runId\":\"" + run + "\",\"end\":{\"ok\":false,\"exitCode\":3,\"durationMs\":40}}}",
+            ],
+        };
+
+        string read = await rig.CallAsync("scripts_read", new() { ["id"] = "hola" });
+        string library = await rig.CallAsync("library_read");
+        string test = await rig.CallAsync("script_test", new() { ["id"] = "hola" });
+
+        Assert.All([read, library, test], text => Assert.Contains("Recortado", text, StringComparison.Ordinal));
+        Assert.Contains("\"fingerprint\":\"huella\"", read, StringComparison.Ordinal);
+        Assert.Contains("\"fingerprint\":\"huella\"", library, StringComparison.Ordinal);
+        Assert.Contains("\"exitCode\":3", test, StringComparison.Ordinal);
+    }
+
+    // Revisión de la tanda 3 (nit): una ficha editada a mano con un tope negativo no puede tirar después de arrancar el script.
+    [Fact]
+    public async Task A_script_whose_manifest_has_a_timeout_that_is_not_positive_still_gives_its_result()
+    {
+        await using var rig = await McpRig.StartAsync();
+        var run = Guid.NewGuid();
+        rig.App.Reply = request => request.GetProperty("request").GetString() == RequestNames.ScriptsRead
+            ? [FakePampaPad.Ok(request, """{"script":{"id":"hola","timeoutSec":-30}}""")]
+            : [FakePampaPad.Ok(request, "{\"runId\":\"" + run + "\"}"), "{\"event\":\"script.output\",\"seq\":1,\"data\":{\"runId\":\"" + run + "\",\"end\":{\"ok\":true,\"exitCode\":0,\"durationMs\":1}}}"];
+
+        var result = McpRig.Parse(await rig.CallAsync("script_test", new() { ["id"] = "hola" }));
+
+        Assert.Equal(0, result.GetProperty("data").GetProperty("end").GetProperty("exitCode").GetInt32());
+    }
+
     [Fact]
     public async Task A_request_over_the_line_limit_is_refused_here_and_never_reaches_the_program()
     {
