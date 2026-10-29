@@ -230,3 +230,39 @@ test("con cambios de la biblioteca sin guardar, Recargar se apaga y dice por qu�
   await expect(page.getByRole("button", { name: "Recargar" })).toBeDisabled();
   await expect(page.getByText("Recargar tira los cambios sin guardar de la biblioteca: primero guardá o descartá.")).toBeVisible();
 });
+
+const claude = (page: Page) => card(page, "Claude");
+const claudeSwitch = (page: Page) => page.getByRole("switch", { name: "Permitir que Claude maneje PampaPad" });
+
+test("apagar Permitir que Claude maneje PampaPad y guardar manda settings.save con mcpEnabled y la tarjeta muestra lo devuelto", async ({ page }) => {
+  await answer(page, "settings.save", { ok: true, data: { hotkeysEnabled: true, startWithWindows: "on", mcpEnabled: false, mcpCommand: "claude mcp add otra" } });
+  await expect(claude(page).getByText("Mientras se graba: sólo lectura")).toBeVisible();
+  await expect(claudeSwitch(page)).toHaveAttribute("aria-checked", "true");
+  await claudeSwitch(page).click();
+  await expect(page.getByText("Cambios sin guardar en: Esta PC")).toBeVisible();
+  await page.getByRole("button", { name: "Guardar", exact: true }).click();
+
+  expect(await calls(page, "settings.save")).toEqual([{ mcpEnabled: false }]);
+  await expect(claudeSwitch(page)).toHaveAttribute("aria-checked", "false");
+  await expect(claude(page).getByText("claude mcp add otra")).toBeVisible();
+});
+
+test("Copiar deja en el portapapeles el comando que registra el MCP", async ({ page }) => {
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  const command = claude(page).getByText("claude mcp add --scope user pampapad", { exact: false });
+  await expect(command).toBeVisible();
+
+  await claude(page).getByRole("button", { name: "Copiar" }).click();
+
+  await expect(claude(page).getByText("Copiado")).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(await command.textContent());
+});
+
+test("sin comando, la tarjeta Claude dice que no está disponible en la copia de desarrollo", async ({ page }) => {
+  await answer(page, "settings.save", { ok: true, data: { hotkeysEnabled: true, startWithWindows: "unavailable", mcpEnabled: false } });
+  await claudeSwitch(page).click();
+  await page.getByRole("button", { name: "Guardar", exact: true }).click();
+
+  await expect(claude(page).getByText("No disponible en la copia de desarrollo")).toBeVisible();
+  await expect(claude(page).getByRole("button", { name: "Copiar" })).toHaveCount(0);
+});

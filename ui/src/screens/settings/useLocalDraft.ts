@@ -5,7 +5,7 @@ import type { SettingsView } from "@/bridge/contract.settings";
 import type { SnapshotView } from "@/bridge/useSnapshot";
 
 /** Lo que cambia en "Esta PC": sólo lo tocado viaja en settings.save; skippedVersion "" olvida la versión salteada. */
-export type LocalChanges = { startWithWindows?: boolean; skippedVersion?: string };
+export type LocalChanges = { startWithWindows?: boolean; skippedVersion?: string; mcpEnabled?: boolean };
 export type LocalSave = { kind: "idle" } | { kind: "saving" } | { kind: "saved" } | { kind: "failed"; failure: Failure };
 
 function same(base: SettingsView | undefined, name: keyof LocalChanges, value: boolean | string): boolean {
@@ -13,7 +13,14 @@ function same(base: SettingsView | undefined, name: keyof LocalChanges, value: b
     return false;
   }
 
-  return name === "startWithWindows" ? (base.startWithWindows === "on") === value : (base.skippedVersion ?? "") === value;
+  switch (name) {
+    case "startWithWindows":
+      return (base.startWithWindows === "on") === value;
+    case "mcpEnabled":
+      return base.mcpEnabled === value;
+    default:
+      return (base.skippedVersion ?? "") === value;
+  }
 }
 
 /**
@@ -77,6 +84,7 @@ export function useLocalDraft(bridge: Bridge, view: SnapshotView) {
           ...base,
           startWithWindows: changes.startWithWindows === undefined ? base.startWithWindows : changes.startWithWindows ? "on" : "off",
           skippedVersion: changes.skippedVersion === undefined ? base.skippedVersion : changes.skippedVersion === "" ? undefined : changes.skippedVersion,
+          mcpEnabled: changes.mcpEnabled ?? base.mcpEnabled,
         };
 
   return { shown, set, dirty, save, saveState, discard, markSkipped };

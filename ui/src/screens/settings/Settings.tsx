@@ -3,6 +3,7 @@ import { queryOf } from "@/model/where";
 import type { ScreenProps } from "@/screens/screen";
 import { Card } from "@/ui/card";
 import { AlertsCard } from "./AlertsCard";
+import { ClaudeCard } from "./ClaudeCard";
 import { DataCard } from "./DataCard";
 import { HotkeysCard } from "./HotkeysCard";
 import { ObsCard } from "./ObsCard";
@@ -89,6 +90,7 @@ export function SettingsScreen({ bridge, view, editor, local }: ScreenProps) {
         onSkip={() => void run("update.skip")}
         onForget={() => local.set("skippedVersion", "")}
       />
+      <ClaudeCard settings={local.shown} onMcpEnabled={(on) => local.set("mcpEnabled", on)} />
       <SettingsSaveBar
         library={editor.dirty}
         local={local.dirty}
