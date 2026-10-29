@@ -209,6 +209,44 @@ public sealed class PipeListenerTests : IAsyncLifetime
         Assert.True(_running.IsCompletedSuccessfully);
     }
 
+    // Revisión de la tanda 1 (should): una falla al crear la tubería terminaba el listener para siempre, con el programa abierto y Claude
+    // viendo app_not_running. Una tubería de una sola instancia con el mismo nombre hace fallar la creación.
+    [Fact]
+    public async Task A_pipe_that_cannot_be_created_is_tried_again_and_answers_once_it_can()
+    {
+        string name = "PampaPad-test-" + Guid.NewGuid().ToString("N");
+        var holder = new NamedPipeServerStream(name, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+        Task running = new PipeListener(_bridge, _rig.Log, name, "9.9.9").RunAsync(_life.Token);
+        await Task.Delay(300);
+        Assert.False(running.IsCompleted);
+        await holder.DisposeAsync();
+
+        var stream = new NamedPipeClientStream(".", name, PipeDirection.InOut, PipeOptions.Asynchronous);
+        await stream.ConnectAsync(5000);
+        await using (var client = new PipeClient(stream))
+        {
+            Assert.StartsWith("""{"hello":""", await client.HelloAsync());
+        }
+
+        Assert.Single(_rig.Log.Recent(), entry => entry.Level == LogLevel.Warning && entry.Module == "mcp");
+        await _life.CancelAsync();
+        await running.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task A_burst_of_300_clients_that_connect_and_leave_does_not_stop_the_listener()
+    {
+        for (int i = 0; i < 300; i++)
+        {
+            var stream = new NamedPipeClientStream(".", _name, PipeDirection.InOut, PipeOptions.Asynchronous);
+            await stream.ConnectAsync(5000);
+            await stream.DisposeAsync();
+        }
+
+        await using var client = await ConnectAsync();
+        Assert.StartsWith("""{"hello":""", await client.HelloAsync());
+    }
+
     private void Start(TimeSpan helloTimeout) =>
         _running = new PipeListener(_bridge, _rig.Log, _name, "9.9.9", helloTimeout).RunAsync(_life.Token);
 

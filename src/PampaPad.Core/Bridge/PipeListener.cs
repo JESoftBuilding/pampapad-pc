@@ -17,6 +17,8 @@ public sealed class PipeListener(Bridge bridge, Log log, string pipeName, string
     private static readonly string[] Forwarded =
         [$"{{\"event\":\"{EventNames.ActionFinished}\"", $"{{\"event\":\"{EventNames.ScriptOutput}\""];
 
+    private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(1);
+
     private readonly TimeSpan _helloTimeout = helloTimeout ?? PipeProtocol.HelloTimeout;
     private readonly Lock _gate = new();
     private readonly List<Task> _connections = [];
@@ -26,27 +28,52 @@ public sealed class PipeListener(Bridge bridge, Log log, string pipeName, string
     {
         try
         {
+            bool failing = false;
             while (!ct.IsCancellationRequested)
             {
-                var pipe = new NamedPipeServerStream(
-                    pipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances, PipeTransmissionMode.Byte,
-                    PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+                NamedPipeServerStream? pipe = null;
                 try
                 {
+                    pipe = new NamedPipeServerStream(
+                        pipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances, PipeTransmissionMode.Byte,
+                        PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
                     await pipe.WaitForConnectionAsync(ct).ConfigureAwait(false);
                 }
-                catch (IOException)
+                catch (Exception e) when (e is not OperationCanceledException || !ct.IsCancellationRequested)
                 {
+                    if (pipe is not null)
+                    {
+                        await pipe.DisposeAsync().ConfigureAwait(false);
+                    }
+
                     // Un cliente que se fue antes de que lo atendieran: se espera al siguiente.
-                    await pipe.DisposeAsync().ConfigureAwait(false);
+                    if (pipe is not null && e is IOException)
+                    {
+                        continue;
+                    }
+
+                    // Lo demás, sobre todo no poder crear la tubería, se anota una vez y se reintenta al segundo: un listener muerto deja a
+                    // Claude con app_not_running y el programa abierto (revisión de la tanda 1 de la etapa MCP).
+                    if (!failing)
+                    {
+                        log.Warning("mcp", $"La tubería {pipeName} no pudo atender: {e.Message} Se reintenta cada segundo.", ErrorCodes.InternalError);
+                        failing = true;
+                    }
+
+                    await Task.Delay(RetryDelay, ct).ConfigureAwait(false);
                     continue;
                 }
-                catch (Exception)
+                catch (OperationCanceledException)
                 {
-                    await pipe.DisposeAsync().ConfigureAwait(false);
+                    if (pipe is not null)
+                    {
+                        await pipe.DisposeAsync().ConfigureAwait(false);
+                    }
+
                     throw;
                 }
 
+                failing = false;
                 lock (_gate)
                 {
                     _connections.RemoveAll(task => task.IsCompleted);
