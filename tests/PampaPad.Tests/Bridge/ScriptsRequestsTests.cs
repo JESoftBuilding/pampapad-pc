@@ -62,7 +62,7 @@ public sealed class ScriptsRequestsTests : IAsyncLifetime
 
         Assert.Equal("hola", data.GetProperty("script").GetProperty("id").GetString());
         Assert.Equal(["ayuda.ps1", "hola.cmd", "script.json"], data.GetProperty("files").EnumerateArray().Select(file => file.GetProperty("name").GetString()).Order(StringComparer.Ordinal));
-        Assert.Equal(Fingerprints.Of(File.ReadAllBytes(Path.Combine(folder, "script.json"))), data.GetProperty("fingerprint").GetString());
+        Assert.Equal(ScriptFingerprint.Of(folder), data.GetProperty("fingerprint").GetString());
         Assert.Equal(1, data.GetProperty("manifest").GetProperty("inventado").GetInt32());
         Assert.Equal(2, data.GetProperty("runs").GetArrayLength());
         Assert.Equal("lista", data.GetProperty("runs")[0].GetProperty("end").GetProperty("message").GetString());

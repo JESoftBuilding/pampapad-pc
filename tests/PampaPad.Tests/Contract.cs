@@ -115,16 +115,17 @@ public class Contract
                     Envelope.Response(10, new OptionsListResponse([new OptionItem("Cámara", "3da67a13-6704-4c87-9e09-c8be28efdf20"), new OptionItem("Banco", "900ebc25-03ef-443e-80cc-2ad8991268ff")]))),
                 [RequestNames.ScriptsList] = Pair(Envelope.Request(12, RequestNames.ScriptsList, new NoData()), Envelope.Response(12, new ScriptsListResponse([SampleScript(), SampleLoose()]))),
                 [RequestNames.ScriptsRead] = Pair(
-                    Envelope.Request(13, RequestNames.ScriptsRead, new ScriptsReadRequest("bancocam")),
+                    Envelope.Request(13, RequestNames.ScriptsRead, new ScriptsReadRequest("bancocam", Content: true)),
                     Envelope.Response(13, new ScriptsReadResponse(
                         SampleScript(),
                         JsonSerializer.Deserialize<ScriptManifest>("""{ "entry": "bancocam.cmd", "name": "Cámara del banco", "inventado": true }""", Json.Options),
-                        [new ScriptFile("bancocam.cmd", 412, At.AddDays(-3)), new ScriptFile("script.json", 96, At.AddDays(-3))],
+                        [new ScriptFile("bancocam.cmd", 412, At.AddDays(-3), BancocamText), new ScriptFile("script.json", 96, At.AddDays(-3))],
                         SavedFingerprint,
                         [SampleScriptRun()]))),
                 [RequestNames.ScriptsWrite] = Pair(
                     Envelope.Request(14, RequestNames.ScriptsWrite, new ScriptsWriteRequest(
-                        "bancocam", JsonSerializer.Deserialize<ScriptManifest>("""{ "entry": "bancocam.cmd", "name": "Cámara del banco", "timeoutSec": 20, "inventado": true }""", Json.Options)!, SampleFingerprint)),
+                        "bancocam", JsonSerializer.Deserialize<ScriptManifest>("""{ "entry": "bancocam.cmd", "name": "Cámara del banco", "timeoutSec": 20, "inventado": true }""", Json.Options)!, SampleFingerprint,
+                        [new ScriptText("bancocam.cmd", BancocamText)])),
                     Envelope.Response(14, new ScriptsWriteResponse(SavedFingerprint))),
                 [RequestNames.ScriptsImport] = Pair(Envelope.Request(15, RequestNames.ScriptsImport, new NoData()), Envelope.Response(15, new ScriptsImportResponse("bancocam-2"))),
                 [RequestNames.ScriptsDelete] = Pair(
@@ -162,6 +163,9 @@ public class Contract
 
     private static readonly SettingsView SampleSettings = new(
         true, "COM20", null, StartupStatus.On, new ObsSettingsView("127.0.0.1:4455"), McpEnabled: true, McpCommand: @"claude mcp add --scope user pampapad -- ""C:\Users\Emmanuel\AppData\Local\PampaPad\current\PampaPad.Mcp.exe""");
+
+    // El texto de un .cmd, que viaja sólo al MCP (scripts.read con content, scripts.write con files).
+    private const string BancocamText = "@echo off\r\nscrcpy --window-title Banco\r\n";
 
     private static readonly string SampleFingerprint = Fingerprints.Of("config.json de la muestra"u8);
 

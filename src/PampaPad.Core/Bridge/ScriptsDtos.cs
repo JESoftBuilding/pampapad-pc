@@ -47,21 +47,28 @@ public sealed record ScriptView(
     IReadOnlyList<ScriptUse> UsedBy,
     ScriptRunView? LastRun = null);
 
-/// <summary>Un archivo de la carpeta de un script.</summary>
-public sealed record ScriptFile(string Name, long Size, DateTimeOffset Modified);
+/// <summary>Un archivo de la carpeta de un script. Text, sólo con scripts.read y content: el de un .cmd, .ps1 o .py de hasta 256 KB.</summary>
+public sealed record ScriptFile(string Name, long Size, DateTimeOffset Modified, string? Text = null);
+
+/// <summary>Un archivo de texto que scripts.write escribe en la carpeta del script: el nombre, sin carpetas, y su texto.</summary>
+public sealed record ScriptText(string Name, string Text);
 
 public sealed record ScriptsListResponse(IReadOnlyList<ScriptView> Scripts);
 
-public sealed record ScriptsReadRequest(string Id);
+/// <summary>scripts.read: el id y, con Content, el texto de los archivos de texto (el MCP; la ventana no lo pide).</summary>
+public sealed record ScriptsReadRequest(string Id, bool Content = false);
 
 /// <summary>
-/// scripts.read con el id: la fila, la ficha cruda con lo que el programa no conoce, los archivos, la huella de script.json (vacía sin
-/// ficha) y las cinco últimas corridas, primero la más nueva. El contenido de los archivos no viaja: la ventana no edita código.
+/// scripts.read con el id: la fila, la ficha cruda con lo que el programa no conoce, los archivos, la huella de la carpeta
+/// (ScriptFingerprint) y las cinco últimas corridas, primero la más nueva. El texto de los archivos viaja sólo con content: la ventana no edita código.
 /// </summary>
 public sealed record ScriptsReadResponse(ScriptView Script, ScriptManifest? Manifest, IReadOnlyList<ScriptFile> Files, string Fingerprint, IReadOnlyList<ScriptRunView> Runs);
 
-/// <summary>scripts.write: sólo la ficha, con la huella de script.json que se leyó (vacía si no había). Contesta la huella nueva.</summary>
-public sealed record ScriptsWriteRequest(string Id, ScriptManifest Manifest, string ExpectedFingerprint);
+/// <summary>
+/// scripts.write: la ficha y, si vienen, archivos de texto (Files; la ventana no los manda), con la huella de la carpeta que se leyó
+/// (ScriptFingerprint; vacía para crear). Contesta la huella nueva.
+/// </summary>
+public sealed record ScriptsWriteRequest(string Id, ScriptManifest Manifest, string ExpectedFingerprint, IReadOnlyList<ScriptText>? Files = null);
 
 public sealed record ScriptsWriteResponse(string Fingerprint);
 

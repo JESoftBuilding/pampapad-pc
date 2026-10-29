@@ -25,7 +25,7 @@ public static class ScriptsRequests
         bridge.Register<NoData, ScriptsListResponse>(RequestNames.ScriptsList, RequestKind.Read, Doors.WindowAndMcp,
             (_, _, _) => Task.FromResult(Result<ScriptsListResponse>.Success(new ScriptsListResponse(ScriptCatalog.List(sources)))));
         bridge.Register<ScriptsReadRequest, ScriptsReadResponse>(RequestNames.ScriptsRead, RequestKind.Read, Doors.WindowAndMcp,
-            (request, _, _) => Task.FromResult(Read(sources, request.Id ?? "")));
+            (request, _, _) => Task.FromResult(Read(sources, request.Id ?? "", request.Content)));
         bridge.Register<ScriptsWriteRequest, ScriptsWriteResponse>(RequestNames.ScriptsWrite, RequestKind.Write, Doors.WindowAndMcp,
             (request, _, _) => Task.FromResult(ScriptEdits.Write(sources, request)), RequestChecks.ScriptsWrite);
         bridge.Register<NoData, ScriptsImportResponse>(RequestNames.ScriptsImport, RequestKind.Write, Doors.Window,
@@ -77,7 +77,7 @@ public static class ScriptsRequests
         return new NoData();
     }
 
-    private static Result<ScriptsReadResponse> Read(ScriptsSources sources, string id)
+    private static Result<ScriptsReadResponse> Read(ScriptsSources sources, string id, bool content)
     {
         if (ScriptFolder.Inspect(sources.Library.Folder, id) is not { } found)
         {
@@ -94,9 +94,8 @@ public static class ScriptsRequests
         try
         {
             ScriptFile[] files = [.. new DirectoryInfo(found.Path).EnumerateFiles().OrderBy(file => file.Name, StringComparer.OrdinalIgnoreCase)
-                .Select(file => new ScriptFile(file.Name, file.Length, new DateTimeOffset(file.LastWriteTime)))];
-            string manifest = Path.Combine(found.Path, ScriptFolder.ManifestName);
-            string fingerprint = File.Exists(manifest) ? Fingerprints.Of(File.ReadAllBytes(manifest)) : "";
+                .Select(file => new ScriptFile(file.Name, file.Length, new DateTimeOffset(file.LastWriteTime), content ? TextOf(file) : null))];
+            string fingerprint = ScriptFingerprint.Of(found.Path);
             ScriptView view = ScriptCatalog.View(found, sources.Library.Current, sources.Runner.Running, sources.Runs);
             return new ScriptsReadResponse(view, found.Manifest, files, fingerprint, [.. sources.Runs.Last(id, RunsRead).Select(ScriptCatalog.Run)]);
         }
@@ -105,4 +104,8 @@ public static class ScriptsRequests
             return Result<ScriptsReadResponse>.Fail(ErrorCodes.ScriptNotFound, $"La carpeta del script \"{id}\" no se puede leer: {error.Message}", "id");
         }
     }
+
+    // El texto de un .cmd, .ps1 o .py de hasta 256 KB, con la codificación del contrato; los demás no viajan (05 §7).
+    private static string? TextOf(FileInfo file) =>
+        ScriptFingerprint.IsText(file.Name) && file.Length <= ScriptFingerprint.MaxTextBytes ? ScriptFingerprint.Decode(file.Name, File.ReadAllBytes(file.FullName)) : null;
 }

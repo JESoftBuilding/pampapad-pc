@@ -229,7 +229,7 @@ public sealed class ScriptsEditTests : IAsyncLifetime
         Assert.Equal(ErrorCodes.ScriptNotFound, missing);
     }
 
-    private static string Fingerprint(string folder) => Fingerprints.Of(File.ReadAllBytes(Path.Combine(folder, "script.json")));
+    private static string Fingerprint(string folder) => ScriptFingerprint.Of(folder);
 
     private async Task<JsonDocument> AskAsync(string request, string data) =>
         JsonDocument.Parse(await _bridge.HandleAsync($$"""{"id":1,"request":"{{request}}","data":{{data}}}""", Caller.Window, CancellationToken.None));
