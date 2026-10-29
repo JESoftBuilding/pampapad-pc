@@ -19,6 +19,8 @@ public static class RequestChecks
 
     public static Failure? ScriptsTest(ScriptsTestRequest request) => Missing(request.Id, "id");
 
+    public static Failure? ActionRun(ActionRunRequest request) => Missing(request.Id, "id");
+
     public static Failure? SettingsSave(SettingsSaveRequest request) =>
         request is { StartWithWindows: null, SkippedVersion: null, McpEnabled: null }
             ? new Failure(ErrorCodes.InvalidData, "settings.save no trae ningún ajuste: van startWithWindows, skippedVersion o mcpEnabled.", "data")

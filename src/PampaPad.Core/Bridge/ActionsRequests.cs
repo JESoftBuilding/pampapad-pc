@@ -21,7 +21,25 @@ public static class ActionsRequests
             RequestNames.OptionsList, RequestKind.Read, Doors.WindowAndMcp, (request, _, _) => Task.FromResult(Options(sources, request)));
         bridge.Register<ScriptsTestRequest, ActionTestResponse>(
             RequestNames.ScriptsTest, RequestKind.Execute, Doors.WindowAndMcp, (request, caller, _) => Task.FromResult(TestScript(sources, request.Id, caller)), RequestChecks.ScriptsTest);
+        bridge.Register<ActionRunRequest, ActionFinishedView>(
+            RequestNames.ActionRun, RequestKind.Execute, Doors.Mcp, (request, caller, _) => RunAsync(sources, request.Id, caller), RequestChecks.ActionRun);
+        bridge.Register<NoData, PreflightReport>(
+            RequestNames.PreflightRun, RequestKind.Read, Doors.Mcp, (_, caller, ct) => PreflightAsync(sources, caller, ct));
     }
+
+    // Espera a que la acción termine (plan de la etapa MCP, decisión 9). Lo que Launch rechaza sin correr ningún paso (no existe, ya en
+    // curso) vuelve como error del pedido, con el id como lugar; lo que corrió vuelve entero, también si falló.
+    private static async Task<Result<ActionFinishedView>> RunAsync(EditSources sources, string id, Caller caller)
+    {
+        var invocation = new Invocation(Guid.NewGuid(), BridgePolicy.AsTrigger(caller), "mcp", null, null, null, id);
+        ActionResult result = await sources.Dispatcher.Launch(id, invocation).ConfigureAwait(false);
+        return result is { Ok: false, Steps.Count: 0, Failure: { } refused } ? refused with { Where = "id" } : ActionFinishedView.From(result);
+    }
+
+    private static async Task<Result<PreflightReport>> PreflightAsync(EditSources sources, Caller caller, CancellationToken ct) =>
+        sources.Preflight is { } preflight
+            ? await preflight.RunAsync(BridgePolicy.AsTrigger(caller), ct).ConfigureAwait(false)
+            : Result<PreflightReport>.Fail(ErrorCodes.InternalError, "Este programa no armó el chequeo previo.");
 
     // Probar un script es probar un borrador de un paso, sin id: usa DraftKey, así que no corre junto con la prueba de una acción sin id
     // (plan de la etapa 8, decisión 1). Va acá y no en ScriptsRequests porque necesita el despachador. Lo que falta se niega antes de lanzar.

@@ -69,7 +69,7 @@ internal sealed partial class Composition
     private void ComposeBridge(
         StateStore state, Library library, Dispatcher dispatcher, Executor executor, IReadOnlyList<IStepType> catalog,
         IReadOnlyList<ConditionType> conditions, IWindows windows, SynchronizationContext ui, string localFolder, ScriptsSources scripts,
-        ScriptOutputSink output, SettingsSources settings)
+        ScriptOutputSink output, SettingsSources settings, Preflight preflight)
     {
         // El interruptor de Ajustes se lee en cada pedido del MCP (E-MCP-3).
         var bridge = new Bridge(state, Log) { McpAllowed = settings.Local.McpAllowed };
@@ -84,7 +84,7 @@ internal sealed partial class Composition
                 catalog,
                 conditions,
                 settings.View),
-            new EditSources(library, state, Log, executor, catalog, conditions, dispatcher, windows, _hotkeys),
+            new EditSources(library, state, Log, executor, catalog, conditions, dispatcher, windows, _hotkeys, preflight),
             scripts,
             settings);
         output.Published += line => bridge.Publish(EventNames.ScriptOutput, line);
