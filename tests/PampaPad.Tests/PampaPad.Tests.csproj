@@ -16,6 +16,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\PampaPad.Core\PampaPad.Core.csproj" />
+    <!-- Un ejecutable: las pruebas lo arman en memoria (McpRig) y lo corren de verdad por stdio (McpToolsTests). -->
+    <ProjectReference Include="..\..\src\PampaPad.Mcp\PampaPad.Mcp.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -2,15 +2,15 @@ using System.Reflection;
 
 namespace PampaPad.Tests;
 
-/// <summary>La barrera de dependencias de 01 §1 y el tope de 300 líneas por archivo.</summary>
+/// <summary>La barrera de dependencias de 01 §1 (con el SDK de MCP, que vive sólo en PampaPad.Mcp) y el tope de 300 líneas por archivo.</summary>
 public class Architecture
 {
     private const int MaxLines = 300;
 
-    private static readonly string[] ForbiddenInCore = ["System.Windows.Forms", "Microsoft.Web.WebView2", "Velopack"];
+    private static readonly string[] ForbiddenInCore = ["System.Windows.Forms", "Microsoft.Web.WebView2", "Velopack", "ModelContextProtocol"];
 
     [Fact]
-    public void Core_references_no_windows_ui_and_no_velopack()
+    public void Core_references_no_windows_ui_no_velopack_and_no_mcp_sdk()
     {
         var core = Assembly.Load("PampaPad.Core");
 
@@ -27,6 +27,8 @@ public class Architecture
     [InlineData("Microsoft.Web.WebView2.Core", true)]
     [InlineData("Microsoft.Web.WebView2.WinForms", true)]
     [InlineData("Velopack", true)]
+    [InlineData("ModelContextProtocol", true)]
+    [InlineData("ModelContextProtocol.Core", true)]
     [InlineData("System.Text.Json", false)]
     [InlineData("VelopackExtras", false)]
     public void Forbidden_assemblies_are_recognized_by_name_or_prefix(string name, bool forbidden)
