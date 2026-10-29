@@ -118,6 +118,33 @@ public sealed class McpSwitchTests : IAsyncLifetime
         Assert.Null(BridgePolicy.Check("x", RequestKind.Read, Doors.Mcp, Caller.Mcp, new PolicyContext(true, false)));
     }
 
+    // Revisión de la tanda 1 (should): la prueba de humo pide app.snapshot como el MCP, encendido y apagado desde Ajustes, sobre el puente
+    // del programa real. Acá se comprueba que la comprobación vea un interruptor mal cableado.
+    [Fact]
+    public async Task The_smoke_check_passes_when_the_bridge_reads_the_switch_on_every_request()
+    {
+        Assert.Null(await McpSwitchCheck.ProblemAsync(WithSnapshot(_bridge), CancellationToken.None));
+        Assert.False(_local.McpAllowed());
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task The_smoke_check_catches_a_switch_that_is_not_read(bool fixedValue)
+    {
+        var bridge = new Bridge(_state, _log) { McpAllowed = () => fixedValue };
+        SettingsRequests.Register(bridge, new SettingsSources(
+            _local, new FakeStartup(false), null, null, () => new SettingsView(false, null, null, McpEnabled: _local.McpAllowed())));
+
+        Assert.NotNull(await McpSwitchCheck.ProblemAsync(WithSnapshot(bridge), CancellationToken.None));
+    }
+
+    private static Bridge WithSnapshot(Bridge bridge)
+    {
+        bridge.Register<NoData, NoData>(RequestNames.AppSnapshot, RequestKind.Read, Doors.WindowAndMcp, (_, _, _) => Task.FromResult(Result<NoData>.Success(new NoData())));
+        return bridge;
+    }
+
     private static bool Ok(JsonDocument reply) => reply.RootElement.GetProperty("ok").GetBoolean();
 
     private static string? Code(JsonDocument reply) => reply.RootElement.GetProperty("error").GetProperty("code").GetString();
