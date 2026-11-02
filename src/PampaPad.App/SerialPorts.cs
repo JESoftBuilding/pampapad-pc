@@ -16,6 +16,7 @@ internal static class SerialPorts
     private const bool Rts = false;
 
     // Una escritura trabada no puede colgar el paso lights: falla en medio segundo con console_disconnected (plan de la 8b, decisión 8).
+    // Rige sólo en el Write sincrónico, que es el que usa SerialConsole: el WriteAsync de SerialStream lo pone en infinito.
     private const int WriteTimeoutMs = 500;
 
     /// <summary>La función que SerialConsole llama en cada intento. Si el puerto no abre, tira, y SerialConsole reintenta.</summary>

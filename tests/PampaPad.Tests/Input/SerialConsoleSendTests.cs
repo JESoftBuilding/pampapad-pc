@@ -94,6 +94,53 @@ public class SerialConsoleSendTests
         Assert.Equal(Violet + "\n", second.Written);
     }
 
+    // Revisión de la tanda 1 (must y should): el acceso denegado es el error 5 de Windows al desenchufar (SerialConsole.cs:229-233), y las
+    // otras tres no tenían prueba. Ninguna puede salir de SendAsync: el Executor la volvería internal_error.
+    [Theory]
+    [InlineData("io")]
+    [InlineData("denied")]
+    [InlineData("disposed")]
+    [InlineData("timeout")]
+    [InlineData("aborted")]
+    public async Task Every_error_a_serial_port_gives_while_writing_answers_console_disconnected(string kind)
+    {
+        await using var rig = new SerialConsoleRig();
+        var cable = new MemoryPipe();
+        rig.NextOpensStream(cable);
+        await rig.Source.StartAsync(CancellationToken.None);
+        await Poll.Until(() => rig.Link == ConsoleLinkState.Connected);
+        cable.WriteError = kind switch
+        {
+            "io" => new IOException("El dispositivo no está conectado."),
+            "denied" => new UnauthorizedAccessException("Acceso denegado."),
+            "disposed" => new ObjectDisposedException("SerialStream"),
+            "timeout" => new TimeoutException("Se agotó el tiempo de espera."),
+            _ => new OperationCanceledException("La operación de E/S se anuló."),
+        };
+
+        var result = await rig.Source.SendAsync(Toggle, CancellationToken.None);
+
+        Assert.Equal(ErrorCodes.ConsoleDisconnected, result.Failure?.Code);
+        Assert.StartsWith("No se pudo escribir en la consola: ", result.Failure?.Message, StringComparison.Ordinal);
+    }
+
+    // Revisión de la tanda 1 (should): el WriteAsync de SerialStream pone WriteTimeout en infinito, así que una escritura trabada colgaba el
+    // paso con el candado tomado. El Write sincrónico sí respeta el tope.
+    [Fact]
+    public async Task A_cable_whose_async_write_never_ends_still_gets_the_line()
+    {
+        await using var rig = new SerialConsoleRig();
+        var cable = new MemoryPipe { AsyncWriteNeverEnds = true };
+        rig.NextOpensStream(cable);
+        await rig.Source.StartAsync(CancellationToken.None);
+        await Poll.Until(() => rig.Link == ConsoleLinkState.Connected);
+
+        var result = await rig.Source.SendAsync(Toggle, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.True(result.Ok, result.Failure?.Message);
+        Assert.Equal(Toggle + "\n", cable.Written);
+    }
+
     [Fact]
     public async Task Two_sends_at_once_on_a_slow_cable_leave_two_whole_lines_one_after_the_other()
     {

@@ -39,15 +39,23 @@ public sealed partial class SerialConsole
 
             try
             {
-                await stream.WriteAsync(bytes, ct).ConfigureAwait(false);
-                await stream.FlushAsync(ct).ConfigureAwait(false);
+                // Write sincrónico y no WriteAsync: el WriteAsync de SerialStream pone WriteTimeout en infinito, y una escritura trabada
+                // colgaba el paso con el candado tomado (revisión de la tanda 1 de la 8b).
+                await Task.Run(
+                    () =>
+                    {
+                        stream.Write(bytes, 0, bytes.Length);
+                        stream.Flush();
+                    },
+                    ct).ConfigureAwait(false);
                 return Result.Success;
             }
-            catch (Exception e) when (e is IOException or ObjectDisposedException or TimeoutException
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or ObjectDisposedException or TimeoutException
                                       || (e is OperationCanceledException && !ct.IsCancellationRequested))
             {
-                // Desenchufada (IOException), cerrada por el bucle o por Release mientras escribía (ObjectDisposedException) o trabada
-                // más que el WriteTimeout de SerialPorts. Una cancelación que no pidió el paso es el puerto que abortó la escritura.
+                // Desenchufada (IOException, o el error 5 de Windows como UnauthorizedAccessException: SerialConsole.cs:229-233), cerrada
+                // por el bucle o por Release mientras escribía (ObjectDisposedException) o trabada más que el WriteTimeout de SerialPorts.
+                // Una cancelación que no pidió el paso es el puerto que abortó la escritura.
                 return Disconnected($"No se pudo escribir en la consola: {e.Message}");
             }
         }

@@ -67,6 +67,7 @@ public class LightsTests
     [InlineData("""{ "type": "lights", "command": "power", "value": "medio" }""", "value")]
     [InlineData("""{ "type": "lights", "command": "power", "value": 1 }""", "value")]
     [InlineData("""{ "type": "lights", "command": "color", "color": "6d5df6" }""", "color")]
+    [InlineData("""{ "type": "lights", "command": "color", "color": "x6d5df6" }""", "color")]
     [InlineData("""{ "type": "lights", "command": "color", "color": "#abc" }""", "color")]
     [InlineData("""{ "type": "lights", "command": "color", "color": "#6d5dfz" }""", "color")]
     [InlineData("""{ "type": "lights", "command": "color" }""", "color")]
