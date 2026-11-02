@@ -162,23 +162,51 @@ test("un paso de un tipo desconocido se conserva tal cual, se ve roto y se guard
       config: {
         version: 1,
         pages: [],
-        actions: [{ id: "luces", name: "Luces", steps: [{ type: "lights", command: "power", value: "toggle", inventado: "se queda" }] }],
+        actions: [{ id: "luces", name: "Luces", steps: [{ type: "keys.send", shortcut: "Ctrl+S", inventado: "se queda" }] }],
       },
       fingerprint: "otra",
     },
     43,
   );
   await page.getByRole("list", { name: "Acciones" }).getByRole("button", { name: /Luces/ }).click();
-  await page.getByRole("button", { name: /lights \(tipo desconocido\)/ }).click();
+  await page.getByRole("button", { name: /keys.send \(tipo desconocido\)/ }).click();
 
-  await expect(page.getByText("Este programa no conoce el tipo lights")).toBeVisible();
+  await expect(page.getByText("Este programa no conoce el tipo keys.send")).toBeVisible();
   await expect(page.getByRole("textbox", { name: "El paso, tal cual está en config.json" })).toHaveValue(/"inventado": "se queda"/);
   await page.getByLabel("Nombre", { exact: true }).fill("Luces de la sala");
   await page.getByRole("button", { name: "Guardar" }).click();
 
   const saves = (await calls(page, "config.save")) as Array<SaveCall & { expectedFingerprint: string }>;
   expect(saves[0].expectedFingerprint).toBe("otra");
-  expect(saves[0].config.actions[0]).toEqual({ id: "luces", name: "Luces de la sala", steps: [{ type: "lights", command: "power", value: "toggle", inventado: "se queda" }] });
+  expect(saves[0].config.actions[0]).toEqual({ id: "luces", name: "Luces de la sala", steps: [{ type: "keys.send", shortcut: "Ctrl+S", inventado: "se queda" }] });
+});
+
+test("un paso de luces se arma con el comando, el valor escrito y el selector de color, y guarda #RRGGBB", async ({ page }) => {
+  await page.getByLabel("Nombre de la acción nueva").fill("Luz violeta");
+  await page.getByRole("button", { name: "Crear acción" }).click();
+  await page.getByLabel("Tipo de paso").selectOption("lights");
+  await page.getByRole("button", { name: "Agregar paso" }).click();
+  await page.getByLabel("Comando").selectOption("color");
+  await page.getByLabel("Color", { exact: true }).fill("#6d5df6");
+  await expect(page.getByText("brightness no prende la tira")).toBeVisible();
+
+  await page.getByLabel("Tipo de paso").selectOption("lights");
+  await page.getByRole("button", { name: "Agregar paso" }).click();
+  await page.getByLabel("Comando").selectOption("brightness");
+  await page.getByLabel("Valor").fill("50");
+  await page.getByLabel("Tipo de paso").selectOption("lights");
+  await page.getByRole("button", { name: "Agregar paso" }).click();
+  await page.getByLabel("Comando").selectOption("power");
+  await page.getByLabel("Valor").fill("toggle");
+  await page.getByRole("button", { name: "Guardar" }).click();
+
+  await expect(page.getByText("Guardado.")).toBeVisible();
+  const saves = (await calls(page, "config.save")) as SaveCall[];
+  expect(saves[0].config.actions.at(-1)?.steps).toEqual([
+    { type: "lights", command: "color", color: "#6D5DF6" },
+    { type: "lights", command: "brightness", value: 50 },
+    { type: "lights", command: "power", value: "toggle" },
+  ]);
 });
 
 test("sin OBS, la escena se escribe a mano y el campo dice por qué", async ({ page }) => {

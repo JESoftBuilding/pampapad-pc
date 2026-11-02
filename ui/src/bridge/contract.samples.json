@@ -294,6 +294,38 @@
                   "optional": false
                 }
               ]
+            },
+            {
+              "id": "lights",
+              "name": "Luces de la sala",
+              "group": "Cadenas",
+              "fields": [
+                {
+                  "name": "command",
+                  "label": "Comando",
+                  "kind": "option",
+                  "optional": false,
+                  "options": [
+                    "power",
+                    "color",
+                    "brightness",
+                    "adjustBrightness",
+                    "preset"
+                  ]
+                },
+                {
+                  "name": "value",
+                  "label": "Valor",
+                  "kind": "text",
+                  "optional": true
+                },
+                {
+                  "name": "color",
+                  "label": "Color",
+                  "kind": "color",
+                  "optional": true
+                }
+              ]
             }
           ],
           "conditionTypes": [

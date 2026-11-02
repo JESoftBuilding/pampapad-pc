@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { problemsUnder, summary, valueText, withOnlyIf, withValue } from "./steps";
+import { lightValue, problemsUnder, summary, valueText, withOnlyIf, withValue } from "./steps";
 
 const types = [
   { id: "obs.scene", name: "Poner una escena", group: "OBS", fields: [{ name: "scene", label: "Escena", kind: "obsScene", optional: false }] },
@@ -55,5 +55,15 @@ describe("valueText y problemsUnder", () => {
 
     expect(problemsUnder(problems, "pages[0].keys[1]").map((problem) => problem.code)).toEqual(["a"]);
     expect(problemsUnder(problems, "actions[0]").map((problem) => problem.code)).toEqual(["c"]);
+  });
+});
+
+describe("lightValue", () => {
+  it("un entero escrito viaja como número y lo demás como texto, para que lights lo lea de una sola forma", () => {
+    expect(lightValue("50")).toBe(50);
+    expect(lightValue("-10")).toBe(-10);
+    expect(lightValue("toggle")).toBe("toggle");
+    expect(lightValue("1.5")).toBe("1.5");
+    expect(lightValue("")).toBe("");
   });
 });

@@ -69,10 +69,12 @@ internal sealed partial class Composition : IAsyncDisposable
 
         // El Dispatcher publica la biblioteca en el estado al construirse y en cada recarga, junto con los problemas de los pasos y de los atajos.
         // La salida en vivo de una prueba de la ventana: script.run la escribe y ComposeBridge la publica como script.output (etapa 8).
+        // lights escribe por la consola, que se arma más abajo: también llega tarde, por la composición (etapa 8b).
         Dispatcher? dispatcher = null;
+        Composition? composition = null;
         var output = new ScriptOutputSink();
         (IReadOnlyList<IStepType> catalog, IReadOnlyList<ConditionType> conditions, Executor executor, ScriptRunner scripts) =
-            ComposeChains(library, state, obs, windows, log, clock, target => dispatcher!.Go(target), output);
+            ComposeChains(library, state, obs, windows, log, clock, target => dispatcher!.Go(target), output, (line, ct) => composition!.SendToConsoleAsync(line, ct));
         var preflight = new Preflight(conditions, library, state, log, clock);
 
         // El umbral de mantener sale de console.holdMs de la biblioteca; si no está, es un segundo (02 §4.10).
@@ -80,7 +82,7 @@ internal sealed partial class Composition : IAsyncDisposable
         var gestures = new Gestures(clock, Gestures.HoldFrom(library.Current.Console?.HoldMs), Gestures.DefaultFreshness);
         dispatcher = new Dispatcher(library, state, executor, gestures, log);
         var updater = new Updater(state, settings, log, clock);
-        var composition = new Composition(log, state, obs, updater);
+        composition = new Composition(log, state, obs, updater);
         composition.Library = library;
         composition._dispatcher = dispatcher;
         composition.StepTypes = catalog;
@@ -105,17 +107,7 @@ internal sealed partial class Composition : IAsyncDisposable
             composition._hotkeys = hotkeys;
         }
 
-        // Las fuentes de entrada van después del Dispatcher (01 §4.3). Sin puerto en local.json no hay consola, que es como
-        // arranca la copia de desarrollo (05 §10). La prueba de humo no abre puertos.
-        var consolePort = settings.Current.ConsolePort;
-        if (!headless && !string.IsNullOrWhiteSpace(consolePort))
-        {
-            state.Update(s => s with { Console = new ConsoleLink(ConsoleLinkState.Waiting, consolePort) });
-            composition._console = new SerialConsole(SerialPorts.Opener(consolePort), state, log, clock);
-
-            // La consola entra por la misma puerta que los atajos, y el Dispatcher le aplica la página que rige.
-            dispatcher.Attach(composition._console);
-        }
+        composition.ComposeConsole(settings.Current.ConsolePort, state, dispatcher, log, clock, headless);
 
         // El puente con todos sus pedidos, después de las fuentes de entrada y el Notifier (01 §4.3). Fuera del if de la bandeja:
         // la prueba de humo comprueba que cada pedido tenga manejador (01 §3.2).
