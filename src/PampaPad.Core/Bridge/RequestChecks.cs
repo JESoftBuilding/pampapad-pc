@@ -30,8 +30,8 @@ public static class RequestChecks
         ?? NullIn(request.ShortLabel, "shortLabel");
 
     public static Failure? SettingsSave(SettingsSaveRequest request) =>
-        request is { StartWithWindows: null, SkippedVersion: null, McpEnabled: null }
-            ? new Failure(ErrorCodes.InvalidData, "settings.save no trae ningún ajuste: van startWithWindows, skippedVersion o mcpEnabled.", "data")
+        request is { StartWithWindows: null, SkippedVersion: null, McpEnabled: null, ConsolePort: null }
+            ? new Failure(ErrorCodes.InvalidData, "settings.save no trae ningún ajuste: van startWithWindows, skippedVersion, mcpEnabled o consolePort.", "data")
             : null;
 
     private static Failure? Config(Config config, string at) =>

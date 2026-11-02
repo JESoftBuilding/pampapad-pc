@@ -1006,7 +1006,8 @@
         "data": {
           "startWithWindows": false,
           "skippedVersion": "",
-          "mcpEnabled": false
+          "mcpEnabled": false,
+          "consolePort": "COM20"
         }
       },
       "response": {
@@ -1022,6 +1023,30 @@
           },
           "mcpEnabled": false,
           "mcpCommand": "claude mcp add --scope user pampapad -- \"C:\\Users\\Emmanuel\\AppData\\Local\\PampaPad\\current\\PampaPad.Mcp.exe\""
+        }
+      }
+    },
+    "console.ports": {
+      "request": {
+        "id": 23,
+        "request": "console.ports",
+        "data": {}
+      },
+      "response": {
+        "id": 23,
+        "ok": true,
+        "data": {
+          "ports": [
+            {
+              "port": "COM1",
+              "description": "Puerto de comunicaciones"
+            },
+            {
+              "port": "COM20",
+              "description": "USB-Enhanced-SERIAL CH343",
+              "usbId": "1A86:55D3"
+            }
+          ]
         }
       }
     },

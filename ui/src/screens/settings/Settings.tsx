@@ -4,6 +4,7 @@ import type { ScreenProps } from "@/screens/screen";
 import { Card } from "@/ui/card";
 import { AlertsCard } from "./AlertsCard";
 import { ClaudeCard } from "./ClaudeCard";
+import { ConsoleCard } from "./ConsoleCard";
 import { DataCard } from "./DataCard";
 import { HotkeysCard } from "./HotkeysCard";
 import { ObsCard } from "./ObsCard";
@@ -74,6 +75,7 @@ export function SettingsScreen({ bridge, view, editor, local }: ScreenProps) {
       <HotkeysCard config={config} setDraft={editor.setDraft} bridge={bridge} busyReason={editor.busyReason} highlighted={highlighted} />
       <AlertsCard config={config} setDraft={editor.setDraft} />
       <ObsCard settings={local.shown} state={view.state} />
+      <ConsoleCard bridge={bridge} settings={local.shown} state={view.state} onPort={(port) => local.set("consolePort", port)} />
       <DataCard
         folder={view.state?.library.folder}
         reloadBlocked={editor.dirty ? "Recargar tira los cambios sin guardar de la biblioteca: primero guardá o descartá." : undefined}

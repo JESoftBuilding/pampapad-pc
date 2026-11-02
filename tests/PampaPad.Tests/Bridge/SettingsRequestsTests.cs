@@ -79,6 +79,52 @@ public sealed class SettingsRequestsTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task The_console_port_is_saved_in_local_json_and_the_rest_stays_as_it_was()
+    {
+        File.WriteAllText(LocalPath, """{ "version": 1, "skippedVersion": "0.7.0", "inventado": { "a": 1 } }""");
+        Assert.True(_local.Load().Ok);
+        Bridge bridge = Installed();
+
+        using JsonDocument reply = await AskAsync(bridge, "settings.save", """{"consolePort":"COM20"}""");
+        JsonNode saved = JsonNode.Parse(File.ReadAllText(LocalPath))!;
+
+        Assert.True(reply.RootElement.GetProperty("ok").GetBoolean(), reply.RootElement.ToString());
+        Assert.Equal("COM20", saved["consolePort"]!.GetValue<string>());
+        Assert.Equal("0.7.0", saved["skippedVersion"]!.GetValue<string>());
+        Assert.Equal(1, saved["inventado"]!["a"]!.GetValue<int>());
+        Assert.Equal("COM20", reply.RootElement.GetProperty("data").GetProperty("consolePort").GetString());
+    }
+
+    [Fact]
+    public async Task An_empty_console_port_is_no_console_and_takes_the_key_out()
+    {
+        File.WriteAllText(LocalPath, """{ "version": 1, "consolePort": "COM8" }""");
+        Assert.True(_local.Load().Ok);
+
+        using JsonDocument reply = await AskAsync(Installed(), "settings.save", """{"consolePort":""}""");
+
+        Assert.True(reply.RootElement.GetProperty("ok").GetBoolean(), reply.RootElement.ToString());
+        Assert.Null(JsonNode.Parse(File.ReadAllText(LocalPath))!["consolePort"]);
+        Assert.False(reply.RootElement.GetProperty("data").TryGetProperty("consolePort", out _));
+    }
+
+    [Fact]
+    public async Task Console_ports_answers_what_the_shell_lists_and_with_no_ports_an_empty_list()
+    {
+        IReadOnlyList<ConsolePortView> listed = [new("COM8", "USB-Enhanced-SERIAL CH9102", "1A86:55D4"), new("COM20", "USB-Enhanced-SERIAL CH343", "1A86:55D3")];
+        Bridge some = Make(new SettingsSources(_local, _startup, null, null, () => View(_startup), () => listed));
+        Bridge none = Make(new SettingsSources(_local, _startup, null, null, () => View(_startup), () => []));
+
+        using JsonDocument two = await AskAsync(some, "console.ports", "{}");
+        using JsonDocument empty = await AskAsync(none, "console.ports", "{}");
+
+        JsonElement ports = two.RootElement.GetProperty("data").GetProperty("ports");
+        Assert.Equal(["COM8", "COM20"], ports.EnumerateArray().Select(p => p.GetProperty("port").GetString()));
+        Assert.Equal("1A86:55D3", ports[1].GetProperty("usbId").GetString());
+        Assert.Equal(0, empty.RootElement.GetProperty("data").GetProperty("ports").GetArrayLength());
+    }
+
+    [Fact]
     public async Task Update_check_and_update_skip_call_their_functions()
     {
         Bridge bridge = Installed();
@@ -94,6 +140,8 @@ public sealed class SettingsRequestsTests : IAsyncLifetime
 
     [Theory]
     [InlineData("settings.save", """{"startWithWindows":true}""")]
+    [InlineData("settings.save", """{"consolePort":"COM20"}""")]
+    [InlineData("console.ports", "{}")]
     [InlineData("update.check", "{}")]
     [InlineData("update.skip", "{}")]
     public async Task The_mcp_gets_no_permission_even_with_the_mcp_allowed(string request, string data)
@@ -105,6 +153,15 @@ public sealed class SettingsRequestsTests : IAsyncLifetime
         Assert.Equal(ErrorCodes.NoPermission, reply.RootElement.GetProperty("error").GetProperty("code").GetString());
         Assert.Empty(_startup.Calls);
         Assert.Equal(0, _checks + _skips);
+        Assert.False(File.Exists(LocalPath));
+    }
+
+    [Fact]
+    public async Task Console_ports_is_only_for_the_window_and_the_tray_cannot_ask_it()
+    {
+        using JsonDocument reply = JsonDocument.Parse(await Installed().HandleAsync("""{"id":1,"request":"console.ports","data":{}}""", Caller.Tray, CancellationToken.None));
+
+        Assert.Equal(ErrorCodes.NoPermission, reply.RootElement.GetProperty("error").GetProperty("code").GetString());
     }
 
     private Bridge Installed() => Make(new SettingsSources(

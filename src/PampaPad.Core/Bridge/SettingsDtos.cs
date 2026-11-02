@@ -41,6 +41,13 @@ public sealed record SettingsView(
 
 /// <summary>
 /// settings.save: sólo los campos que cambiaron. skippedVersion "" borra la versión salteada. Contesta el SettingsView nuevo. mcpEnabled
-/// entra en la etapa MCP: el pedido sigue siendo sólo de la ventana, así el MCP no se puede prender a sí mismo.
+/// entra en la etapa MCP: el pedido sigue siendo sólo de la ventana, así el MCP no se puede prender a sí mismo. consolePort, en la 8b:
+/// "" es "Sin consola" y borra la clave; el puerto nuevo se usa al volver a abrir PampaPad (plan de la 8b, decisión 3).
 /// </summary>
-public sealed record SettingsSaveRequest(bool? StartWithWindows = null, string? SkippedVersion = null, bool? McpEnabled = null);
+public sealed record SettingsSaveRequest(bool? StartWithWindows = null, string? SkippedVersion = null, bool? McpEnabled = null, string? ConsolePort = null);
+
+/// <summary>Un puerto serie que está, con la descripción de Windows y, si es USB, su VID:PID en hexadecimal (05 §11, console.ports).</summary>
+public sealed record ConsolePortView(string Port, string Description, string? UsbId);
+
+/// <summary>console.ports: los puertos serie que están ahora. Sin puertos, la lista vacía.</summary>
+public sealed record ConsolePortsResponse(IReadOnlyList<ConsolePortView> Ports);
