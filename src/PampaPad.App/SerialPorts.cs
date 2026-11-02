@@ -12,6 +12,9 @@ internal static class SerialPorts
     private const bool Dtr = false;
     private const bool Rts = false;
 
+    // Una escritura trabada no puede colgar el paso lights: falla en medio segundo con console_disconnected (plan de la 8b, decisión 8).
+    private const int WriteTimeoutMs = 500;
+
     /// <summary>La función que SerialConsole llama en cada intento. Si el puerto no abre, tira, y SerialConsole reintenta.</summary>
     public static Func<CancellationToken, Task<Stream>> Opener(string portName) =>
         ct => Task.Run(() => Open(portName), ct);
@@ -23,6 +26,7 @@ internal static class SerialPorts
             Handshake = Handshake.None,
             DtrEnable = Dtr,
             RtsEnable = Rts,
+            WriteTimeout = WriteTimeoutMs,
         };
         try
         {

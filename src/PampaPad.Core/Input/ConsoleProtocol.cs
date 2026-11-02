@@ -25,10 +25,14 @@ public readonly record struct InputState(ushort Buttons)
     public int Keys => Buttons & ConsoleProtocol.KeyMask;
 }
 
+/// <summary>Un comando para la tira de luces: los 5 bytes de LightCommand en DeviceProtocol.h (04 §7). Cmd va de 1 a 5.</summary>
+public sealed record LightCommand(byte Cmd, byte R, byte G, byte B, byte Value);
+
 /// <summary>El único códec de las cargas de DeviceProtocol.h, tal como viajan por el cable (04 §7).</summary>
 public static class ConsoleProtocol
 {
     public const byte InputStateType = 0x30;
+    public const byte LightCommandType = 0x10;
     public const int KeyCount = 12;
     public const int KeyMask = (1 << KeyCount) - 1;
     public const int InputStateLength = 8;
@@ -38,6 +42,10 @@ public static class ConsoleProtocol
 
     private const int HeaderLength = 7;
     private const int MaxDecodedLength = 36;
+
+    // El origen es el lado de la PC (Receiver, informativo) y el destino, la tira (Lights); la consola reenvía por el destino (04 §7).
+    private const byte FromPc = 0x10;
+    private const byte ToLights = 0x13;
 
     public static ConsoleLineKind Parse(ReadOnlySpan<char> line, out ConsoleMessage message)
     {
@@ -80,6 +88,13 @@ public static class ConsoleProtocol
 
         state = new InputState((ushort)(payload[0] | (payload[1] << 8)));
         return true;
+    }
+
+    /// <summary>La línea de un comando de luces, sin el fin de línea: #101013 y la carga en base64 (04 §7).</summary>
+    public static string LightLine(LightCommand command)
+    {
+        ReadOnlySpan<byte> payload = [command.Cmd, command.R, command.G, command.B, command.Value];
+        return string.Create(CultureInfo.InvariantCulture, $"#{LightCommandType:X2}{FromPc:X2}{ToLights:X2}{Convert.ToBase64String(payload)}");
     }
 
     private static bool TryHex(ReadOnlySpan<char> digits, out byte value) =>

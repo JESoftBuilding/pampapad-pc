@@ -192,16 +192,6 @@ public class SerialConsoleTests
     }
 
     [Fact]
-    public async Task Sending_is_not_part_of_this_stage_and_says_console_disconnected()
-    {
-        await using var rig = new SerialConsoleRig();
-
-        var result = await rig.Source.SendAsync("#101013BQAAAAI=", CancellationToken.None);
-
-        Assert.Equal(ErrorCodes.ConsoleDisconnected, result.Failure?.Code);
-    }
-
-    [Fact]
     public async Task Stopping_the_program_closes_the_port()
     {
         await using var rig = new SerialConsoleRig();

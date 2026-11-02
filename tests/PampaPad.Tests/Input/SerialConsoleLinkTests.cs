@@ -232,19 +232,5 @@ public class SerialConsoleLinkTests
         Assert.Equal(0, rig.OpenCalls);                     // el bucle ya terminó: tomarla de nuevo no abre nada
     }
 
-    [Fact]
-    public async Task Sending_while_connected_still_says_console_disconnected_and_writes_nothing()
-    {
-        await using var rig = new SerialConsoleRig();
-        rig.NextOpens();
-        await rig.Source.StartAsync(CancellationToken.None);
-        await Poll.Until(() => rig.Link == ConsoleLinkState.Connected);
-
-        var result = await rig.Source.SendAsync("#101013BQAAAAI=", CancellationToken.None);
-
-        Assert.Equal(ErrorCodes.ConsoleDisconnected, result.Failure?.Code);
-        Assert.Contains("no le manda nada", result.Failure?.Message, StringComparison.Ordinal);   // MemoryPipe.Write tira: si escribiera, la prueba fallaría
-    }
-
     private static InputEvent Press(int key) => new(SerialConsole.SourceId, $"key.{key}", Gesture.Press);
 }

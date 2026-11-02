@@ -2,7 +2,7 @@ namespace PampaPad.Core;
 
 /// <summary>
 /// La consola por cable. Lee líneas de un flujo que le abre la cáscara, saca de cada InputState los
-/// eventos crudos de las teclas y se reconecta sola. En esta etapa sólo lee (01 §8, etapa 3b).
+/// eventos crudos de las teclas y se reconecta sola. Desde la etapa 8b también escribe: las luces (SerialConsole.Send.cs).
 /// </summary>
 public sealed partial class SerialConsole : IInputSource
 {
@@ -54,21 +54,6 @@ public sealed partial class SerialConsole : IInputSource
 
     /// <summary>En esta etapa la consola no dibuja nada: la página que rige no cambia lo que hace esta fuente.</summary>
     public IReadOnlyList<Problem> Apply(Page page, IReadOnlyList<HotkeyBinding> hotkeys) => [];
-
-    /// <summary>El envío entra con las luces, en la etapa 8b. Hasta entonces existe la firma y nada sale por el cable.</summary>
-    public Task<Result> SendAsync(string line, CancellationToken ct)
-    {
-        bool connected;
-        lock (_gate)
-        {
-            connected = _stream is not null;
-        }
-
-        var message = connected
-            ? "Esta versión no le manda nada a la consola: el envío entra con las luces."
-            : "La consola no está conectada.";
-        return Task.FromResult(Result.Fail(ErrorCodes.ConsoleDisconnected, message));
-    }
 
     /// <summary>Suelta el puerto (true), para cargar firmware o abrir el monitor serie, o lo vuelve a tomar (false).</summary>
     public void Release(bool on)
