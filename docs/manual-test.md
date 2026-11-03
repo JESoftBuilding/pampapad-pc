@@ -421,3 +421,24 @@ Al terminar: el interruptor encendido y `git -C D:\Conocimiento status --short -
   - el registro muestra cada pedido con `requestedBy = mcp`;
   - con `mcpEnabled: false` en `%APPDATA%\PampaPad-dev\local.json`, `state_read`, `library_read` y `action_run` dan "El MCP está apagado en Ajustes"; con el programa cerrado, `app_not_running` "PampaPad no está abierto" en 1 s;
   - por la salida estándar, sólo JSON-RPC (24 líneas en las tres corridas) y nada por la de error.
+
+## Etapa 8b: las luces por cable
+
+Se repasa con la v1.0.0 instalada y la biblioteca real, la placa con el firmware de la consola 0.1.4 (que reenvía las luces por radio; la pantalla dice "SIN PC" hasta la etapa 9) y la tira de luces-rgb prendida. Antes de empezar, `git -C D:\Conocimiento status --short -- Areas/marca-personal/pampapad` tiene que estar vacío.
+
+| N | Qué hacer | Qué tiene que pasar |
+|---|---|---|
+| 1 | Ajustes → Conexión con la consola: elegir COM20 ("USB-Enhanced-SERIAL CH343") → Guardar; salir desde la bandeja y volver a abrir PampaPad | La tarjeta y Estado dicen la consola conectada en COM20 |
+| 2 | Acciones → crear "Luz alternar" con un paso "Luces de la sala": comando `power`, valor `toggle` → Guardar; asignarla a una tecla libre en Teclas → apretarla dos veces | La tira se prende y se apaga |
+| 3 | Crear "Luz violeta": comando `color` y el violeta en el selector → Guardar; ponerle un atajo general → apretarlo | La tira queda violeta |
+| 4 | Con OBS grabando una prueba (que después se borra), apretar la tecla de "Luz alternar" | Anda igual: grabando, las luces no se frenan |
+| 5 | Desenchufar la consola y apretar el atajo de "Luz violeta"; volver a enchufarla y apretarlo de nuevo | Sin consola, el aviso leve y el registro con `console_disconnected`; enchufada, anda otra vez |
+| 6 | Pedirle a Claude, con el MCP, que corra `luz-alternar` | Pide la aprobación y la tira cambia |
+
+Al terminar: quitar lo que se creó para la prueba, o dejarlo si sirve, y mirar `git -C D:\Conocimiento status --short -- Areas/marca-personal/pampapad`.
+
+- **Lo que repasó Claude solo, el 2026-11-02 y el 2026-11-03**, con la copia de desarrollo de `etapa-8b` sobre una copia de la biblioteca de ejemplo (`D:\repos\pampapad-construccion\E8b-5-biblioteca`; informe en `E8b-5-repaso.txt`, capturas `E8b-5-*.png`), sin puerto de consola en la copia y sin tocar la instalada:
+  - por el MCP, el catálogo trae `lights` (10 tipos) con `command`, `value` y `color`. `luz-alternar` (`power`/`toggle`) y `luz-violeta` (`#6D5DF6`) se guardan y fallan con `console_disconnected`, "No hay puerto de la consola: se elige en Ajustes, en Conexión con la consola.". `luz-mala` (`preset` 6) se guarda con el aviso en `actions[26].steps[0].value` y no corre (`config_invalid`);
+  - por CDP, la tarjeta lista "Sin consola", COM1, COM6 y COM7 (Bluetooth) y COM20 "USB-Enhanced-SERIAL CH343", y dice "Se aplica al volver a abrir PampaPad";
+  - en Acciones, el paso de "Luz violeta" muestra el comando `color`, el selector en violeta y la ayuda con los cinco comandos y los nombres de los presets. Probar dice "falló en 7 ms: No hay puerto de la consola…". "Luz alternar" muestra `power` y `toggle`, y "Luz mala" su aviso;
+  - una acción "Luz roja" creada en la ventana con el selector se guardó como `{"type":"lights","command":"color","color":"#FF0000"}`.
