@@ -42,7 +42,7 @@ public sealed class ConfigCanonTests : IAsyncLifetime
               "version": 1,
               "actions": [ { "id": "a", "name": "A", "steps": [
                 { "type": "obs.marker", "label": null, "marker": "short" },
-                { "type": "lights", "zeta": 1, "alfa": null }
+                { "type": "keys.send", "zeta": 1, "alfa": null }
               ] } ]
             }
             """);

@@ -4,8 +4,8 @@ import type { Failure } from "@/bridge/contract";
 import type { SettingsView } from "@/bridge/contract.settings";
 import type { SnapshotView } from "@/bridge/useSnapshot";
 
-/** Lo que cambia en "Esta PC": sólo lo tocado viaja en settings.save; skippedVersion "" olvida la versión salteada. */
-export type LocalChanges = { startWithWindows?: boolean; skippedVersion?: string; mcpEnabled?: boolean };
+/** Lo que cambia en "Esta PC": sólo lo tocado viaja en settings.save; skippedVersion "" olvida la versión salteada y consolePort "" es "Sin consola". */
+export type LocalChanges = { startWithWindows?: boolean; skippedVersion?: string; mcpEnabled?: boolean; consolePort?: string };
 export type LocalSave = { kind: "idle" } | { kind: "saving" } | { kind: "saved" } | { kind: "failed"; failure: Failure };
 
 function same(base: SettingsView | undefined, name: keyof LocalChanges, value: boolean | string): boolean {
@@ -18,6 +18,8 @@ function same(base: SettingsView | undefined, name: keyof LocalChanges, value: b
       return (base.startWithWindows === "on") === value;
     case "mcpEnabled":
       return base.mcpEnabled === value;
+    case "consolePort":
+      return (base.consolePort ?? "") === value;
     default:
       return (base.skippedVersion ?? "") === value;
   }
@@ -85,6 +87,7 @@ export function useLocalDraft(bridge: Bridge, view: SnapshotView) {
           startWithWindows: changes.startWithWindows === undefined ? base.startWithWindows : changes.startWithWindows ? "on" : "off",
           skippedVersion: changes.skippedVersion === undefined ? base.skippedVersion : changes.skippedVersion === "" ? undefined : changes.skippedVersion,
           mcpEnabled: changes.mcpEnabled ?? base.mcpEnabled,
+          consolePort: changes.consolePort === undefined ? base.consolePort : changes.consolePort === "" ? undefined : changes.consolePort,
         };
 
   return { shown, set, dirty, save, saveState, discard, markSkipped };

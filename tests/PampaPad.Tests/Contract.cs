@@ -134,7 +134,10 @@ public class Contract
                 [RequestNames.ScriptsReveal] = Pair(Envelope.Request(17, RequestNames.ScriptsReveal, new ScriptsRevealRequest("bancocam")), Envelope.Response(17, new NoData())),
                 [RequestNames.LibraryReveal] = Pair(Envelope.Request(18, RequestNames.LibraryReveal, new NoData()), Envelope.Response(18, new NoData())),
                 [RequestNames.SettingsSave] = Pair(
-                    Envelope.Request(20, RequestNames.SettingsSave, new SettingsSaveRequest(StartWithWindows: false, SkippedVersion: "", McpEnabled: false)), Envelope.Response(20, settingsSaved)),
+                    Envelope.Request(20, RequestNames.SettingsSave, new SettingsSaveRequest(StartWithWindows: false, SkippedVersion: "", McpEnabled: false, ConsolePort: "COM20")), Envelope.Response(20, settingsSaved)),
+                [RequestNames.ConsolePorts] = Pair(
+                    Envelope.Request(23, RequestNames.ConsolePorts, new NoData()),
+                    Envelope.Response(23, new ConsolePortsResponse([new ConsolePortView("COM1", "Puerto de comunicaciones", null), new ConsolePortView("COM20", "USB-Enhanced-SERIAL CH343", "1A86:55D3")]))),
                 [RequestNames.UpdateCheck] = Pair(Envelope.Request(21, RequestNames.UpdateCheck, new NoData()), Envelope.Response(21, new NoData())),
                 [RequestNames.UpdateSkip] = Pair(Envelope.Request(22, RequestNames.UpdateSkip, new NoData()), Envelope.Response(22, new NoData())),
                 [RequestNames.ScriptsTest] = Pair(Envelope.Request(19, RequestNames.ScriptsTest, new ScriptsTestRequest("bancocam")), Envelope.Response(19, new ActionTestResponse(RunId))),

@@ -6,11 +6,13 @@ namespace PampaPad.Tests;
 /// <summary>
 /// El cable de la consola, en memoria. La prueba escribe lo que mandaría la placa y SerialConsole lo lee
 /// como leería el puerto. Break imita desenchufar; cerrarlo corta la lectura pendiente, igual que el puerto real.
+/// Lo que SerialConsole escribe queda en Written; Slow y FailsToWrite imitan un puerto lento y uno que se desenchufó.
 /// </summary>
 public sealed class MemoryPipe : Stream
 {
     private readonly Channel<byte[]> _incoming = Channel.CreateUnbounded<byte[]>();
     private byte[] _rest = [];
+    private readonly StringBuilder _written = new();
     private volatile bool _closed;
 
     public bool Closed => _closed;
@@ -32,7 +34,34 @@ public sealed class MemoryPipe : Stream
 
     public override bool CanSeek => false;
 
-    public override bool CanWrite => false;
+    /// <summary>Escribe de a un byte y cede entre uno y otro: dos escrituras sin candado se mezclarían.</summary>
+    public bool Slow { get; init; }
+
+    /// <summary>Mientras está prendido, escribir tira IOException, como el puerto con la placa desenchufada.</summary>
+    public bool FailsToWrite { get; set; }
+
+    /// <summary>Mientras tiene valor, escribir tira esta excepción: las otras que da un puerto serie al escribir.</summary>
+    public Exception? WriteError { get; set; }
+
+    /// <summary>
+    /// El WriteAsync no termina nunca, ni cancelando, como el de SerialStream con el driver trabado: el asíncrono no respeta WriteTimeout
+    /// (revisión de la tanda 1 de la 8b). El Write sincrónico anda.
+    /// </summary>
+    public bool AsyncWriteNeverEnds { get; init; }
+
+    /// <summary>Lo que llegó a la placa, tal cual.</summary>
+    public string Written
+    {
+        get
+        {
+            lock (_written)
+            {
+                return _written.ToString();
+            }
+        }
+    }
+
+    public override bool CanWrite => true;
 
     public override long Length => throw new NotSupportedException();
 
@@ -82,7 +111,47 @@ public sealed class MemoryPipe : Stream
 
     public override void SetLength(long value) => throw new NotSupportedException();
 
-    public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    public override void Write(byte[] buffer, int offset, int count) => WriteBytesAsync(buffer.AsMemory(offset, count), CancellationToken.None).AsTask().GetAwaiter().GetResult();
+
+    public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        if (AsyncWriteNeverEnds)
+        {
+            await new TaskCompletionSource().Task.ConfigureAwait(false);
+        }
+
+        await WriteBytesAsync(buffer, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async ValueTask WriteBytesAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
+    {
+        ObjectDisposedException.ThrowIf(_closed, this);
+        if (FailsToWrite)
+        {
+            throw new IOException("El dispositivo no está conectado.");
+        }
+
+        if (WriteError is { } error)
+        {
+            throw error;
+        }
+
+        foreach (var value in buffer.ToArray())
+        {
+            if (Slow)
+            {
+                await Task.Delay(1, cancellationToken).ConfigureAwait(false);
+            }
+
+            lock (_written)
+            {
+                _written.Append((char)value);
+            }
+        }
+    }
+
+    public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
+        WriteAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
 
     protected override void Dispose(bool disposing)
     {

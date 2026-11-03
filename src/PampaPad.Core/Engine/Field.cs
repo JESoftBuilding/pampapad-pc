@@ -32,6 +32,9 @@ public enum FieldKind
 
     /// <summary>El id de una página, o next, previous o main. La trae page.go.</summary>
     Page,
+
+    /// <summary>Un color #RRGGBB; la página lo guarda en mayúsculas. La trae lights (etapa 8b).</summary>
+    Color,
 }
 
 /// <summary>Un campo de un tipo de paso, declarado como dato: de acá va a salir el formulario de la pantalla Acciones.</summary>

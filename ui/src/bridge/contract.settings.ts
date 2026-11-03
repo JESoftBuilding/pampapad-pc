@@ -13,6 +13,8 @@ export const settingsViewSchema = z.object({
   mcpCommand: z.string().optional(),
 });
 
+export const consolePortSchema = z.object({ port: z.string(), description: z.string(), usbId: z.string().optional() });
+
 export const settingsRequests = {
   // Sólo lo que cambió; skippedVersion "" borra la versión salteada. Contesta los ajustes como quedaron.
   "settings.save": {
@@ -20,12 +22,17 @@ export const settingsRequests = {
       startWithWindows: z.boolean().optional(),
       skippedVersion: z.string().optional(),
       mcpEnabled: z.boolean().optional(),
+      // "" es "Sin consola" y borra la clave; el puerto se usa al volver a abrir PampaPad (etapa 8b).
+      consolePort: z.string().optional(),
     }),
     response: settingsViewSchema,
   },
+  // Los puertos serie que están, con la descripción de Windows y el VID:PID si es USB (etapa 8b). Sólo la ventana.
+  "console.ports": { request: z.strictObject({}), response: z.object({ ports: z.array(consolePortSchema) }) },
   // La fase de la actualización llega por state.
   "update.check": { request: z.strictObject({}), response: z.object({}) },
   "update.skip": { request: z.strictObject({}), response: z.object({}) },
 } as const;
 
 export type SettingsView = z.output<typeof settingsViewSchema>;
+export type ConsolePort = z.output<typeof consolePortSchema>;

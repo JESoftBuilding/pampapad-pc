@@ -3,10 +3,16 @@ namespace PampaPad.Core;
 /// <summary>
 /// Lo que necesitan los pedidos de Ajustes que no son de la biblioteca: local.json, el arranque con Windows, buscar y saltear una
 /// actualización y cómo se arma el SettingsView de la foto. Las dos de la actualización son null en una copia sin instalar. Lo arma
-/// Composition, también sin ventana: la prueba de humo cuenta los manejadores.
+/// Composition, también sin ventana: la prueba de humo cuenta los manejadores. Ports lista los puertos serie: lee el registro de Windows,
+/// que es de la cáscara (etapa 8b); sin ella, la lista vacía.
 /// </summary>
 public sealed record SettingsSources(
-    LocalSettings Local, IStartup Startup, Func<CancellationToken, Task<Result>>? CheckUpdate, Func<CancellationToken, Task<Result>>? SkipUpdate, Func<SettingsView> View);
+    LocalSettings Local,
+    IStartup Startup,
+    Func<CancellationToken, Task<Result>>? CheckUpdate,
+    Func<CancellationToken, Task<Result>>? SkipUpdate,
+    Func<SettingsView> View,
+    Func<IReadOnlyList<ConsolePortView>>? Ports = null);
 
 /// <summary>
 /// Los pedidos de Ajustes de esta PC (05 §4.5 y §11). settings.save escribe sólo lo que cambió y contesta los ajustes como quedaron (la
@@ -27,6 +33,10 @@ public static class SettingsRequests
             (_, _, ct) => CallAsync(sources.CheckUpdate, "Buscar una actualización", ct));
         bridge.Register<NoData, NoData>(RequestNames.UpdateSkip, RequestKind.WindowOnly, Doors.WindowAndTray,
             (_, _, ct) => CallAsync(sources.SkipUpdate, "Saltear una versión", ct));
+
+        // Sólo la ventana: es la lista de la tarjeta Conexión con la consola (05 §11). Recorrer el registro tarda: fuera del hilo del puente.
+        bridge.Register<NoData, ConsolePortsResponse>(RequestNames.ConsolePorts, RequestKind.WindowOnly, Doors.Window,
+            (_, _, ct) => Task.Run(() => (Result<ConsolePortsResponse>)new ConsolePortsResponse(sources.Ports?.Invoke() ?? []), ct));
     }
 
     private static async Task<Result<SettingsView>> SaveAsync(SettingsSources sources, SettingsSaveRequest request, CancellationToken ct)
@@ -54,6 +64,15 @@ public static class SettingsRequests
         {
             string? version = skipped.Length == 0 ? null : skipped;
             if (await sources.Local.SaveAsync(data => data with { SkippedVersion = version }, ct).ConfigureAwait(false) is { Ok: false, Failure: { } failed })
+            {
+                return failed;
+            }
+        }
+
+        if (request.ConsolePort is string port)
+        {
+            string? chosen = port.Length == 0 ? null : port;
+            if (await sources.Local.SaveAsync(data => data with { ConsolePort = chosen }, ct).ConfigureAwait(false) is { Ok: false, Failure: { } failed })
             {
                 return failed;
             }

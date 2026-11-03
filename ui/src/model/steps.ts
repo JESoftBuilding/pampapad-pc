@@ -48,6 +48,11 @@ export function withValue<S extends StepLike>(step: S, name: string, value: unkn
   return next as S;
 }
 
+/** El value de lights, escrito en un solo campo: un entero va como número y lo demás (on, off, toggle) como texto (02 §5, plan de la 8b). */
+export function lightValue(text: string): string | number {
+  return /^-?\d+$/.test(text) ? Number(text) : text;
+}
+
 export function withOnlyIf<S extends StepLike>(step: S, onlyIf: StepLike["onlyIf"]): S {
   const next: Record<string, unknown> = { ...step };
   if (onlyIf === undefined) {

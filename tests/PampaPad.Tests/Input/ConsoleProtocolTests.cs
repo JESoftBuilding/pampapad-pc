@@ -42,6 +42,29 @@ public class ConsoleProtocolTests
         Assert.False(ConsoleProtocol.TryDecodeInputState(message.Payload, out _));
     }
 
+    [Fact]
+    public void Power_toggle_goes_down_the_cable_as_the_line_of_the_spec()
+    {
+        Assert.Equal("#101013BQAAAAI=", ConsoleProtocol.LightLine(new LightCommand(5, 0, 0, 0, 2)));
+    }
+
+    [Theory]
+    [InlineData(1, 0x6D, 0x5D, 0xF6, 0, "#101013AW1d9gA=")]
+    [InlineData(2, 0, 0, 0, 128, "#101013AgAAAIA=")]
+    [InlineData(3, 0, 0, 0, 0xF6, "#101013AwAAAPY=")]
+    [InlineData(4, 0, 0, 0, 2, "#101013BAAAAAI=")]
+    public void Each_light_command_is_type_0x10_from_the_pc_to_the_lights_with_its_five_bytes(byte cmd, byte r, byte g, byte b, byte value, string expected)
+    {
+        // Las líneas salen a mano de 04 §7: tipo 0x10, origen 16, destino 19 y la carga en base64. Se leen de vuelta con el mismo códec.
+        string line = ConsoleProtocol.LightLine(new LightCommand(cmd, r, g, b, value));
+
+        Assert.Equal(expected, line);
+        Assert.True(line.Length <= ConsoleProtocol.MaxLineLength);
+        Assert.Equal(ConsoleLineKind.Message, ConsoleProtocol.Parse(line, out var message));
+        Assert.Equal(new ConsoleMessage(ConsoleProtocol.LightCommandType, 0x10, 0x13, []) with { Payload = message.Payload }, message);
+        Assert.Equal(new[] { cmd, r, g, b, value }, message.Payload);
+    }
+
     [Theory]
     [MemberData(nameof(Samples))]
     public void Sample_lines_fall_in_their_class(string expected, string keys, string line)

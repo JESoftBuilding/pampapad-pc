@@ -65,8 +65,16 @@ export function StepField(props: Props) {
           {(id) => <Input id={id} type="number" value={typeof props.value === "number" ? props.value : ""} onChange={(event) => props.onChange(event.target.value === "" ? undefined : Number(event.target.value))} />}
         </Plain>
       );
+    case "color":
+      // El selector da #rrggbb en minúsculas; se guarda en mayúsculas, como lo escribe la spec (02 §5).
+      return (
+        <Plain {...props}>
+          {(id) => <Input id={id} type="color" className="w-16 cursor-pointer px-1" value={typeof props.value === "string" ? props.value.toLowerCase() : "#000000"} onChange={(event) => props.onChange(event.target.value.toUpperCase())} />}
+        </Plain>
+      );
     default:
-      return <Plain {...props}>{(id) => <Input id={id} value={typeof props.value === "string" ? props.value : ""} onChange={(event) => props.onChange(event.target.value)} />}</Plain>;
+      // Un número también se muestra: el value de lights viaja como entero salvo con power.
+      return <Plain {...props}>{(id) => <Input id={id} value={typeof props.value === "string" || typeof props.value === "number" ? String(props.value) : ""} onChange={(event) => props.onChange(event.target.value)} />}</Plain>;
   }
 }
 
