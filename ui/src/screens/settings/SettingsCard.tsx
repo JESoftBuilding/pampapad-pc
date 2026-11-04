@@ -17,4 +17,5 @@ export function SettingsCard({ id, title, place, children }: { id: string; title
 }
 
 export const inLibrary = "Biblioteca (se versiona)";
+export const toConsole = "Biblioteca · se copia a la consola";
 export const onlyThisPc = "Sólo esta PC";

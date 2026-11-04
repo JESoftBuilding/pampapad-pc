@@ -89,21 +89,21 @@ test("una fila de atajo general tiene un solo Quitar, que la saca entera, y el c
   await expect(page.getByLabel("Atajo general 1")).toHaveCount(0);
 });
 
-test("callar el sonido en falso lo escribe en el bloque console", async ({ page }) => {
-  await page.getByRole("switch", { name: "Callar el sonido con una toma en curso" }).click();
+test("callar los sonidos de la PC en falso lo escribe en el bloque console", async ({ page }) => {
+  await page.getByRole("switch", { name: "Callar los sonidos de la PC con una toma en curso" }).click();
   await page.getByRole("button", { name: "Guardar", exact: true }).click();
 
   expect((await lastSaved(page))?.console).toEqual({ muteSoundWhileRecording: false });
 });
 
-test("callar el sonido en verdadero quita el campo, y el bloque si queda vacío, sin tocar lo desconocido", async ({ page }) => {
+test("callar los sonidos de la PC en verdadero quita el campo, y el bloque si queda vacío, sin tocar lo desconocido", async ({ page }) => {
   await withConfig(page, { console: { muteSoundWhileRecording: false } });
-  await page.getByRole("switch", { name: "Callar el sonido con una toma en curso" }).click();
+  await page.getByRole("switch", { name: "Callar los sonidos de la PC con una toma en curso" }).click();
   await page.getByRole("button", { name: "Guardar", exact: true }).click();
   expect(await lastSaved(page)).not.toHaveProperty("console");
 
   await withConfig(page, { console: { muteSoundWhileRecording: false, inventado: 3 } });
-  await page.getByRole("switch", { name: "Callar el sonido con una toma en curso" }).click();
+  await page.getByRole("switch", { name: "Callar los sonidos de la PC con una toma en curso" }).click();
   await page.getByRole("button", { name: "Guardar", exact: true }).click();
   expect((await lastSaved(page))?.console).toEqual({ inventado: 3 });
 });
@@ -120,7 +120,7 @@ test("el arranque con Windows manda settings.save y la tarjeta muestra lo que de
 });
 
 test("con cambios en los dos lados, Guardar manda los dos, primero la biblioteca, y la barra se limpia", async ({ page }) => {
-  await page.getByRole("switch", { name: "Callar el sonido con una toma en curso" }).click();
+  await page.getByRole("switch", { name: "Callar los sonidos de la PC con una toma en curso" }).click();
   await page.getByRole("switch", { name: "Arrancar con Windows" }).click();
   await expect(page.getByText("Cambios sin guardar en: Biblioteca / Esta PC")).toBeVisible();
   await page.getByRole("button", { name: "Guardar", exact: true }).click();
@@ -133,14 +133,14 @@ test("con cambios en los dos lados, Guardar manda los dos, primero la biblioteca
 
 test("con una toma en curso config.save se niega y settings.save pasa: la barra dice cuál y queda el borrador de la biblioteca", async ({ page }) => {
   await answer(page, "config.save", { ok: false, error: { code: "read_only_while_recording", message: "Hay una toma en curso." } });
-  await page.getByRole("switch", { name: "Callar el sonido con una toma en curso" }).click();
+  await page.getByRole("switch", { name: "Callar los sonidos de la PC con una toma en curso" }).click();
   await page.getByRole("switch", { name: "Arrancar con Windows" }).click();
   await page.getByRole("button", { name: "Guardar", exact: true }).click();
 
   await expect(page.getByText("No se guardó la Biblioteca: Hay una toma en curso.")).toBeVisible();
   await expect(page.getByText("Cambios sin guardar en: Biblioteca", { exact: true })).toBeVisible();
   expect(await calls(page, "settings.save")).toEqual([{ startWithWindows: false }]);
-  await expect(page.getByRole("switch", { name: "Callar el sonido con una toma en curso" })).toHaveAttribute("aria-checked", "false");
+  await expect(page.getByRole("switch", { name: "Callar los sonidos de la PC con una toma en curso" })).toHaveAttribute("aria-checked", "false");
 });
 
 test("el borrador de Esta PC cuenta en window.dirty y sobrevive a ir a Teclas y volver", async ({ page }) => {
@@ -157,7 +157,7 @@ test("el borrador de Esta PC cuenta en window.dirty y sobrevive a ir a Teclas y 
 
 test("si settings.save falla y config.save pasa, la barra dice cuál y queda el borrador de Esta PC", async ({ page }) => {
   await answer(page, "settings.save", { ok: false, error: { code: "x", message: "No se pudo." } });
-  await page.getByRole("switch", { name: "Callar el sonido con una toma en curso" }).click();
+  await page.getByRole("switch", { name: "Callar los sonidos de la PC con una toma en curso" }).click();
   await page.getByRole("switch", { name: "Arrancar con Windows" }).click();
   await page.getByRole("button", { name: "Guardar", exact: true }).click();
 
@@ -225,7 +225,7 @@ test("un problema de un atajo general en Estado lleva a su fila en Ajustes", asy
 
 test("con cambios de la biblioteca sin guardar, Recargar se apaga y dice por qué", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Recargar" })).toBeEnabled();
-  await page.getByRole("switch", { name: "Callar el sonido con una toma en curso" }).click();
+  await page.getByRole("switch", { name: "Callar los sonidos de la PC con una toma en curso" }).click();
 
   await expect(page.getByRole("button", { name: "Recargar" })).toBeDisabled();
   await expect(page.getByText("Recargar tira los cambios sin guardar de la biblioteca: primero guardá o descartá.")).toBeVisible();

@@ -5,9 +5,11 @@ import { Card } from "@/ui/card";
 import { AlertsCard } from "./AlertsCard";
 import { ClaudeCard } from "./ClaudeCard";
 import { ConsoleCard } from "./ConsoleCard";
+import { ConsoleScreenCard } from "./ConsoleScreenCard";
 import { DataCard } from "./DataCard";
 import { HotkeysCard } from "./HotkeysCard";
 import { ObsCard } from "./ObsCard";
+import { PageChangeCard } from "./PageChangeCard";
 import { PagesCard } from "./PagesCard";
 import { ProgramCard } from "./ProgramCard";
 import { SettingsSaveBar } from "./SettingsSaveBar";
@@ -71,7 +73,9 @@ export function SettingsScreen({ bridge, view, editor, local }: ScreenProps) {
   const config = editor.draft;
   return (
     <div className="space-y-4">
+      <ConsoleScreenCard config={config} setDraft={editor.setDraft} state={view.state} />
       <PagesCard config={config} setDraft={editor.setDraft} />
+      <PageChangeCard config={config} setDraft={editor.setDraft} />
       <HotkeysCard config={config} setDraft={editor.setDraft} bridge={bridge} busyReason={editor.busyReason} highlighted={highlighted} />
       <AlertsCard config={config} setDraft={editor.setDraft} />
       <ObsCard settings={local.shown} state={view.state} />
