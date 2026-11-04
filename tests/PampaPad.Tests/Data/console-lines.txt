@@ -12,7 +12,7 @@ keys 0fff #301110/w8AAAAAAAA=
 keys 0004 #301110BAAAAAAAAAD//w==
 keys 0004 #301110BPAAAAAAAAA=
 short ---- #301110BAAAAAAAAA==
-unknown ---- #311110AAAAAAAAAAA=
+unknown ---- #3F1011AAAA
 text ---- ESP-ROM:esp32s3-20210327
 text ---- PampaPad, firmware de banco: estado de las 12 teclas por el cable
 text ---- tecla 3 apretada (fila 1, columna 3)

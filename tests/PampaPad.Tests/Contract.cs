@@ -226,7 +226,7 @@ public class Contract
         BasePage = "grabacion",
         ActivePage = "grabacion",
         Running = [new RunningAction(RunId, "marca-largo", Trigger.Key)],
-        Console = new ConsoleLink(ConsoleLinkState.Connected, "COM20"),
+        Console = new ConsoleLink(ConsoleLinkState.Connected, "COM20") { Firmware = "0.1.5", Capabilities = 0xC7, Energy = 0, SettingsFingerprint = 0x6BEB, SettingsInSync = true },
     });
 
     private static LogEntry[] SampleLog() =>

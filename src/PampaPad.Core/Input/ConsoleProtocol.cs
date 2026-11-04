@@ -18,12 +18,24 @@ public enum ConsoleLineKind
 /// <summary>Un mensaje del cable ya partido: tipo, origen, destino y la carga en claro.</summary>
 public readonly record struct ConsoleMessage(byte Type, byte Source, byte Target, byte[] Payload);
 
-/// <summary>El estado de los controles de la consola. De sus 8 bytes, esta etapa usa los dos primeros.</summary>
-public readonly record struct InputState(ushort Buttons)
+/// <summary>El estado de los controles de la consola: los botones en los bytes 0 y 1 y la perilla en el byte 7 (ConsoleWire.h:126-136).</summary>
+public readonly record struct InputState(ushort Buttons, byte Knob = 0)
 {
-    /// <summary>Bits 0 a 11: teclas 1 a 12. Los bits 12 y 13, perilla y tecla del módulo, entran en la etapa 9.</summary>
+    /// <summary>Bits 0 a 11: teclas 1 a 12.</summary>
     public int Keys => Buttons & ConsoleProtocol.KeyMask;
+
+    /// <summary>Bit 12: el clic de la perilla.</summary>
+    public bool Push => (Buttons & ConsoleProtocol.PushBit) != 0;
+
+    /// <summary>Bit 13: la tecla del módulo (KO).</summary>
+    public bool ModuleKey => (Buttons & ConsoleProtocol.ModuleKeyBit) != 0;
 }
+
+/// <summary>
+/// El saludo de la consola, 0x31 (ConsoleWire.h:147-160). Version es "0.1.5"; Energy, 0 activa, 1 atenuada y 2 pantalla apagada;
+/// JustBooted sigue prendido hasta el primer ScreenState; SettingsFingerprint es 0 si nunca recibió ajustes.
+/// </summary>
+public readonly record struct Hello(byte Level, string Version, byte Capabilities, byte Energy, bool JustBooted, ushort SettingsFingerprint);
 
 /// <summary>Un comando para la tira de luces: los 5 bytes de LightCommand en DeviceProtocol.h (04 §7). Cmd va de 1 a 5.</summary>
 public sealed record LightCommand(byte Cmd, byte R, byte G, byte B, byte Value);
@@ -32,16 +44,22 @@ public sealed record LightCommand(byte Cmd, byte R, byte G, byte B, byte Value);
 public static class ConsoleProtocol
 {
     public const byte InputStateType = 0x30;
+    public const byte HelloType = 0x31;
     public const byte LightCommandType = 0x10;
     public const int KeyCount = 12;
     public const int KeyMask = (1 << KeyCount) - 1;
+    public const int PushBit = 1 << 12;
+    public const int ModuleKeyBit = 1 << 13;
     public const int InputStateLength = 8;
+    public const int HelloLength = 8;
 
-    /// <summary>'#', seis dígitos hexadecimales y hasta 48 caracteres de base64, que son 35 bytes de carga.</summary>
-    public const int MaxLineLength = 55;
+    /// <summary>El tope del firmware en los dos sentidos (ConsoleWire.h:32-34): '#', seis dígitos y base64. La válida más larga tiene 63.</summary>
+    public const int MaxLineLength = 64;
+
+    /// <summary>Lo que entra en 56 caracteres de base64, los grupos de 4 que caben en los 57 que quedan.</summary>
+    public const int MaxDecodedLength = 42;
 
     private const int HeaderLength = 7;
-    private const int MaxDecodedLength = 36;
 
     // El origen es el lado de la PC (Receiver, informativo) y el destino, la tira (Lights); la consola reenvía por el destino (04 §7).
     private const byte FromPc = 0x10;
@@ -86,7 +104,26 @@ public static class ConsoleProtocol
             return false;
         }
 
-        state = new InputState((ushort)(payload[0] | (payload[1] << 8)));
+        state = new InputState((ushort)(payload[0] | (payload[1] << 8)), payload[7]);
+        return true;
+    }
+
+    /// <summary>Con la misma regla de crecimiento que el InputState: 8 bytes o más, y la cola (los candidatos de 04:447) no se mira.</summary>
+    public static bool TryDecodeHello(ReadOnlySpan<byte> payload, out Hello hello)
+    {
+        if (payload.Length < HelloLength)
+        {
+            hello = default;
+            return false;
+        }
+
+        hello = new Hello(
+            payload[0],
+            string.Create(CultureInfo.InvariantCulture, $"{payload[1]}.{payload[2]}.{payload[3]}"),
+            payload[4],
+            (byte)(payload[5] & 0x03),
+            (payload[5] & 0x80) != 0,
+            (ushort)(payload[6] | (payload[7] << 8)));
         return true;
     }
 

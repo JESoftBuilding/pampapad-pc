@@ -44,7 +44,16 @@ export const stateSchema = z.object({
   activePage: z.string(),
   running: z.array(z.object({ runId: z.string(), actionId: z.string(), requestedBy: triggerSchema })),
   lastFailure: z.object({ noticeId: z.string(), summary: z.string(), message: z.string() }).optional(),
-  console: z.object({ state: z.enum(["off", "waiting", "connected", "released"]), port: z.string().optional() }),
+  // Lo del Hello falta hasta que la consola salude en este enlace (plan de la 9a, decisión 13).
+  console: z.object({
+    state: z.enum(["off", "waiting", "connected", "released"]),
+    port: z.string().optional(),
+    firmware: z.string().optional(),
+    capabilities: z.number().int().optional(),
+    energy: z.number().int().optional(),
+    settingsFingerprint: z.number().int().optional(),
+    settingsInSync: z.boolean().optional(),
+  }),
 });
 
 // config.json (02 §4), tipado sin cerrar ningún nivel: z.looseObject deja pasar lo que la página no conoce, que vuelve igual en

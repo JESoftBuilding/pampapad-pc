@@ -81,7 +81,7 @@ public class SerialConsoleTests
         var cable = rig.NextOpens();
         await rig.Source.StartAsync(CancellationToken.None);
 
-        cable.Feed("#311110AAAAAAAAAAA=\n#30111\n#301110BAAAAAAAAA==\n#" + new string('A', 80) + "\n" + Key3Down);
+        cable.Feed("#3F1011AAAA\n#30111\n#301110BAAAAAAAAA==\n#" + new string('A', 80) + "\n" + Key3Down);
 
         Assert.Equal(Press(3), await rig.NextEvent());
         Assert.Equal(1, rig.Source.UnknownMessages);

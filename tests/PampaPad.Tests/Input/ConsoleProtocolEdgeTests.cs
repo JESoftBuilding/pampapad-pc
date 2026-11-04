@@ -18,7 +18,7 @@ public class ConsoleProtocolEdgeTests
         Assert.Equal(12, ConsoleProtocol.KeyCount);
         Assert.Equal(0x0FFF, ConsoleProtocol.KeyMask);
         Assert.Equal(8, ConsoleProtocol.InputStateLength);
-        Assert.Equal(1 + 6 + 48, ConsoleProtocol.MaxLineLength);
+        Assert.Equal(64, ConsoleProtocol.MaxLineLength);
     }
 
     [Fact]
@@ -108,12 +108,13 @@ public class ConsoleProtocolEdgeTests
     }
 
     [Fact]
-    public void The_longest_line_is_55_characters_and_56_is_malformed()
+    public void The_longest_message_is_42_bytes_in_63_characters_and_the_limit_is_64()
     {
-        var longest = Line(0x30, 0x11, 0x10, Bytes(35));
-        Assert.Equal(55, longest.Length);
+        // 64 es el tope del firmware (ConsoleWire.h:32-34). Con base64 en grupos de 4, la línea válida más larga tiene 63.
+        var longest = Line(0x30, 0x11, 0x10, Bytes(42));
+        Assert.Equal(63, longest.Length);
         Assert.Equal(ConsoleLineKind.Message, ConsoleProtocol.Parse(longest, out var message));
-        Assert.Equal(Bytes(35), message.Payload);
+        Assert.Equal(Bytes(42), message.Payload);
 
         Assert.Equal(ConsoleLineKind.Malformed, ConsoleProtocol.Parse(longest + "A", out _));
     }
@@ -121,28 +122,29 @@ public class ConsoleProtocolEdgeTests
     [Fact]
     public void The_limit_counts_every_character_of_the_line_even_one_that_base64_would_skip()
     {
-        // La biblioteca ignora los espacios dentro del base64: sin el tope, una línea de 56 con un espacio de más pasaría por buena.
-        var longest = Line(0x30, 0x11, 0x10, Bytes(35));
+        // La biblioteca ignora los espacios dentro del base64: la de 64 con un espacio de más pasa, y la de 65 la para el tope.
+        var longest = Line(0x30, 0x11, 0x10, Bytes(42));
 
-        Assert.Equal(ConsoleLineKind.Malformed, ConsoleProtocol.Parse(longest + " ", out _));
-        Assert.Equal(ConsoleLineKind.Malformed, ConsoleProtocol.Parse(longest + "\r", out _));
+        Assert.Equal(ConsoleLineKind.Message, ConsoleProtocol.Parse(longest + " ", out _));
+        Assert.Equal(ConsoleLineKind.Malformed, ConsoleProtocol.Parse(longest + "  ", out _));
+        Assert.Equal(ConsoleLineKind.Malformed, ConsoleProtocol.Parse(longest + " \r", out _));
     }
 
     [Fact]
     public void The_buffer_fits_the_longest_line_even_without_padding()
     {
-        // 48 caracteres de base64 sin relleno son 36 bytes, uno más que la carga máxima de 04 §7: el sobrante no es motivo para tirar la línea.
-        var line = "#301110" + new string('A', 48);
-        Assert.Equal(ConsoleProtocol.MaxLineLength, line.Length);
+        // 56 caracteres de base64 sin relleno son justo los 42 bytes de la carga máxima del firmware.
+        var line = "#301110" + new string('A', 56);
+        Assert.Equal(ConsoleProtocol.MaxLineLength - 1, line.Length);
 
         Assert.Equal(ConsoleLineKind.Message, ConsoleProtocol.Parse(line, out var message));
-        Assert.Equal(36, message.Payload.Length);
+        Assert.Equal(42, message.Payload.Length);
     }
 
     [Fact]
-    public void Payloads_from_0_to_36_bytes_make_a_message_and_37_makes_a_line_too_long()
+    public void Payloads_from_0_to_42_bytes_make_a_message_and_43_makes_a_line_too_long()
     {
-        for (var count = 0; count <= 36; count++)
+        for (var count = 0; count <= 42; count++)
         {
             var kind = ConsoleProtocol.Parse(Line(0x30, 0x11, 0x10, Bytes(count)), out var message);
 
@@ -150,7 +152,7 @@ public class ConsoleProtocolEdgeTests
             Assert.Equal(Bytes(count), message.Payload);
         }
 
-        Assert.Equal(ConsoleLineKind.Malformed, ConsoleProtocol.Parse(Line(0x30, 0x11, 0x10, Bytes(37)), out _));
+        Assert.Equal(ConsoleLineKind.Malformed, ConsoleProtocol.Parse(Line(0x30, 0x11, 0x10, Bytes(43)), out _));
     }
 
     [Fact]

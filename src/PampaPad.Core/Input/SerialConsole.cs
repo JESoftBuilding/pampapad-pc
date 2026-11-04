@@ -188,7 +188,7 @@ public sealed partial class SerialConsole : IInputSource
     }
 
     private void Publish(ConsoleLinkState next) =>
-        _state.Update(s => s with { Console = s.Console with { State = next } });
+        _state.Update(s => s with { Console = s.Console.Moved(next) });
 
     private (bool Released, Task Changed) Snapshot()
     {
