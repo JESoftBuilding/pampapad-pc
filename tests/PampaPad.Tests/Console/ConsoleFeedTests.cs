@@ -207,6 +207,40 @@ public class ConsoleFeedTests
         Assert.Equal(1 + 11, rig.Sent.Count);
     }
 
+    // Revisión de la tanda 1 de la 9a (should): la consola borra las teclas al cambiar de página (ConsoleModel.h:83), así que una pareja
+    // que se ve igual en las dos páginas también tiene que viajar; si no, queda en blanco hasta que la rotación la alcance.
+    [Fact]
+    public async Task A_page_change_sends_all_six_labels_even_when_they_look_the_same_as_the_old_page()
+    {
+        await using var rig = new ConsoleFeedRig();
+        rig.Connect(rig.OwnFingerprint);
+        await rig.Round();
+        rig.Clear();
+
+        rig.Frame = rig.Frame with { Screen = rig.Frame.Screen with { Page = 1 } };
+        rig.Clock.Advance(ConsoleFeedRig.Tick);
+        await rig.Round();
+
+        Assert.Equal(new byte[] { Screen, Labels, Labels, Labels, Labels, Labels, Labels }, rig.Sent.Select(s => ConsoleFeedRig.Type(s.Line)));
+    }
+
+    // Revisión de la tanda 1 de la 9a (should): con el enlace todavía conectado, una escritura que falló no puede callar al emisor para siempre.
+    [Fact]
+    public async Task After_a_failed_write_with_the_link_still_connected_it_sends_everything_again_two_seconds_later()
+    {
+        await using var rig = new ConsoleFeedRig();
+        rig.Answer = _ => Task.FromResult(Result.Fail(ErrorCodes.ConsoleDisconnected, "No se pudo escribir en la consola."));
+        rig.Connect(rig.OwnFingerprint);
+        await rig.Run(ConsoleFeedRig.Tick);
+        Assert.Single(rig.Sent);
+
+        rig.Answer = _ => Task.FromResult(Result.Success);
+        await rig.Run(TimeSpan.FromSeconds(2));
+
+        Assert.True(rig.Sent.Count >= 1 + 11, $"Salieron {rig.Sent.Count} líneas");
+        Assert.Equal(Settings, ConsoleFeedRig.Type(rig.Sent[1].Line));
+    }
+
     [Fact]
     public async Task Just_booted_sends_everything_again()
     {
