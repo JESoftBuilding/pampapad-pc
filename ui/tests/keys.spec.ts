@@ -51,6 +51,15 @@ test("elegir una tecla vacía, ponerle etiqueta y acción, y guardar manda la co
   expect(await calls(page, "window.dirty")).toEqual(expect.arrayContaining([{ dirty: true }, { dirty: false }]));
 });
 
+test("las líneas de la consola se escriben sin acentos y cuentan sus letras de seis", async ({ page }) => {
+  await page.getByRole("button", { name: "Tecla 1", exact: true }).click();
+  await page.getByLabel("Línea 1", { exact: true }).fill("ñandú");
+
+  await expect(page.getByLabel("Línea 1", { exact: true })).toHaveValue("NANDU");
+  await expect(page.getByLabel("Letras de la línea 1")).toHaveText("5/6");
+  await expect(page.getByLabel("Letras de la línea 2")).toHaveText("0/6");
+});
+
 test("el borrador sobrevive a cambiar de pantalla y window.dirty no vuelve a false al navegar", async ({ page }) => {
   await page.getByRole("button", { name: "Tecla 5", exact: true }).click();
   await page.getByLabel("Etiqueta").fill("Corto");

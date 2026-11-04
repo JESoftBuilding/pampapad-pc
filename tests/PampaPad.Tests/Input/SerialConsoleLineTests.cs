@@ -9,10 +9,10 @@ public class SerialConsoleLineTests
     private const string AllUp = "#301110AAAAAAAAAAA=\n";
 
     [Theory]
-    [InlineData(35, "\n")]
-    [InlineData(36, "\n")]
-    [InlineData(35, "\r\n")]
-    [InlineData(36, "\r\n")]
+    [InlineData(41, "\n")]
+    [InlineData(42, "\n")]
+    [InlineData(41, "\r\n")]
+    [InlineData(42, "\r\n")]
     public async Task A_line_of_the_longest_length_is_read_whole_with_either_line_ending(int payloadLength, string ending)
     {
         await using var rig = new SerialConsoleRig();
@@ -23,18 +23,18 @@ public class SerialConsoleLineTests
 
         cable.Feed(Line(payload).TrimEnd('\n') + ending);
 
-        Assert.Equal(55, Line(payload).Length - 1);         // la línea más larga que admite 04 §7, sin el fin de línea
+        Assert.Equal(63, Line(payload).Length - 1);         // la línea más larga que arma el firmware (ConsoleWire.h:32-34), sin el fin de línea
         Assert.Equal(Press(3), await rig.NextEvent());
         Assert.Equal(0, rig.Source.MalformedLines);
     }
 
     [Fact]
-    public async Task A_line_one_character_too_long_is_malformed_even_if_its_start_is_a_valid_state()
+    public async Task A_line_past_the_longest_is_malformed_even_if_its_start_is_a_valid_state()
     {
         await using var rig = new SerialConsoleRig();
         var cable = rig.NextOpens();
         await rig.Source.StartAsync(CancellationToken.None);
-        var payload = new byte[36];
+        var payload = new byte[42];
         payload[0] = 0x01;                                  // la tecla 1: si la línea entrara, el primer evento sería Press(1)
 
         cable.Feed(Line(payload).TrimEnd('\n') + "A\n" + Key3Down);
@@ -187,11 +187,11 @@ public class SerialConsoleLineTests
         var cable = rig.NextOpens();
         await rig.Source.StartAsync(CancellationToken.None);
 
-        cable.Feed("#311110AAAAAAAAAAA=\n#zz\n" + Key3Down);
+        cable.Feed("#3F1011AAAA\n#zz\n" + Key3Down);
 
         Assert.Equal(Press(3), await rig.NextEvent());
         var logged = rig.Log.Recent().Where(e => e.Module == SerialConsole.SourceId).ToList();
-        Assert.Single(logged, e => e.Level == LogLevel.Info && e.Message.Contains("0x31", StringComparison.Ordinal));
+        Assert.Single(logged, e => e.Level == LogLevel.Info && e.Message.Contains("0x3F", StringComparison.Ordinal));
         Assert.Single(logged, e => e.Level == LogLevel.Warning);
     }
 
@@ -202,13 +202,13 @@ public class SerialConsoleLineTests
         var cable = rig.NextOpens();
         await rig.Source.StartAsync(CancellationToken.None);
 
-        cable.Feed(string.Concat(Enumerable.Repeat("#311110AAAAAAAAAAA=\n#zz\n", 5)) + Key3Down);
+        cable.Feed(string.Concat(Enumerable.Repeat("#3F1011AAAA\n#zz\n", 5)) + Key3Down);
 
         Assert.Equal(Press(3), await rig.NextEvent());
         Assert.Equal(5, rig.Source.UnknownMessages);
         Assert.Equal(5, rig.Source.MalformedLines);
         var logged = rig.Log.Recent().Where(e => e.Module == SerialConsole.SourceId).ToList();
-        Assert.Single(logged, e => e.Level == LogLevel.Info && e.Message.Contains("0x31", StringComparison.Ordinal));
+        Assert.Single(logged, e => e.Level == LogLevel.Info && e.Message.Contains("0x3F", StringComparison.Ordinal));
         Assert.Single(logged, e => e.Level == LogLevel.Warning);
     }
 

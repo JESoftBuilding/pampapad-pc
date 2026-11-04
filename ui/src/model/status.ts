@@ -64,15 +64,27 @@ export function recordingText(link: ObsLink, recording: Recording, recordedMs: n
   return parts.length === 0 ? undefined : parts.join(" · ");
 }
 
-/** La consola por cable. "Conectada" quiere decir sólo que el puerto abrió: el saludo de la consola llega en la etapa 9 (05 §4.5). */
-export function consoleText(state: ConsoleState, port?: string): string {
+/** Lo que dijo el último Hello de este enlace; sin Hello, todo falta (plan de la 9a, decisión 13). */
+export type ConsoleHello = { firmware?: string; settingsInSync?: boolean };
+
+/** El saludo de la consola: el firmware y si la huella de los ajustes coincide con la que manda la PC. Es el mismo texto que la bandeja. */
+export function greetingText(hello: ConsoleHello = {}): string {
+  if (hello.firmware === undefined) {
+    return "sin saludo todavía";
+  }
+
+  return `firmware ${hello.firmware} · ${hello.settingsInSync === true ? "ajustes al día" : "ajustes sin confirmar"}`;
+}
+
+/** La consola por cable (05 §4.5). Conectada, el saludo dice si la placa contestó: el puerto abierto solo no lo dice. */
+export function consoleText(state: ConsoleState, port?: string, hello?: ConsoleHello): string {
   switch (state) {
     case "off":
       return "Sin consola: no hay puerto en local.json";
     case "waiting":
       return `Consola ${port}: sin conexión, reintenta cada 2 s`;
     case "connected":
-      return `Consola ${port}: conectada`;
+      return `Consola conectada · ${greetingText(hello)}`;
     case "released":
       return `Consola ${port}: suelta, se toma desde la bandeja`;
   }

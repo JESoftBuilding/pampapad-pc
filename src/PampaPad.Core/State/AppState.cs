@@ -60,6 +60,9 @@ public sealed record AppState
     /// <summary>La última acción que falló. Se borra cuando la próxima termina bien o cuando se abre el menú de la bandeja.</summary>
     public ActionFailure? LastFailure { get; init; }
 
+    /// <summary>La última acción que falló, con su hora: la consola la muestra 5 s en la línea de escena (04:147). Dismiss no la borra.</summary>
+    public RecentFailure? RecentFailure { get; init; }
+
     /// <summary>El enlace con la consola por cable y el puerto que dice local.json. Sin puerto, apagada.</summary>
     public ConsoleLink Console { get; init; } = ConsoleLink.None;
 }
@@ -70,3 +73,6 @@ public sealed record RunningAction(Guid RunId, string ActionId, Trigger Requeste
 
 /// <summary>NoticeId es el id del aviso (marker_failed o action_failed); Summary, "Falló acción: paso n (tipo)".</summary>
 public sealed record ActionFailure(string NoticeId, string Summary, string Message);
+
+/// <summary>Lo que necesita el aviso leve de la consola: el id del aviso, el nombre de la acción, el número del paso que falló y cuándo.</summary>
+public sealed record RecentFailure(string NoticeId, string ActionName, int? Step, DateTimeOffset At);

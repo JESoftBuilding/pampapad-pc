@@ -58,8 +58,14 @@ describe("consoleText", () => {
     expect(consoleText("off")).toBe("Sin consola: no hay puerto en local.json");
   });
 
-  it("conectada", () => {
-    expect(consoleText("connected", "COM20")).toBe("Consola COM20: conectada");
+  it("conectada sin saludo todavía", () => {
+    expect(consoleText("connected", "COM20")).toBe("Consola conectada · sin saludo todavía");
+  });
+
+  it("conectada, con el firmware del saludo y si la huella de los ajustes coincide (plan de la 9a, decisión 13)", () => {
+    expect(consoleText("connected", "COM20", { firmware: "0.1.5", settingsInSync: true })).toBe("Consola conectada · firmware 0.1.5 · ajustes al día");
+    expect(consoleText("connected", "COM20", { firmware: "0.1.5", settingsInSync: false })).toBe("Consola conectada · firmware 0.1.5 · ajustes sin confirmar");
+    expect(consoleText("connected", "COM20", { firmware: "0.1.4" })).toBe("Consola conectada · firmware 0.1.4 · ajustes sin confirmar");
   });
 
   it("esperando, con el reintento", () => {

@@ -102,7 +102,12 @@
             ],
             "console": {
               "state": "connected",
-              "port": "COM20"
+              "port": "COM20",
+              "firmware": "0.1.5",
+              "capabilities": 199,
+              "energy": 0,
+              "settingsFingerprint": 27627,
+              "settingsInSync": true
             }
           },
           "stepTypes": [
@@ -1138,7 +1143,12 @@
         ],
         "console": {
           "state": "connected",
-          "port": "COM20"
+          "port": "COM20",
+          "firmware": "0.1.5",
+          "capabilities": 199,
+          "energy": 0,
+          "settingsFingerprint": 27627,
+          "settingsInSync": true
         }
       }
     },

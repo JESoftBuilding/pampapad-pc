@@ -5,13 +5,17 @@
 export const lineLength = 6;
 export const maxLines = 2;
 
-function plain(text: string): string {
+/** Lo que la letra de la consola dibuja: mayúsculas sin acentos ni signos raros, con los espacios como están (para escribir a mano). */
+export function screenText(text: string): string {
   return text
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .toUpperCase()
-    .replace(/[^A-Z0-9 +\-./]/g, "")
-    .trim();
+    .replace(/[^A-Z0-9 +\-./]/g, "");
+}
+
+function plain(text: string): string {
+  return screenText(text).trim();
 }
 
 function abbreviate(word: string): string {
@@ -44,12 +48,10 @@ export function shortLabelFor(label: string): string[] {
   const lines: string[] = [];
   pack(main.split(/\s+/), lines);
   if (inner.length > 0) {
-    if (lines.length === 0) {
-      lines.push("");
-    }
-
-    lines.splice(1, lines.length - 1);
-    pack(inner.split(/\s+/), lines);
+    // Lo de entre paréntesis va siempre a la segunda línea, aunque entre en la primera (04 §9: Mic (on) da MIC / ON).
+    const second: string[] = [];
+    pack(inner.split(/\s+/), second);
+    return [lines[0] ?? "", second[0] ?? ""];
   }
 
   return lines.length === 0 ? [""] : lines;

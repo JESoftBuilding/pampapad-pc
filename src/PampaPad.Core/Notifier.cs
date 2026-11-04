@@ -11,8 +11,10 @@ public readonly record struct NoticeChannels(bool Sound, bool Balloon);
 /// Con una toma en curso nunca hay cartel: la escena Pantalla graba el monitor entero y saldría en el video.
 /// Sólo encola en cada canal: sonar y mostrar el cartel es de la bandeja.
 /// </summary>
-public sealed class Notifier(StateStore state, Library library, Log log, Action<Notice> playSound, Action<Notice> showBalloon)
+public sealed class Notifier(StateStore state, Library library, Log log, Action<Notice> playSound, Action<Notice> showBalloon, TimeProvider? clock = null)
 {
+    private readonly TimeProvider _clock = clock ?? TimeProvider.System;
+
     public const string MarkerFailed = "marker_failed";
     public const string ActionFailed = "action_failed";
 
@@ -48,14 +50,16 @@ public sealed class Notifier(StateStore state, Library library, Log log, Action<
         // Una falla da un solo aviso: si el paso que falló es una marca, es marker_failed y no action_failed (04 §5).
         string id = result.StepType == ObsMarker.TypeId ? MarkerFailed : ActionFailed;
         string at = result.StepNumber is { } step ? $": paso {step}{(string.IsNullOrEmpty(result.StepType) ? "" : $" ({result.StepType})")}" : "";
-        string summary = $"Falló {NameOf(config, result)}{at}";
+        string name = NameOf(config, result);
+        string summary = $"Falló {name}{at}";
         string message = result.Failure?.Message ?? "";
 
         var obs = state.Current.Obs;
         bool mute = config.Console?.MuteSoundWhileRecording ?? ConsoleSettings.DefaultMuteSoundWhileRecording;
         NoticeChannels channels = Decide(obs.Recording, obs.Streaming, mute);
 
-        state.Update(s => s with { LastFailure = new ActionFailure(id, summary, message) });
+        var recent = new RecentFailure(id, name, result.StepNumber, _clock.GetUtcNow());
+        state.Update(s => s with { LastFailure = new ActionFailure(id, summary, message), RecentFailure = recent });
         var notice = new Notice(id, summary, message);
         if (channels.Sound)
         {

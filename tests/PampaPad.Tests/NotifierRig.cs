@@ -19,7 +19,8 @@ internal sealed class NotifierRig : IAsyncDisposable
         bool streaming = false,
         ObsLinkState link = ObsLinkState.Ready,
         Action<Notice>? sound = null,
-        Action<Notice>? balloon = null)
+        Action<Notice>? balloon = null,
+        TimeProvider? clock = null)
     {
         config ??= $$"""{ "version": 1, "actions": [ {{ShortAction}} ] }""";
         Directory.CreateDirectory(_temp.Combine("biblioteca"));
@@ -28,7 +29,7 @@ internal sealed class NotifierRig : IAsyncDisposable
         Library = new CoreLibrary(_temp.Combine("biblioteca"), _temp.Combine("backup"));
         Library.Load();
         State.Update(s => s with { Obs = s.Obs with { Link = link, Recording = recording, Streaming = streaming } });
-        Notifier = new Notifier(State, Library, Log, sound ?? Sounds.Add, balloon ?? Balloons.Add);
+        Notifier = new Notifier(State, Library, Log, sound ?? Sounds.Add, balloon ?? Balloons.Add, clock);
     }
 
     public StateStore State { get; } = new();

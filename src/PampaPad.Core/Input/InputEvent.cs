@@ -18,10 +18,16 @@ public enum Gesture
 /// <summary>Lo que llega de una fuente de entrada. Source es el Id de la fuente; Value, los pasos de la perilla o el lugar del atajo en la lista general.</summary>
 public sealed record InputEvent(string Source, string Control, Gesture Gesture, int Value = 0);
 
-/// <summary>Los nombres de control de un InputEvent: key.1 a key.12 y hotkey. knob y moduleKey entran con la consola.</summary>
+/// <summary>Los nombres de control de un InputEvent: key.1 a key.12, hotkey, y knob y moduleKey de la consola (02 §6).</summary>
 public static class Controls
 {
     public const string Hotkey = "hotkey";
+
+    /// <summary>La perilla: Turn con los detentes con signo en Value, y Press/Release por su clic (PUSH).</summary>
+    public const string Knob = "knob";
+
+    /// <summary>La tecla del módulo (KO): Press/Release.</summary>
+    public const string ModuleKey = "moduleKey";
 
     private const string KeyPrefix = "key.";
 

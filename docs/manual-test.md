@@ -442,3 +442,40 @@ Al terminar: quitar lo que se creó para la prueba, o dejarlo si sirve, y mirar 
   - por CDP, la tarjeta lista "Sin consola", COM1, COM6 y COM7 (Bluetooth) y COM20 "USB-Enhanced-SERIAL CH343", y dice "Se aplica al volver a abrir PampaPad";
   - en Acciones, el paso de "Luz violeta" muestra el comando `color`, el selector en violeta y la ayuda con los cinco comandos y los nombres de los presets. Probar dice "falló en 7 ms: No hay puerto de la consola…". "Luz alternar" muestra `power` y `toggle`, y "Luz mala" su aviso;
   - una acción "Luz roja" creada en la ventana con el selector se guardó como `{"type":"lights","command":"color","color":"#FF0000"}`.
+
+## Etapa 9a: la consola viva
+
+Se repasa con la placa y el firmware de la consola 0.1.5, la tira y OBS abierto. La consola tiene que estar suelta del PampaPad instalado, que se puede cerrar. Así la copia que se prueba abre COM20.
+
+| N | Qué hacer | Qué tiene que pasar |
+|---|---|---|
+| 1 | Conectar la consola con el programa abierto | Deja de decir "SIN PC"; Estado dice "Consola conectada · firmware 0.1.5 · ajustes al día" |
+| 2 | Mirar la pantalla con OBS abierto y detenido | La banda en detenido, la escena al aire en la línea de escena y las etiquetas de la página con su color |
+| 3 | Grabar desde una tecla | La banda en rojo con el cronómetro, la tecla de grabar activa y la tira roja fija |
+| 4 | Pausa desde su tecla | La banda en pausa y la tira ámbar titilando |
+| 5 | Cambiar el nombre de una tecla en Teclas y guardar | La consola la muestra cambiada, en su lugar |
+| 6 | Cortar la grabación (mantener la tecla de grabar) | La banda en detenido y la tira apagada |
+| 7 | Girar la perilla detenida | Cambia de página con sus etiquetas, y da la vuelta |
+| 8 | Toque de la tecla del módulo | Vuelve a la página principal |
+| 9 | Con una capa asignada (`moduleKey.layer`), mantener la tecla del módulo y apretar otra | Mientras se mantiene se ve la capa; la tecla corre su acción de la capa; al soltar vuelve la base |
+| 10 | Desenchufar y volver a enchufar la consola | Vuelve sola, sin quedarse en "SIN PC" |
+
+- **El repaso del 2026-11-03**, con la copia de desarrollo de `etapa-9`:
+  - la copia leía una copia de la biblioteca real (`D:\repos\pampapad-construccion\E9-8-biblioteca`), con la capa `escenas` agregada sólo ahí;
+  - la consola tenía la 0.1.5, cargada por Emmanuel con `pio run -e consola -t upload --upload-port COM20`;
+  - registro copiado en `E9-8-registro.jsonl`.
+- **Lo que vio el programa:**
+  - a las 23:26:13, la consola conectada y su saludo: firmware 0.1.5, capacidades 0xC7;
+  - por el MCP de la rama, "ajustes al día" (huella 0x6BEB);
+  - la línea `estado:` de la consola cada 60 s, con "descartes 0 0 0 0 0 0";
+  - al reenchufar, a las 23:35:04, el arranque del chip y "reinicio 1 encendido", también en el registro.
+- **Lo que vio Emmanuel:**
+  - 1, la consola dejó de decir "SIN PC";
+  - 3, grabando, la banda roja con el cronómetro y la tira roja; las marcas se ven todas;
+  - 4, en pausa, la tira ámbar titilando;
+  - 5, cambiar el nombre de una tecla la actualizó en la consola, en su lugar;
+  - 6, mantener la tecla de grabar corta la grabación;
+  - 7, la perilla cambia de página;
+  - 8 y 9, la tecla del módulo anda;
+  - 10, al desenchufar y reenchufar "tomó todo de una".
+- **Lo que preguntó:** en la página Escenas, elegir una escena vuelve a la principal. No es la 9a: cada acción "Escena: …" de su biblioteca empieza con "Ir a otra página: principal, sólo si la grabación está detenida". Se puede sacar escena por escena.

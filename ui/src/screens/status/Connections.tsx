@@ -20,7 +20,7 @@ export function Connections({ state, settings }: { state: State; settings: Snaps
         <dt className="text-muted">Micrófono</dt>
         <dd>{obs.micName === undefined ? "sin dato" : `${obs.micName}${obs.micMuted ? ", silenciado" : ""}`}</dd>
         <dt className="text-muted">Consola</dt>
-        <dd>{consoleText(state.console.state, state.console.port)}</dd>
+        <dd>{consoleText(state.console.state, state.console.port, state.console)}</dd>
         <dt className="text-muted">Atajos</dt>
         <dd>
           {hotkeysText(settings.hotkeysEnabled, state.hotkeys.registered, state.hotkeys.rejected)}

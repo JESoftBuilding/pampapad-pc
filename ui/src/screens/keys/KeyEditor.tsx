@@ -1,7 +1,7 @@
 import type { Bridge } from "@/bridge/bridge";
 import type { Action, Key, Page, Problem } from "@/bridge/contract";
 import type { KeyPatch } from "@/model/draft";
-import { fitsScreen, lineLength, shortLabelFor } from "@/model/labels";
+import { fitsScreen, lineLength, screenText, shortLabelFor } from "@/model/labels";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
@@ -31,7 +31,7 @@ export function KeyEditor({ page, position, current, actions, scripts, problems,
   const lines = current?.shortLabel ?? [];
   const setLine = (index: number, value: string) => {
     const next = [lines[0] ?? "", lines[1] ?? ""];
-    next[index] = value.toUpperCase();
+    next[index] = screenText(value);
     while (next.length > 0 && next[next.length - 1] === "") {
       next.pop();
     }
@@ -63,16 +63,20 @@ export function KeyEditor({ page, position, current, actions, scripts, problems,
       >
         <div className="flex gap-2">
           {[0, 1].map((index) => (
-            <Input
-              key={index}
-              aria-label={`Línea ${index + 1}`}
-              className="w-28 font-display uppercase"
-              maxLength={lineLength}
-              placeholder={computed[index] ?? ""}
-              value={lines[index] ?? ""}
-              onChange={(event) => setLine(index, event.target.value)}
-              disabled={!editable}
-            />
+            <div key={index} className="flex items-center gap-1">
+              <Input
+                aria-label={`Línea ${index + 1}`}
+                className="w-28 font-display uppercase"
+                maxLength={lineLength}
+                placeholder={computed[index] ?? ""}
+                value={lines[index] ?? ""}
+                onChange={(event) => setLine(index, event.target.value)}
+                disabled={!editable}
+              />
+              <span className="text-xs text-muted" aria-label={`Letras de la línea ${index + 1}`}>
+                {(lines[index] ?? "").length}/{lineLength}
+              </span>
+            </div>
           ))}
         </div>
       </Field>

@@ -25,9 +25,9 @@ public class ConsoleProtocolTests
     }
 
     [Fact]
-    public void A_line_longer_than_55_characters_is_malformed()
+    public void A_line_longer_than_64_characters_is_malformed()
     {
-        var line = "#301110" + new string('A', 52);
+        var line = "#301110" + new string('A', 58);
 
         Assert.Equal(ConsoleLineKind.Malformed, ConsoleProtocol.Parse(line, out _));
     }

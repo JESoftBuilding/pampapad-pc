@@ -94,7 +94,8 @@ internal sealed partial class Composition : IAsyncDisposable
             library,
             log,
             playSound: notice => ui.Post(_ => composition.Tray?.PlayFailed(), null),
-            showBalloon: notice => ui.Post(_ => composition.Tray?.ShowBalloon(notice.Title, notice.Text, notice.Warning), null));
+            showBalloon: notice => ui.Post(_ => composition.Tray?.ShowBalloon(notice.Title, notice.Text, notice.Warning), null),
+            clock);
         dispatcher.Finished += notifier.OnFinished;
         if (!headless && (settings.Current.HotkeysEnabled ?? !AppIdentity.Dev))
         {
@@ -210,11 +211,7 @@ internal sealed partial class Composition : IAsyncDisposable
             _loops.Add(_hotkeys.StartAsync(_life.Token));
         }
 
-        if (_console is not null)
-        {
-            // Vuelve en el acto: el bucle de lectura es de la consola y se cierra con su DisposeAsync.
-            _loops.Add(_console.StartAsync(_life.Token));
-        }
+        StartConsole();
 
         if (_dispatcher is not null)
         {
@@ -264,10 +261,7 @@ internal sealed partial class Composition : IAsyncDisposable
         }
 
         _systemHotkeys?.Dispose();
-        if (_console is not null)
-        {
-            await _console.DisposeAsync().ConfigureAwait(false);
-        }
+        await DisposeConsoleAsync().ConfigureAwait(false);
 
         await _obs.DisposeAsync().ConfigureAwait(false);
         await _state.DisposeAsync().ConfigureAwait(false);
