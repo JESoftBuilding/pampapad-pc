@@ -77,9 +77,9 @@ internal sealed partial class Composition : IAsyncDisposable
             ComposeChains(library, state, obs, windows, log, clock, target => dispatcher!.Go(target), output, (line, ct) => composition!.SendToConsoleAsync(line, ct));
         var preflight = new Preflight(conditions, library, state, log, clock);
 
-        // El umbral de mantener sale de console.holdMs de la biblioteca; si no está, es un segundo (02 §4.10).
-        // Se lee una sola vez, ahora: "Recargar biblioteca" no lo toma y cambiarlo pide reiniciar el programa.
-        var gestures = new Gestures(clock, Gestures.HoldFrom(library.Current.Console?.HoldMs), Gestures.DefaultFreshness);
+        // El umbral de mantener sale de console.holdMs de la biblioteca actual en cada gesto; si no está, es un segundo (02 §4.10).
+        // En vivo: lo cambia Ajustes y rige sin reiniciar (plan de la 9b, decisión 12).
+        var gestures = new Gestures(clock, () => Gestures.HoldFrom(library.Current.Console?.HoldMs), Gestures.DefaultFreshness);
         dispatcher = new Dispatcher(library, state, executor, gestures, log);
         var updater = new Updater(state, settings, log, clock);
         composition = new Composition(log, state, obs, updater);
