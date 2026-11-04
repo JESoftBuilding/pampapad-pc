@@ -15,6 +15,9 @@ public static class AlertTexts
     public const string ObsLost = "obs_lost";
     public const string RecordingWithFailure = "recording_with_failure";
 
+    /// <summary>El único aviso que decide la consola sola (04 §5): no es grave, pero tiene canales en console.alerts.</summary>
+    public const string NoPc = "no_pc";
+
     public const int TitleLetters = 8;
     public const int LineLetters = 17;
     public const int HintLetters = 25;
