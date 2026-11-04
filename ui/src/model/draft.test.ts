@@ -4,7 +4,29 @@ import { describe, expect, it } from "vitest";
 // El único cruce de model/ con bridge/, y sólo en una prueba: ata z.looseObject a no perder nada (02 §3, regla 1).
 // eslint-disable-next-line no-restricted-imports
 import { configSchema } from "../bridge/contract";
-import { keyAt, moveStep, newActionId, removeAction, removeStep, sameConfig, scriptAction, setKey, setStep, slug, upsertAction, type ActionLike, type ConfigLike, type PageLike } from "./draft";
+import {
+  alertChannel,
+  consoleValue,
+  keyAt,
+  moveStep,
+  newActionId,
+  removeAction,
+  removeStep,
+  resetConsole,
+  sameConfig,
+  scriptAction,
+  setAlertChannel,
+  setConsoleValue,
+  setKey,
+  setModuleLayer,
+  setMuteSound,
+  setStep,
+  slug,
+  upsertAction,
+  type ActionLike,
+  type ConfigLike,
+  type PageLike,
+} from "./draft";
 
 // El archivo mínimo con un campo inventado en cada nivel (02 §3, regla 1), el mismo de ModelTests y LibrarySaveTests.
 type Minimal = ConfigLike & { pages: PageLike[]; actions: ActionLike[] };
@@ -99,5 +121,74 @@ describe("sameConfig", () => {
   it("compara el contenido, no la referencia", () => {
     expect(sameConfig(minimal, JSON.parse(JSON.stringify(minimal)))).toBe(true);
     expect(sameConfig(minimal, setKey(minimal, "grabacion", 5, { label: "Otra" }))).toBe(false);
+  });
+});
+
+describe("los ajustes de la consola", () => {
+  const bare: ConfigLike = { version: 1, pages: [{ id: "grabacion" }] };
+
+  it("un valor distinto del de fábrica se escribe y el de fábrica se quita, con su objeto y el bloque si quedan vacíos", () => {
+    const dim = setConsoleValue(bare, "screen.brightness", 40);
+    expect(dim.console).toEqual({ screen: { brightness: 40 } });
+    expect(consoleValue(dim, "screen.brightness")).toBe(40);
+
+    const back = setConsoleValue(dim, "screen.brightness", 80);
+    expect(back).not.toHaveProperty("console");
+    expect(sameConfig(back, bare)).toBe(true);   // lo no tocado no se escribe: el borrador vuelve a ser el archivo
+  });
+
+  it("lo de fábrica sin tocar no se escribe, y lo leído falta: vale el de 02 §4.10", () => {
+    expect(setConsoleValue(bare, "holdMs", 1000)).toEqual(bare);
+    expect(consoleValue(bare, "screen.offAfterSec")).toBe(300);
+    expect(consoleValue(bare, "strip.brightness")).toBe(25);
+    expect(consoleValue(bare, "sleepAfterSec")).toBe(0);
+  });
+
+  it("Nunca es 0 y se escribe, salvo en dormir, que de fábrica ya es nunca", () => {
+    expect(setConsoleValue(bare, "screen.dimAfterSec", 0).console).toEqual({ screen: { dimAfterSec: 0 } });
+    expect(setConsoleValue(bare, "sleepAfterSec", 0)).not.toHaveProperty("console");
+  });
+
+  it("conserva lo inventado del bloque y de sus objetos", () => {
+    const edited = setConsoleValue(minimal, "screen.brightness", 80);
+    expect(edited.console).toEqual({ ...(minimal.console as object), screen: { inventado: "en screen" } });
+    expect(count(setConsoleValue(minimal, "strip.brightness", 60))).toBe(count(minimal));
+  });
+
+  it("callar el sonido sigue la misma regla: verdadero es de fábrica", () => {
+    expect(setMuteSound(bare, false).console).toEqual({ muteSoundWhileRecording: false });
+    expect(setMuteSound(setMuteSound(bare, false), true)).toEqual(bare);
+  });
+
+  it("un canal de aviso: los graves vienen con luz y sonido, no_pc sólo con luz", () => {
+    expect(alertChannel(bare, "mic_muted", "sound")).toBe(true);
+    expect(alertChannel(bare, "no_pc", "light")).toBe(true);
+    expect(alertChannel(bare, "no_pc", "sound")).toBe(false);
+
+    const quiet = setAlertChannel(bare, "mic_muted", "sound", false);
+    expect(quiet.console).toEqual({ alerts: { mic_muted: { sound: false } } });
+    expect(alertChannel(quiet, "mic_muted", "sound")).toBe(false);
+    expect(setAlertChannel(quiet, "mic_muted", "sound", true)).toEqual(bare);
+    expect(setAlertChannel(bare, "no_pc", "sound", true).console).toEqual({ alerts: { no_pc: { sound: true } } });
+  });
+
+  it("un canal vuelto a fábrica deja lo inventado del aviso", () => {
+    const edited = setAlertChannel(minimal, "marker_failed", "sound", true);
+    expect((edited.console as { alerts: unknown }).alerts).toEqual({ marker_failed: { light: true, inventado: "en el aviso" } });
+  });
+
+  it("la capa de la tecla del módulo se elige y se quita, y moduleKey vacío desaparece", () => {
+    const chosen = setModuleLayer(bare, "grabacion");
+    expect(chosen.moduleKey).toEqual({ layer: "grabacion" });
+    expect(setModuleLayer(chosen, null)).toEqual(bare);
+    expect(setModuleLayer(minimal, null).moduleKey).toEqual({ inventado: "en moduleKey" });
+  });
+
+  it("volver a los valores por defecto quita el bloque console entero y nada más", () => {
+    const reset = resetConsole(minimal);
+    expect("console" in reset).toBe(false);
+    expect({ ...reset, console: minimal.console }).toEqual(minimal);
+    expect(reset.moduleKey).toBe(minimal.moduleKey);
+    expect(reset.pages).toBe(minimal.pages);
   });
 });
