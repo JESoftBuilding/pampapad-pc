@@ -114,7 +114,7 @@ public static class ObsMirror
     private static ObsState RecordChanged(ObsState state, string? outputState) => outputState switch
     {
         "OBS_WEBSOCKET_OUTPUT_STARTING" => state with { Recording = RecordingState.Starting },
-        "OBS_WEBSOCKET_OUTPUT_STARTED" => state with { Recording = RecordingState.Recording, Recorded = TimeSpan.Zero },
+        "OBS_WEBSOCKET_OUTPUT_STARTED" => state with { Recording = RecordingState.Recording, Recorded = TimeSpan.Zero, TakeMarks = 0 },
         "OBS_WEBSOCKET_OUTPUT_PAUSED" => state with { Recording = RecordingState.Paused },
         "OBS_WEBSOCKET_OUTPUT_RESUMED" => state with { Recording = RecordingState.Recording },
         "OBS_WEBSOCKET_OUTPUT_STOPPING" => state with { Recording = RecordingState.Stopping },

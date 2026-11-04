@@ -15,12 +15,14 @@ public enum MuteCommand
 /// en el estado; el de otra entrada se pregunta antes con GetInputMute, porque el estado no lo refleja. Nunca ToggleInputMute: por uuid no
 /// se probó (03, Incierto).
 /// </summary>
-public sealed class ObsMute(ObsClient obs, StateStore state) : StepType<MuteParameters>
+public sealed class ObsMute(ObsClient obs, StateStore state, TimeProvider? clock = null) : StepType<MuteParameters>
 {
     public const string TypeId = "obs.mute";
     public const string RequestType = "SetInputMute";
 
     private static readonly string[] Words = ["toggle", "mute", "unmute"];
+
+    private readonly TimeProvider _clock = clock ?? TimeProvider.System;
 
     public override string Id => TypeId;
 
@@ -103,11 +105,22 @@ public sealed class ObsMute(ObsClient obs, StateStore state) : StepType<MutePara
         object data = target.Uuid.Length > 0
             ? new { inputUuid = target.Uuid, inputMuted = muted }
             : new { inputName = target.Name, inputMuted = muted };
+
+        // El silencio propio (plan de la 9b, decisión 7): se marca antes del pedido, porque el evento de OBS puede llegar antes que la respuesta.
+        if (IsMic(known, target))
+        {
+            DateTimeOffset at = _clock.GetUtcNow();
+            state.Update(s => s with { Obs = s.Obs with { OwnMuteAt = at } });
+        }
+
         ObsResponse response = await obs.RequestAsync(RequestType, data, ct).ConfigureAwait(false);
         return response.Ok ? new StepResult(null) : new StepResult(Missing(response, target) ?? ObsStep.Rejected(response, what));
     }
 
     private static ObsItem? Mic(ObsState known) => known.MicName is { } name ? new ObsItem(known.MicUuid ?? "", name) : null;
+
+    private static bool IsMic(ObsState known, ObsItem target) =>
+        known.MicName is { } mic && (target.Uuid.Length > 0 && known.MicUuid is { } uuid ? target.Uuid == uuid : target.Name == mic);
 
     // 600: la entrada se borró entre que se la buscó en la lista y que llegó el pedido.
     private static Failure? Missing(ObsResponse response, ObsItem target) => response.Code == ObsStep.ResourceNotFound

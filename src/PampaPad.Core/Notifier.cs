@@ -33,9 +33,16 @@ public sealed class Notifier(StateStore state, Library library, Log log, Action<
     {
         // Una prueba de la ventana (action.test) se ve ahí mismo, paso por paso: ni suena, ni muestra un cartel, ni cambia el ícono de la
         // bandeja, y tampoco borra la falla de una acción de verdad (05 §4.2, Propuesto). Lo del MCP, igual: Claude recibe el resultado y lo
-        // cuenta en la sesión (plan de la etapa MCP, decisión 1).
+        // cuenta en la sesión (plan de la etapa MCP, decisión 1). Una marca que falló sí llega a la consola por cualquier vía, y sólo a ella
+        // (plan de la 9b, decisión 7).
         if (result.RequestedBy is Trigger.Window or Trigger.Mcp)
         {
+            if (!result.Ok && result.StepType == ObsMarker.TypeId)
+            {
+                var marker = new RecentFailure(MarkerFailed, NameOf(library.Current, result), result.StepNumber, _clock.GetUtcNow(), result.Failure?.Code);
+                state.Update(s => s with { RecentFailure = marker });
+            }
+
             return;
         }
 
@@ -58,7 +65,7 @@ public sealed class Notifier(StateStore state, Library library, Log log, Action<
         bool mute = config.Console?.MuteSoundWhileRecording ?? ConsoleSettings.DefaultMuteSoundWhileRecording;
         NoticeChannels channels = Decide(obs.Recording, obs.Streaming, mute);
 
-        var recent = new RecentFailure(id, name, result.StepNumber, _clock.GetUtcNow());
+        var recent = new RecentFailure(id, name, result.StepNumber, _clock.GetUtcNow(), result.Failure?.Code);
         state.Update(s => s with { LastFailure = new ActionFailure(id, summary, message), RecentFailure = recent });
         var notice = new Notice(id, summary, message);
         if (channels.Sound)

@@ -74,5 +74,8 @@ public sealed record RunningAction(Guid RunId, string ActionId, Trigger Requeste
 /// <summary>NoticeId es el id del aviso (marker_failed o action_failed); Summary, "Falló acción: paso n (tipo)".</summary>
 public sealed record ActionFailure(string NoticeId, string Summary, string Message);
 
-/// <summary>Lo que necesita el aviso leve de la consola: el id del aviso, el nombre de la acción, el número del paso que falló y cuándo.</summary>
-public sealed record RecentFailure(string NoticeId, string ActionName, int? Step, DateTimeOffset At);
+/// <summary>
+/// Lo que necesitan los avisos de la consola: el id del aviso, el nombre de la acción, el número del paso que falló, cuándo y el código del
+/// error, del que sale el texto de marker_failed (plan de la 9b, E9b-2).
+/// </summary>
+public sealed record RecentFailure(string NoticeId, string ActionName, int? Step, DateTimeOffset At, string? Code = null);
