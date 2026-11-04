@@ -223,7 +223,7 @@ public sealed partial class ObsClient(
     // lee al conectar pudo haber cambiado hace horas. ObsMirror no tiene reloj: la marca la pone el cliente, con el reloj monótono del
     // TimeProvider (GetTimestamp) y no con la hora de Windows, que salta si Windows la corrige.
     private ObsState Stamp(ObsState before, ObsState after) =>
-        after.Recording != before.Recording ? after with { RecordingChangedAt = clock.GetTimestamp() } : after;
+        after.Recording != before.Recording ? after with { RecordingChangedAt = clock.GetTimestamp(), RecordingChangedOn = clock.GetUtcNow() } : after;
 
     private void Info(string message) => log.Write(LogLevel.Info, "obs", message);
 

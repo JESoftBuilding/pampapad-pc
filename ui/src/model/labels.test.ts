@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { fitsScreen, shortLabelFor } from "./labels";
+import cases from "./labels.cases.json";
+import { fitsScreen, screenText, shortLabelFor } from "./labels";
 
 describe("shortLabelFor", () => {
   it("una palabra corta queda sola, en mayúsculas y sin acentos", () => {
@@ -30,5 +31,19 @@ describe("shortLabelFor", () => {
     expect(fitsScreen(["SHORT"])).toBe(true);
     expect(fitsScreen(["DEMASIADO"])).toBe(false);
     expect(fitsScreen(["A", "B", "C"])).toBe(false);
+  });
+});
+
+// Los mismos casos los corre ShortLabelsTests del lado de C#: la consola recibe la regla de C# y Teclas muestra la de acá (plan de la 9a, decisión 12).
+describe("los casos compartidos con C#", () => {
+  it.each(cases.map((c) => [c.label, c.lines] as const))("%j da %j", (label, lines) => {
+    expect(shortLabelFor(label)).toEqual(lines);
+  });
+});
+
+describe("screenText", () => {
+  it("pasa a mayúsculas sin acentos y deja los espacios, para escribir las líneas a mano", () => {
+    expect(screenText("ñandú ")).toBe("NANDU ");
+    expect(screenText("mic: on")).toBe("MIC ON");
   });
 });

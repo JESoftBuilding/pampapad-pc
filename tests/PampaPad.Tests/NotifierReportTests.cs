@@ -130,13 +130,14 @@ public class NotifierReportTests
     }
 
     [Fact]
-    public async Task Showing_the_failure_does_not_touch_the_rest_of_the_state()
+    public async Task Showing_the_failure_touches_only_the_failure_and_its_time_for_the_console()
     {
         await using var rig = new NotifierRig(recording: RecordingState.Paused);
         AppState before = rig.State.Current;
 
         rig.Notifier.OnFinished(NotifierRig.Failed("marca-short", 1, ObsMarker.TypeId, ErrorCodes.MarkerPaused, Paused));
 
-        Assert.Equal(before with { LastFailure = rig.State.Current.LastFailure, Seq = rig.State.Current.Seq }, rig.State.Current);
+        AppState after = rig.State.Current;
+        Assert.Equal(before with { LastFailure = after.LastFailure, RecentFailure = after.RecentFailure, Seq = after.Seq }, after);
     }
 }

@@ -1,0 +1,21 @@
+[
+  { "label": "Short", "lines": ["SHORT"] },
+  { "label": "Cámara", "lines": ["CAMARA"] },
+  { "label": "Año", "lines": ["ANO"] },
+  { "label": "Ñandú", "lines": ["NANDU"] },
+  { "label": "Pantalla", "lines": ["PANTA."] },
+  { "label": "Micrófono", "lines": ["MICRO."] },
+  { "label": "Ir al banco", "lines": ["IR AL", "BANCO"] },
+  { "label": "Ya arrancamos", "lines": ["YA", "ARRAN."] },
+  { "label": "Pantalla + Cámara", "lines": ["PANTA.", "+"] },
+  { "label": "Sting triste", "lines": ["STING", "TRISTE"] },
+  { "label": "Mic: abrir", "lines": ["MIC", "ABRIR"] },
+  { "label": "Ir a la sala", "lines": ["IR A", "LA"] },
+  { "label": "Cámara (zoom)", "lines": ["CAMARA", "ZOOM"] },
+  { "label": "Vertical (SolidWorks)", "lines": ["VERTI.", "SOLID."] },
+  { "label": "Mic (on)", "lines": ["MIC", "ON"] },
+  { "label": "(zoom)", "lines": ["", "ZOOM"] },
+  { "label": "Una etiqueta muy larga de verdad", "lines": ["UNA", "ETIQU."] },
+  { "label": "   ", "lines": [""] },
+  { "label": "", "lines": [""] }
+]

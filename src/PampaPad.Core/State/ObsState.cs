@@ -25,6 +25,7 @@ public sealed record ObsState
     public IReadOnlyList<ObsItem> Scenes { get; init; } = [];   // todas las de GetSceneList, piezas incluidas (03 §1 y §5)
     public IReadOnlyList<ObsItem> Inputs { get; init; } = [];   // las de GetInputList; el silencio sólo se refleja del micrófono
     public long? RecordingChangedAt { get; init; }              // GetTimestamp() del último cambio de la grabación que avisó OBS; null si no avisó ninguno
+    public DateTimeOffset? RecordingChangedOn { get; init; }    // la hora de ese mismo cambio, para lo que se compara con una hora (la pausa y el chequeo previo en la consola)
 
     // "Se graba o se está en pausa" (spec 03 §5): todo estado distinto de stopped.
     public bool TakeInProgress => Recording != RecordingState.Stopped;
