@@ -41,7 +41,7 @@ public readonly record struct Hello(byte Level, string Version, byte Capabilitie
 public sealed record LightCommand(byte Cmd, byte R, byte G, byte B, byte Value);
 
 /// <summary>El único códec de las cargas de DeviceProtocol.h, tal como viajan por el cable (04 §7).</summary>
-public static class ConsoleProtocol
+public static partial class ConsoleProtocol
 {
     public const byte InputStateType = 0x30;
     public const byte HelloType = 0x31;
