@@ -65,7 +65,12 @@ public static class GraveAlerts
         bool own = obs.OwnMuteAt is { } at && now >= at && now - at <= OwnMute;
         bool latched = obs.MicMuted && (m.MicLatched || (obs.TakeInProgress && !m.MicWasMuted && !own));
         DateTimeOffset? pause = obs.Recording == RecordingState.Paused ? m.PauseSince ?? obs.RecordingChangedOn ?? now : null;
-        return m with { MicLatched = latched, PauseSince = pause, ReadyRecording = obs.Recording, ReadyRecorded = obs.Recorded, MicWasMuted = obs.MicMuted };
+
+        // long_pause avisa una sola vez por pausa (04 §5): el clic calla esa pausa, y la siguiente de la misma toma avisa de nuevo.
+        IReadOnlySet<string> attended = pause is null && m.Attended.Contains(AlertTexts.LongPause)
+            ? new HashSet<string>(m.Attended.Where(id => id != AlertTexts.LongPause))
+            : m.Attended;
+        return m with { Attended = attended, MicLatched = latched, PauseSince = pause, ReadyRecording = obs.Recording, ReadyRecorded = obs.Recorded, MicWasMuted = obs.MicMuted };
     }
 
     // Sin enlace: si recién se cayó con una toma en curso, obs_lost. "Se cerró" sólo si llegó ExitStarted (04 §5), que deja Exiting.

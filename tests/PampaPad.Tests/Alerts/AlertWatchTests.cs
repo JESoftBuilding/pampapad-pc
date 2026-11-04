@@ -111,6 +111,27 @@ public sealed class AlertWatchTests : IAsyncDisposable
         Assert.Null(_state.Current.TakeCheckFailure);
     }
 
+    [Fact]
+    public async Task A_check_that_ends_after_its_take_stopped_does_not_mark_the_next_take()
+    {
+        var late = new TaskCompletionSource<PreflightReport>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _check = _ => Volatile.Read(ref _checks) == 1 ? late.Task : Task.FromResult(Report());
+        using AlertWatch watch = Start();
+        _state.Update(s => s with { Obs = AlertRun.Obs().Obs });
+        _state.Update(s => s with { Obs = AlertRun.Obs(RecordingState.Recording).Obs });
+        await Poll.Until(() => Volatile.Read(ref _checks) == 1);
+        _state.Update(s => s with { Obs = AlertRun.Obs().Obs });
+        _state.Update(s => s with { Obs = AlertRun.Obs(RecordingState.Recording).Obs });
+        await Poll.Until(() => Volatile.Read(ref _checks) == 2);
+
+        late.SetResult(Report(new CheckResult("obs.cameraNotCovered", "La cámara está tapada", ConditionOutcome.Fail, "negra")));
+        await Poll.Until(() => _log.Recent().Any(entry => entry.Message.StartsWith("Chequeo al empezar a grabar: 1 comprobaciones y 1 con falla", StringComparison.Ordinal)));
+        await Task.Delay(100);   // Apply corre justo después de la línea del registro
+
+        Assert.Null(_state.Current.Alert);
+        Assert.Null(_state.Current.TakeCheckFailure);
+    }
+
     private static PreflightReport Report(params CheckResult[] checks) => new(Guid.NewGuid(), AlertRun.T0, Trigger.Internal, true, checks);
 
     private AlertWatch Start()

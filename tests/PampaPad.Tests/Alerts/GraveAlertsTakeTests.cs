@@ -119,6 +119,40 @@ public class GraveAlertsTakeTests
         Assert.Null(other.Look(Stopped));
     }
 
+    // 04 §5: "una sola vez por pausa". El clic calla esa pausa; la siguiente de la misma toma avisa de nuevo.
+    [Fact]
+    public void After_a_click_the_next_pause_of_the_same_take_alerts_again()
+    {
+        var run = new AlertRun();
+        run.Look(Stopped);
+        run.Look(Recording);
+        AppState paused = Obs(RecordingState.Paused);
+        run.After(TimeSpan.FromMinutes(3), paused);
+        Assert.Null(run.Click(paused));
+
+        run.After(TimeSpan.FromMinutes(1), Recording);
+        AppState pausedAgain = With(paused, obs => obs with { RecordingChangedOn = run.Now });
+        run.Look(pausedAgain);
+
+        Assert.Null(run.After(TimeSpan.FromSeconds(179), pausedAgain));
+        Assert.Equal(AlertTexts.LongPause, run.After(TimeSpan.FromSeconds(1), pausedAgain)?.Id);
+    }
+
+    [Fact]
+    public void The_failure_of_the_check_of_one_take_does_not_carry_to_the_next()
+    {
+        var run = new AlertRun();
+        run.Look(Stopped);
+        run.Look(Recording);
+        run.Memory = run.Memory with { StartFailure = "CAMARA TAPADA" };
+        Assert.Equal(AlertTexts.RecordingWithFailure, run.Look(Recording)?.Id);
+
+        run.Look(Stopped);
+
+        Assert.Null(run.Look(Recording));
+        Assert.Null(run.Memory.StartFailure);
+    }
+
     [Fact]
     public void Still_recording_shows_at_three_hours_of_take_and_a_click_silences_it_thirty_minutes_of_take()
     {

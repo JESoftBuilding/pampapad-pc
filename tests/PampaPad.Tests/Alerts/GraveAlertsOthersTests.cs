@@ -157,6 +157,21 @@ public class GraveAlertsOthersTests
     }
 
     [Fact]
+    public void Changing_console_alerts_while_an_alert_lasts_does_not_change_its_light_or_sound()
+    {
+        var run = new AlertRun();
+        run.Look(Stopped);
+        AppState muted = Obs(RecordingState.Recording, micMuted: true);
+        run.Look(muted);
+
+        run.Config = Parse("""{ "version": 1, "console": { "alerts": { "mic_muted": { "light": false, "sound": false } } } }""");
+        GraveAlert? still = run.After(TimeSpan.FromSeconds(1), muted);
+
+        Assert.Equal(AlertTexts.MicMuted, still?.Id);
+        Assert.Equal((true, true), (still!.Light, still.Sound));
+    }
+
+    [Fact]
     public void Every_text_fits_in_its_line()
     {
         var run = new AlertRun();

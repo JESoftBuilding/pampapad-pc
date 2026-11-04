@@ -24,6 +24,7 @@ public sealed class AlertWatch : IDisposable
     private AlertMemory _memory = AlertMemory.Initial;
     private IDisposable? _subscription;
     private ITimer? _timer;
+    private bool _disposed;
 
     /// <summary>appeared se llama una vez por aviso nuevo, fuera del candado: es el sonido de la PC (Notifier.OnAlertAppeared).</summary>
     public AlertWatch(StateStore state, Func<Config> config, Func<CancellationToken, Task<PreflightReport>> checkTake, Log log, TimeProvider clock, Action<GraveAlert>? appeared = null)
@@ -61,8 +62,14 @@ public sealed class AlertWatch : IDisposable
     /// <summary>El clic de la perilla: atiende el aviso a la vista; sin aviso no hace nada (decisión 8).</summary>
     public void Attend() => Apply(GraveAlerts.Attend, "atendido con un clic");
 
+    // Un chequeo en vuelo o una mirada del reloj que llegan después ya no escriben el estado (Apply mira _disposed).
     public void Dispose()
     {
+        lock (_gate)
+        {
+            _disposed = true;
+        }
+
         _subscription?.Dispose();
         _timer?.Dispose();
     }
@@ -74,6 +81,11 @@ public sealed class AlertWatch : IDisposable
         int newTake = 0;
         lock (_gate)
         {
+            if (_disposed)
+            {
+                return;
+            }
+
             DateTimeOffset now = _clock.GetUtcNow();
             AlertMemory previous = _memory;
             AlertMemory next = GraveAlerts.Step(change(previous), _state.Current, _config(), now);
@@ -152,7 +164,16 @@ public sealed class AlertWatch : IDisposable
         if (report.Failures.FirstOrDefault() is { } first)
         {
             string text = AlertTexts.Failure(first);
-            Apply(memory => memory.Take == take ? memory with { StartFailure = text } : memory, "");
+
+            // Nadie espera esta tarea: una excepción acá quedaría sin observar.
+            try
+            {
+                Apply(memory => memory.Take == take ? memory with { StartFailure = text } : memory, "");
+            }
+            catch (Exception error)
+            {
+                _log.Error(Module, $"No se pudo anotar la falla del chequeo al empezar a grabar: {error.Message}", ErrorCodes.InternalError);
+            }
         }
     }
 
