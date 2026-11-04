@@ -98,10 +98,14 @@ public sealed class AlertWatchTests : IAsyncDisposable
         _state.Update(s => s with { Obs = AlertRun.Obs(RecordingState.Recording).Obs });
         await Poll.Until(() => Volatile.Read(ref _checks) == 1);
 
-        _clock.Advance(AlertWatch.CheckLimit);
+        // De a poco: el tope de WaitAsync se arma recién cuando el chequeo devuelve su tarea, y un salto de 3 s podría pasarle por encima.
+        for (int step = 0; step < 50; step++)
+        {
+            _clock.Advance(TimeSpan.FromMilliseconds(100));
+            await Task.Delay(1);
+        }
+
         await Poll.Until(() => _log.Recent().Any(entry => entry.Message.Contains("pasó el tope de 3 s", StringComparison.Ordinal)));
-        _clock.Advance(TimeSpan.FromSeconds(2));
-        await Task.Delay(50);
 
         Assert.Null(_state.Current.Alert);
         Assert.Null(_state.Current.TakeCheckFailure);
