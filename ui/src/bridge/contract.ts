@@ -54,6 +54,21 @@ export const stateSchema = z.object({
     settingsFingerprint: z.number().int().optional(),
     settingsInSync: z.boolean().optional(),
   }),
+  // El aviso grave a la vista (GraveAlert, plan de la 9b, E9b-3); falta si no hay ninguno.
+  alert: z
+    .object({
+      id: z.string(),
+      number: z.number().int(),
+      tone: z.number().int(),
+      title: z.string(),
+      line1: z.string(),
+      line2: z.string(),
+      hint: z.string(),
+      since: z.string(),
+      light: z.boolean(),
+      sound: z.boolean(),
+    })
+    .optional(),
 });
 
 // config.json (02 §4), tipado sin cerrar ningún nivel: z.looseObject deja pasar lo que la página no conoce, que vuelve igual en

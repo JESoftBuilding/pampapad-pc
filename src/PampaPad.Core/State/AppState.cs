@@ -63,6 +63,12 @@ public sealed record AppState
     /// <summary>La última acción que falló, con su hora: la consola la muestra 5 s en la línea de escena (04:147). Dismiss no la borra.</summary>
     public RecentFailure? RecentFailure { get; init; }
 
+    /// <summary>El aviso grave a la vista, o null. Lo escribe sólo AlertWatch (plan de la 9b, E9b-3).</summary>
+    public GraveAlert? Alert { get; init; }
+
+    /// <summary>La primera falla del chequeo al empezar esta toma, en letras de la consola: el renglón chico (decisión 11). No es AppState.Preflight.</summary>
+    public string? TakeCheckFailure { get; init; }
+
     /// <summary>El enlace con la consola por cable y el puerto que dice local.json. Sin puerto, apagada.</summary>
     public ConsoleLink Console { get; init; } = ConsoleLink.None;
 }

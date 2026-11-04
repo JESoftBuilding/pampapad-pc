@@ -105,7 +105,7 @@ public sealed record ConditionTypeView(string Id, string Name, IReadOnlyList<Fie
     }
 }
 
-/// <summary>El estado tal como viaja: el de AppState, con el tiempo grabado en milisegundos y el enlace con OBS con guion bajo.</summary>
+/// <summary>El estado tal como viaja: el de AppState, con el tiempo grabado en milisegundos y el enlace con OBS con guion bajo. Alert es el aviso grave a la vista (9b).</summary>
 public sealed record StateView(
     long Seq,
     UpdateState Update,
@@ -117,7 +117,8 @@ public sealed record StateView(
     string ActivePage,
     IReadOnlyList<RunningAction> Running,
     ActionFailure? LastFailure,
-    ConsoleLink Console)
+    ConsoleLink Console,
+    GraveAlert? Alert)
 {
     public static StateView From(AppState state)
     {
@@ -133,7 +134,8 @@ public sealed record StateView(
             state.ActivePage,
             state.Running,
             state.LastFailure,
-            state.Console);
+            state.Console,
+            state.Alert);
     }
 }
 

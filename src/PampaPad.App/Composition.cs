@@ -97,6 +97,7 @@ internal sealed partial class Composition : IAsyncDisposable
             showBalloon: notice => ui.Post(_ => composition.Tray?.ShowBalloon(notice.Title, notice.Text, notice.Warning), null),
             clock);
         dispatcher.Finished += notifier.OnFinished;
+        composition.ComposeAlerts(state, library, preflight, dispatcher, notifier, log, clock);
         if (!headless && (settings.Current.HotkeysEnabled ?? !AppIdentity.Dev))
         {
             // Los atajos son globales. La copia de desarrollo no los toma, para no sacárselos a la instalada (05 §10);

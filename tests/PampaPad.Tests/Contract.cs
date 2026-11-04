@@ -227,6 +227,7 @@ public class Contract
         ActivePage = "grabacion",
         Running = [new RunningAction(RunId, "marca-largo", Trigger.Key)],
         Console = new ConsoleLink(ConsoleLinkState.Connected, "COM20") { Firmware = "0.1.5", Capabilities = 0xC7, Energy = 0, SettingsFingerprint = 0x6BEB, SettingsInSync = true },
+        Alert = new GraveAlert(AlertTexts.MicMuted, 2, 2, "MIC MUDO", "ESTAS GRABANDO", "", "MIC: ABRIR   CLICK: YA SE", At, Light: true, Sound: true),
     });
 
     private static LogEntry[] SampleLog() =>

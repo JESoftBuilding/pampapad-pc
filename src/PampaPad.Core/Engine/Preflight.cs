@@ -28,6 +28,10 @@ public sealed class Preflight(IReadOnlyList<ConditionType> conditions, Library l
 
     private const string Module = "preflight";
 
+    // Las que el chequeo al empezar a grabar deja afuera (plan de la 9b, decisión 7): la captura sin monitor no es aviso hasta probarla con
+    // los monitores repartidos (04 §5), y el micrófono tiene su propio aviso.
+    private static readonly string[] NotAtTakeStart = ["obs.captureHasMonitor", "obs.micNotMuted"];
+
     /// <summary>
     /// Las siete de 03 §7, con los mensajes del programa, en el orden de su tabla salvo obs.captureHasMonitor, que va última: su pedido
     /// reinicia la captura y la lectura siguiente la da en 0 x 0, lo que engañaba a obs.sourceHasImage y a obs.canvasFilled (decisión 34).
@@ -45,12 +49,30 @@ public sealed class Preflight(IReadOnlyList<ConditionType> conditions, Library l
 
     public async Task<PreflightReport> RunAsync(Trigger requestedBy, CancellationToken ct)
     {
-        var runId = Guid.NewGuid();
         IReadOnlyList<PreflightCheck>? listed = library.Current.Preflight;
+        PreflightReport report = await CollectAsync(listed ?? Defaults, listed is null, requestedBy, ct).ConfigureAwait(false);
+        state.Update(s => s with { Preflight = report });
+        log.Write(LogLevel.Info, Module, $"Chequeo previo: {report.Checks.Count} comprobaciones, {report.Failures.Count} con falla y {report.Unchecked.Count} sin comprobar.", null, requestedBy, report.RunId);
+        return report;
+    }
+
+    /// <summary>
+    /// El chequeo al empezar a grabar (plan de la 9b, decisión 7): la lista de la biblioteca o las de fábrica, sin las de NotAtTakeStart. No
+    /// pisa AppState.Preflight, que sigue siendo el de "LISTO" y "REVISAR". El tope lo pone quien lo llama, con ct.
+    /// </summary>
+    public Task<PreflightReport> CheckTakeAsync(CancellationToken ct)
+    {
+        IReadOnlyList<PreflightCheck>? listed = library.Current.Preflight;
+        return CollectAsync([.. (listed ?? Defaults).Where(check => !NotAtTakeStart.Contains(check.Condition?.Type))], listed is null, Trigger.Internal, ct);
+    }
+
+    private async Task<PreflightReport> CollectAsync(IReadOnlyList<PreflightCheck> list, bool defaults, Trigger requestedBy, CancellationToken ct)
+    {
+        var runId = Guid.NewGuid();
         var checks = new List<CheckResult>();
         using var limit = new CancellationTokenSource(Timeout, clock);
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, limit.Token);
-        foreach ((int _, PreflightCheck check) in (listed ?? Defaults).Indexed())
+        foreach ((int _, PreflightCheck check) in list.Indexed())
         {
             CheckResult result;
             try
@@ -74,10 +96,7 @@ public sealed class Preflight(IReadOnlyList<ConditionType> conditions, Library l
             log.Write(result.Outcome == ConditionOutcome.Fail ? LogLevel.Warning : LogLevel.Info, Module, Line(result), result.Code, requestedBy, runId);
         }
 
-        var report = new PreflightReport(runId, clock.GetLocalNow(), requestedBy, listed is null, checks);
-        state.Update(s => s with { Preflight = report });
-        log.Write(LogLevel.Info, Module, $"Chequeo previo: {checks.Count} comprobaciones, {report.Failures.Count} con falla y {report.Unchecked.Count} sin comprobar.", null, requestedBy, runId);
-        return report;
+        return new PreflightReport(runId, clock.GetLocalNow(), requestedBy, defaults, checks);
     }
 
     /// <summary>La línea del registro de una comprobación: qué es, cómo le fue y lo que midió.</summary>

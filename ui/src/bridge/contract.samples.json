@@ -108,6 +108,18 @@
               "energy": 0,
               "settingsFingerprint": 27627,
               "settingsInSync": true
+            },
+            "alert": {
+              "id": "mic_muted",
+              "number": 2,
+              "tone": 2,
+              "title": "MIC MUDO",
+              "line1": "ESTAS GRABANDO",
+              "line2": "",
+              "hint": "MIC: ABRIR   CLICK: YA SE",
+              "since": "2026-10-14T23:30:00-03:00",
+              "light": true,
+              "sound": true
             }
           },
           "stepTypes": [
@@ -1149,6 +1161,18 @@
           "energy": 0,
           "settingsFingerprint": 27627,
           "settingsInSync": true
+        },
+        "alert": {
+          "id": "mic_muted",
+          "number": 2,
+          "tone": 2,
+          "title": "MIC MUDO",
+          "line1": "ESTAS GRABANDO",
+          "line2": "",
+          "hint": "MIC: ABRIR   CLICK: YA SE",
+          "since": "2026-10-14T23:30:00-03:00",
+          "light": true,
+          "sound": true
         }
       }
     },

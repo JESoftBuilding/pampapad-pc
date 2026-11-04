@@ -10,7 +10,7 @@ public enum TrayIcon { Idle, NoObs, Recording, Paused, Streaming, UpdateReady, C
 public sealed record UpdateMenu(bool CheckEnabled, string CheckText, bool InstallVisible, bool InstallEnabled, string InstallText);
 
 /// <summary>Lo que la bandeja muestra, calculado del estado. Función pura: la bandeja sólo pinta.</summary>
-public sealed record TraySummary(TrayIcon Icon, string Tooltip, bool CanReconnect)
+public sealed partial record TraySummary(TrayIcon Icon, string Tooltip, bool CanReconnect)
 {
     private const string Separator = " · ";
 
@@ -22,6 +22,12 @@ public sealed record TraySummary(TrayIcon Icon, string Tooltip, bool CanReconnec
         var obs = state.Obs;
         var icons = new List<TrayIcon>();
         var texts = new List<string>();
+
+        // Un aviso grave, mientras dure (05 §5). Va antes que la falla de una acción: es lo que la toma tiene que atender.
+        if (AlertText(state) is { } alert)
+        {
+            Add(alert.Icon, alert.Text);
+        }
 
         // Falló una acción es el estado de más arriba en la tabla de 05 §3. El texto lleva la acción, el paso y el mensaje de la falla.
         if (state.LastFailure is { } failure)

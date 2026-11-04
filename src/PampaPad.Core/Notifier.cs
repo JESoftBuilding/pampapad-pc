@@ -88,6 +88,36 @@ public sealed class Notifier(StateStore state, Library library, Log log, Action<
     }
 
     /// <summary>
+    /// Un aviso grave que aparece (plan de la 9b, decisión 9): suena "falló" una vez, con la regla de sonido, que desde la 9b vale sólo para
+    /// la PC. Sin cartel (05 §5). marker_failed no: ya sonó en OnFinished, y la ventana y el MCP no suenan.
+    /// </summary>
+    public void OnAlertAppeared(GraveAlert alert)
+    {
+        ArgumentNullException.ThrowIfNull(alert);
+        if (alert.Id == MarkerFailed)
+        {
+            return;
+        }
+
+        ObsState obs = state.Current.Obs;
+        bool mute = library.Current.Console?.MuteSoundWhileRecording ?? ConsoleSettings.DefaultMuteSoundWhileRecording;
+        bool sound = Decide(obs.Recording, obs.Streaming, mute).Sound;
+        if (sound)
+        {
+            try
+            {
+                playSound(new Notice(alert.Id, AlertTexts.Name(alert.Id), $"{alert.Title} {alert.Line1}".Trim()));
+            }
+            catch (Exception error)
+            {
+                log.Write(LogLevel.Error, "notifier", $"No se pudo avisar por el sonido: {error.Message}", ErrorCodes.InternalError);
+            }
+        }
+
+        log.Write(LogLevel.Info, "notifier", $"Aviso {alert.Id}: sonido de la PC: {(sound ? "sí" : "no")}.");
+    }
+
+    /// <summary>
     /// El resultado del chequeo previo que pidió la bandeja (01 §8, fila 5): un globo con el resumen y la primera falla, con la misma regla
     /// que los demás: con una toma en curso no sale y queda el registro, que ya tiene una línea por comprobación. No suena (decisión 32).
     /// </summary>
