@@ -28,8 +28,8 @@ const openSettings = async (page: Page, ports?: unknown[]) => {
 test("muestra el puerto de ahora con su estado, la lista con la descripción de Windows y cuándo se aplica", async ({ page }) => {
   await openSettings(page);
 
-  await expect(consoleCard(page).getByText("COM20 · Conectada")).toBeVisible();
-  await expect(consoleCard(page).getByText("Conectada quiere decir que el puerto abrió", { exact: false })).toBeVisible();
+  await expect(consoleCard(page).getByText("COM20 · Consola conectada · firmware 0.1.5 · ajustes al día")).toBeVisible();
+  await expect(consoleCard(page).getByText("todavía no saluda", { exact: false })).toHaveCount(0);
   await expect(portList(page).locator("option:checked")).toHaveText("COM20 · USB-Enhanced-SERIAL CH343");
   await expect(portList(page).locator("option")).toHaveText(["Sin consola", "COM1 · Puerto de comunicaciones", "COM20 · USB-Enhanced-SERIAL CH343"]);
   await expect(consoleCard(page).getByText("Se aplica al volver a abrir PampaPad")).toBeVisible();

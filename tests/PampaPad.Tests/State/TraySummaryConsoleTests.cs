@@ -14,7 +14,7 @@ public class TraySummaryConsoleTests
     }
 
     [Theory]
-    [InlineData(ConsoleLinkState.Connected, "Soltar la consola (COM7)")]
+    [InlineData(ConsoleLinkState.Connected, "Soltar la consola (COM7 · sin saludo todavía)")]
     [InlineData(ConsoleLinkState.Waiting, "Soltar la consola (COM7, sin conexión)")]
     [InlineData(ConsoleLinkState.Released, "Tomar la consola (COM7)")]
     public void The_menu_item_says_what_a_click_does_and_how_the_link_is(ConsoleLinkState link, string text)
@@ -23,5 +23,16 @@ public class TraySummaryConsoleTests
 
         Assert.Equal(text, TraySummary.ConsoleText(state));
         Assert.Equal(text, TraySummary.From(state).ConsoleItem);
+    }
+
+    [Theory]
+    [InlineData(true, "Soltar la consola (COM7 · firmware 0.1.5 · ajustes al día)")]
+    [InlineData(false, "Soltar la consola (COM7 · firmware 0.1.5 · ajustes sin confirmar)")]
+    [InlineData(null, "Soltar la consola (COM7 · firmware 0.1.5 · ajustes sin confirmar)")]
+    public void Connected_it_says_the_firmware_of_the_hello_and_whether_the_settings_are_confirmed(bool? inSync, string text)
+    {
+        var state = new AppState() with { Console = new ConsoleLink(ConsoleLinkState.Connected, "COM7") { Firmware = "0.1.5", SettingsInSync = inSync } };
+
+        Assert.Equal(text, TraySummary.ConsoleText(state));
     }
 }

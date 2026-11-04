@@ -18,7 +18,7 @@ test("abre en Estado con la foto de las muestras", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1, name: "Estado" })).toBeVisible();
   await expect(strip.getByText("OBS conectado")).toBeVisible();
   await expect(strip.getByText("Grabando 0:12:34")).toBeVisible();
-  await expect(strip.getByText("Consola COM20: conectada")).toBeVisible();
+  await expect(strip.getByText("Consola conectada · firmware 0.1.5 · ajustes al día")).toBeVisible();
   await expect(page.getByText("Versión 0.2.1")).toBeVisible();
   await expect(page.getByText("El chequeo previo llega en la etapa 5")).toBeVisible();
   await expect(page.getByRole("list", { name: "Atajos que rechazó Windows" })).toContainText("Ctrl+Shift+Alt+F6");
@@ -107,4 +107,16 @@ test("manda window.ready una vez, con la foto ya pedida", async ({ page }) => {
   const ready = await page.evaluate(() => (window as unknown as { pampapadFake: Fake }).pampapadFake.calls.filter((call) => call.name === "window.ready").length);
 
   expect(ready).toBe(1);
+});
+
+test("sin Hello la fila de la consola dice que todavía no saludó", async ({ page }) => {
+  const strip = page.getByLabel("Estado de un vistazo");
+
+  await page.evaluate(() => {
+    const fake = (window as unknown as { pampapadFake: Fake }).pampapadFake;
+    const state = fake.sampleState();
+    fake.emit("state", { ...state, seq: state.seq + 1, console: { state: "connected", port: "COM20" } }, state.seq + 1);
+  });
+
+  await expect(strip.getByText("Consola conectada · sin saludo todavía")).toBeVisible();
 });
