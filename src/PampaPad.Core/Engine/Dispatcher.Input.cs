@@ -93,6 +93,11 @@ public sealed partial class Dispatcher
 
     private void Handle(InputEvent e, bool viaGestures)
     {
+        if (viaGestures && HandleConsoleControl(e))
+        {
+            return;
+        }
+
         Config config = _library.Current;
         string? actionId = null;
         if (e.Control == Controls.Hotkey)
@@ -108,7 +113,8 @@ public sealed partial class Dispatcher
             // Base vacía es "no hay página" (Refresh no la toma ni para una página con el id vacío): no hay tecla a la que llevar el gesto.
             // Grabando rige la principal aunque el estado todavía no lo diga (02 §7, regla 1).
             AppState now = _state.Current;
-            string basePage = KeysPage(config, now);
+            // De la consola, la tecla es de la página en que se apretó, que puede ser la capa de la tecla del módulo (02 §6). Un atajo, de la base.
+            string basePage = viaGestures ? KeysPageOfConsoleKey(config, now, e, position) : KeysPage(config, now, null);
 
             // El atajo de una tecla es de la página que lo registró, la base del estado. Grabando, hasta que la regla 2 registra los de la
             // principal, siguen los de la elegida: ese toque es de una página que ya no rige y no se lleva a la tecla de la principal.

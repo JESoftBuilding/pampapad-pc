@@ -38,7 +38,7 @@ public sealed partial class Dispatcher
                 }
             }
 
-            NavigationResult result = Navigation.Resolve(new NavigationInput(_chosen ?? main, null, _state.Current.Obs.Recording, main, target, Cycle(config)));
+            NavigationResult result = Navigation.Resolve(new NavigationInput(_chosen ?? main, HeldLayer(config), _state.Current.Obs.Recording, main, target, Cycle(config)));
             if (result.Failure is { } blocked)
             {
                 return blocked;
@@ -94,7 +94,7 @@ public sealed partial class Dispatcher
             _chosen = null;
         }
 
-        NavigationResult navigation = Navigation.Resolve(new NavigationInput(_chosen ?? main, null, recording, main, null, Cycle(config)));
+        NavigationResult navigation = Navigation.Resolve(new NavigationInput(_chosen ?? main, HeldLayer(config), recording, main, null, Cycle(config)));
         (int pageIndex, Page? page) = config.Pages.Indexed().FirstOrDefault(candidate => navigation.BasePage.Length > 0 && candidate.Item.Id == navigation.BasePage);
         IInputSource[] sources;
         lock (_gate)
@@ -121,9 +121,10 @@ public sealed partial class Dispatcher
         });
     }
 
-    // La página cuyas teclas valen ahora. Grabando es la principal aunque la base del estado no haya cambiado todavía (regla 1).
-    private static string KeysPage(Config config, AppState now) =>
-        Navigation.Resolve(new NavigationInput(now.BasePage, null, now.Obs.Recording, config.ResolveMainPage() ?? "", null, [])).ActivePage;
+    // La página cuyas teclas valen ahora: la capa si se la mantiene; si no, la base, y grabando la principal aunque la base del estado no
+    // haya cambiado todavía (reglas 1 y 3).
+    private static string KeysPage(Config config, AppState now, string? layer) =>
+        Navigation.Resolve(new NavigationInput(now.BasePage, layer, now.Obs.Recording, config.ResolveMainPage() ?? "", null, [])).ActivePage;
 
     // Las páginas del recorrido de next y previous: las que no tienen show en falso, en su orden (02 §7, regla 5). Sólo las de teclas:
     // la local no está en el recorrido (regla 7) y un tipo reservado o desconocido se saltea (02 §4.2).
