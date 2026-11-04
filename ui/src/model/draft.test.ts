@@ -144,6 +144,12 @@ describe("los ajustes de la consola", () => {
     expect(consoleValue(bare, "sleepAfterSec")).toBe(0);
   });
 
+  it("quitar un valor no pisa un nivel que no es objeto, y un valor del tipo equivocado vale el de fábrica", () => {
+    const odd: ConfigLike = { ...bare, console: 3 };
+    expect(setConsoleValue(odd, "holdMs", 1000)).toEqual(odd);
+    expect(consoleValue({ ...bare, console: { holdMs: "x" } }, "holdMs")).toBe(1000);
+  });
+
   it("Nunca es 0 y se escribe, salvo en dormir, que de fábrica ya es nunca", () => {
     expect(setConsoleValue(bare, "screen.dimAfterSec", 0).console).toEqual({ screen: { dimAfterSec: 0 } });
     expect(setConsoleValue(bare, "sleepAfterSec", 0)).not.toHaveProperty("console");

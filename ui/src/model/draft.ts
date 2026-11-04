@@ -136,6 +136,10 @@ const isObject = (value: unknown): value is Json => typeof value === "object" &&
 function setPath<C extends object>(target: C, path: readonly string[], value: unknown): C {
   const [head, ...rest] = path;
   const current = target as Json;
+  if (value === undefined && rest.length > 0 && !isObject(current[head])) {
+    return target;   // nada que quitar: un nivel que no es objeto, escrito a mano, queda como está
+  }
+
   const inner = rest.length === 0 ? value : setPath(isObject(current[head]) ? current[head] : {}, rest, value);
   const next: Json = { ...current };
   if (inner === undefined || (isObject(inner) && Object.keys(inner).length === 0)) {
