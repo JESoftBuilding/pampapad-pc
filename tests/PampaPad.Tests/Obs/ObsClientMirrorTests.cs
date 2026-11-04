@@ -150,4 +150,18 @@ public class ObsClientMirrorTests
         Assert.Equal(RecordingState.Recording, whileLost);
         Assert.Equal(RecordingState.Stopped, h.State.Current.Obs.Recording);
     }
+
+    // Revisión de la tanda 2 de la 9a (should): un cambio de grabación por evento deja la hora del reloj en RecordingChangedOn.
+    [Fact]
+    public async Task A_recording_change_by_event_stamps_the_clock_time()
+    {
+        await using var fake = FakeObs.Start();
+        await using var h = await ObsHarness.ReadyAsync(fake);
+        h.Clock.SetUtcNow(new DateTimeOffset(2026, 11, 3, 20, 0, 0, TimeSpan.Zero));
+
+        await fake.StartRecordingAsync();
+        await UntilRecordingAsync(h, RecordingState.Recording);
+
+        Assert.Equal(h.Clock.GetUtcNow(), h.State.Current.Obs.RecordingChangedOn);
+    }
 }

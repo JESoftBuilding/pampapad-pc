@@ -204,4 +204,18 @@ public class DispatcherConsoleTests
             Send(rig, control, Gesture.Press);
         }
     }
+
+    // Revisión de la tanda 2 de la 9a (should): recargar la biblioteca con la tecla del módulo mantenida deja la capa mostrada.
+    [Fact]
+    public async Task A_refresh_with_the_module_key_held_keeps_the_layer_shown()
+    {
+        await using var rig = Rig();
+        rig.Dispatcher.Go("sala");
+        Send(rig, Controls.ModuleKey, Gesture.Press);
+        Assert.Equal("capa", rig.State.Current.ActivePage);
+
+        rig.Dispatcher.Refresh();
+
+        Assert.Equal(("sala", "capa"), (rig.State.Current.BasePage, rig.State.Current.ActivePage));
+    }
 }

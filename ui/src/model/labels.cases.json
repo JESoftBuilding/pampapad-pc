@@ -10,6 +10,7 @@
   { "label": "Pantalla + Cámara", "lines": ["PANTA.", "+"] },
   { "label": "Sting triste", "lines": ["STING", "TRISTE"] },
   { "label": "Mic: abrir", "lines": ["MIC", "ABRIR"] },
+  { "label": "Mic on", "lines": ["MIC ON"] },
   { "label": "Ir a la sala", "lines": ["IR A", "LA"] },
   { "label": "Cámara (zoom)", "lines": ["CAMARA", "ZOOM"] },
   { "label": "Vertical (SolidWorks)", "lines": ["VERTI.", "SOLID."] },

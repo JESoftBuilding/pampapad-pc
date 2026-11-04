@@ -147,4 +147,30 @@ public class ConsoleProjectionTests
 
     private static PreflightReport Report(DateTimeOffset at, params ConditionOutcome[] outcomes) =>
         new(Guid.NewGuid(), at, Trigger.Hotkey, true, [.. outcomes.Select(outcome => new CheckResult("obs.micNotMuted", "m", outcome, ""))]);
+
+    // Revisión de la tanda 2 de la 9a (should): al arrancar y al detener la tira va apagada y la consola no se queda despierta.
+    [Theory]
+    [InlineData(RecordingState.Starting)]
+    [InlineData(RecordingState.Stopping)]
+    public void While_starting_or_stopping_the_strip_is_off_and_the_console_may_sleep(RecordingState recording)
+    {
+        ConsoleFrame frame = Project(State(recording));
+
+        Assert.All(frame.Strip, led => Assert.Equal(LedColor.Off, led));
+        Assert.Equal(ScreenFlags2.None, frame.Screen.Flags2);
+    }
+
+    // Revisión de la tanda 2 de la 9a (should): sin OBS listo no se muestra nada viejo, ni segundos, ni micrófono, ni escena.
+    [Fact]
+    public void Without_obs_ready_the_stale_seconds_mic_and_scene_are_not_shown()
+    {
+        AppState lost = State(RecordingState.Recording, ObsLinkState.Lost);
+        lost = lost with { Obs = lost.Obs with { Recorded = TimeSpan.FromSeconds(90), MicMuted = true, SceneName = "Cámara" } };
+
+        ConsoleFrame frame = Project(lost);
+
+        Assert.Equal(0, frame.Screen.RecordedSec);
+        Assert.Equal(ScreenFlags.None, frame.Screen.Flags & ScreenFlags.MicMuted);
+        Assert.Equal("", frame.SceneLine.Text);
+    }
 }

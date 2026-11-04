@@ -100,4 +100,18 @@ public class ConsoleProjectionKeysTests
         Assert.Equal(0xFFF, none.Screen.OffMask);
         Assert.Equal(ConsoleRecording.NoObs, none.Screen.Recording);
     }
+
+    // Revisión de la tanda 2 de la 9a (should): una tecla de toque normal con un mantenido de micrófono, escena o marca toma el rol del mantenido.
+    [Theory]
+    [InlineData("mic", KeyRole.Danger)]
+    [InlineData("camara", KeyRole.Scene)]
+    [InlineData("marca", KeyRole.Marker)]
+    public void A_normal_tap_with_a_special_hold_takes_the_role_of_the_hold(string hold, KeyRole expected)
+    {
+        var key = new Key { Position = 1, Label = "X", Action = "script", OnHold = new HoldAction { Action = hold } };
+
+        (KeyKind kind, _) = KeyRoles.Of(key, Sample);
+
+        Assert.Equal(expected, KeyRoles.RoleOf(kind));
+    }
 }
