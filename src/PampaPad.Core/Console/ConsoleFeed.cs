@@ -129,6 +129,7 @@ public sealed partial class ConsoleFeed : IAsyncDisposable
                 && await SendScreenAsync(frame.Screen, now, ct).ConfigureAwait(false)
                 && await SendPairsAsync(frame, all: true, now, ct).ConfigureAwait(false)
                 && await SendTextsAsync(frame, all: true, now, ct).ConfigureAwait(false)
+                && await SendAlertAsync(frame.Alert, all: true, now, ct).ConfigureAwait(false)
                 && await SendStripAsync(frame.Strip, now, ct).ConfigureAwait(false);
             return;
         }
@@ -148,7 +149,8 @@ public sealed partial class ConsoleFeed : IAsyncDisposable
         }
 
         if (!await SendPairsAsync(frame, all: pageChanged, now, ct).ConfigureAwait(false)
-            || !await SendTextsAsync(frame, all: now - _textAt >= TextEvery, now, ct).ConfigureAwait(false))
+            || !await SendTextsAsync(frame, all: now - _textAt >= TextEvery, now, ct).ConfigureAwait(false)
+            || !await SendAlertAsync(frame.Alert, all: false, now, ct).ConfigureAwait(false))
         {
             return;
         }
