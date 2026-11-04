@@ -121,6 +121,7 @@ public sealed class AlertWatchTests : IAsyncDisposable
         _state.Update(s => s with { Obs = AlertRun.Obs(RecordingState.Recording).Obs });
         await Poll.Until(() => Volatile.Read(ref _checks) == 1);
         _state.Update(s => s with { Obs = AlertRun.Obs().Obs });
+        await Poll.Until(() => watch.Memory.ReadyRecording == RecordingState.Stopped);   // el StateStore puede juntar dos cambios seguidos
         _state.Update(s => s with { Obs = AlertRun.Obs(RecordingState.Recording).Obs });
         await Poll.Until(() => Volatile.Read(ref _checks) == 2);
 
