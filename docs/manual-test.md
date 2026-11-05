@@ -500,3 +500,21 @@ Se repasa con la placa y el firmware de la consola 0.1.5, la tira y OBS abierto,
 
 - `still_recording` (3 horas grabando) no se prueba a mano: lo cubren las pruebas con reloj falso.
 - Los textos de los avisos que no están en 04 §5 los eligió el constructor (`AlertTexts.cs`); en el repaso se aprueban o se cambian.
+- **El repaso del 2026-11-05**, con la copia de desarrollo de `etapa-9b`:
+  - la copia leía una copia de la biblioteca real (`D:\repos\pampapad-construccion\E9b-7-biblioteca`); registro copiado en `E9b-7-registro.jsonl`;
+  - a las 11:44:05, la consola conectada y su saludo: firmware 0.1.5, capacidades 0xC7; la línea `estado:` con los mismos descartes de antes de los avisos (2 0 1), así que ninguna línea de aviso se rechazó.
+- **Lo que vio el programa y Emmanuel, fila por fila:**
+  - 1, a las 11:45:36, `MIC MUDO` con luz y zumbador, y el sonido de la PC callado por la regla; el zumbador sonó. El clic lo apagó en la toma siguiente (12:02:53);
+  - 2, silenciar y abrir con la tecla del pad no avisó;
+  - 3, entraron las cuatro marcas;
+  - 4, la pausa larga a los 3:00 justos (11:50:56 → 11:53:56), apagada con el clic;
+  - 5, `NO ENTRO` / `ESTAS EN PAUSA` dos segundos, dos veces;
+  - 6, **en rojo la primera vez**: el chequeo al empezar a grabar daba "no aplica" en la cámara con la toma en curso, aunque 03 §7 dice "sólo detenido o al arrancar". Arreglado en `6e3f486`; después, `OJO` / `GRABANDO CON:` / `CAMARA TAPADA` (desvío 0,2) y el clic lo apagó;
+  - 7, cerrar OBS grabando: `SIN OBS` / `OBS SE CERRO` / `0:00:05 GRABADOS`, hasta el clic; OBS volvió y la copia se reconectó sola;
+  - 8, bajar el brillo cambió la consola en el acto;
+  - 9, la tecla del módulo mantenida muestra la página Escenas;
+  - 10, se guardaron los canales (sin luz para el micrófono) sin problemas; no se repitió la fila 1 grabando;
+  - 11, la vista previa cambia con la etiqueta corta antes de guardar.
+- **La tecla Pausa** de su biblioteca reanuda con un toque y pausa si se mantiene: no es de la 9b.
+- **Las tomas de prueba** (seis, de 11:45 a 12:24) fueron a la papelera, a pedido de Emmanuel.
+- **Los textos de los avisos:** Emmanuel los vio en la consola y no pidió cambios.
