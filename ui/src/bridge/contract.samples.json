@@ -1067,6 +1067,227 @@
         }
       }
     },
+    "console.preview": {
+      "request": {
+        "id": 24,
+        "request": "console.preview",
+        "data": {
+          "config": {
+            "version": 1,
+            "mainPage": "grabacion",
+            "pages": [
+              {
+                "id": "grabacion",
+                "name": "Grabación",
+                "keys": [
+                  {
+                    "position": 5,
+                    "label": "Short",
+                    "action": "marca-short",
+                    "hotkey": "Ctrl+Shift+Alt+F9"
+                  },
+                  {
+                    "position": 6,
+                    "label": "Inicio",
+                    "action": "marca-inicio",
+                    "hotkey": "Ctrl+Shift+Alt+F6"
+                  }
+                ]
+              }
+            ],
+            "actions": [
+              {
+                "id": "marca-short",
+                "name": "Marca: short",
+                "steps": [
+                  {
+                    "type": "obs.marker",
+                    "marker": "short"
+                  }
+                ]
+              },
+              {
+                "id": "marca-inicio",
+                "name": "Marca: inicio",
+                "steps": [
+                  {
+                    "type": "obs.marker",
+                    "marker": "inicio"
+                  }
+                ]
+              }
+            ]
+          },
+          "state": "recording",
+          "page": "grabacion"
+        }
+      },
+      "response": {
+        "id": 24,
+        "ok": true,
+        "data": {
+          "screen": {
+            "page": 0,
+            "recording": "recording",
+            "flags": 0,
+            "recordedSec": 2052,
+            "pausedSec": 0,
+            "spanKey": 0,
+            "canvas": 100,
+            "activeMask": 0,
+            "offMask": 4047,
+            "alert": 0,
+            "labelsVersion": 1,
+            "flags2": 1,
+            "spanSec": 0
+          },
+          "keys": [
+            {
+              "role": "none",
+              "line1": "",
+              "line2": "",
+              "hold": false,
+              "big": false
+            },
+            {
+              "role": "none",
+              "line1": "",
+              "line2": "",
+              "hold": false,
+              "big": false
+            },
+            {
+              "role": "none",
+              "line1": "",
+              "line2": "",
+              "hold": false,
+              "big": false
+            },
+            {
+              "role": "none",
+              "line1": "",
+              "line2": "",
+              "hold": false,
+              "big": false
+            },
+            {
+              "role": "marker",
+              "line1": "SHORT",
+              "line2": "",
+              "hold": false,
+              "big": false
+            },
+            {
+              "role": "marker",
+              "line1": "INICIO",
+              "line2": "",
+              "hold": false,
+              "big": false
+            },
+            {
+              "role": "none",
+              "line1": "",
+              "line2": "",
+              "hold": false,
+              "big": false
+            },
+            {
+              "role": "none",
+              "line1": "",
+              "line2": "",
+              "hold": false,
+              "big": false
+            },
+            {
+              "role": "none",
+              "line1": "",
+              "line2": "",
+              "hold": false,
+              "big": false
+            },
+            {
+              "role": "none",
+              "line1": "",
+              "line2": "",
+              "hold": false,
+              "big": false
+            },
+            {
+              "role": "none",
+              "line1": "",
+              "line2": "",
+              "hold": false,
+              "big": false
+            },
+            {
+              "role": "none",
+              "line1": "",
+              "line2": "",
+              "hold": false,
+              "big": false
+            }
+          ],
+          "sceneLine": {
+            "text": "",
+            "tone": 0
+          },
+          "smallLine": {
+            "text": "3 MARCAS",
+            "tone": 0
+          },
+          "strip": [
+            {
+              "r": 255,
+              "g": 0,
+              "b": 0,
+              "effect": "steady"
+            },
+            {
+              "r": 255,
+              "g": 0,
+              "b": 0,
+              "effect": "steady"
+            },
+            {
+              "r": 255,
+              "g": 0,
+              "b": 0,
+              "effect": "steady"
+            },
+            {
+              "r": 255,
+              "g": 0,
+              "b": 0,
+              "effect": "steady"
+            },
+            {
+              "r": 255,
+              "g": 0,
+              "b": 0,
+              "effect": "steady"
+            },
+            {
+              "r": 255,
+              "g": 0,
+              "b": 0,
+              "effect": "steady"
+            },
+            {
+              "r": 255,
+              "g": 0,
+              "b": 0,
+              "effect": "steady"
+            },
+            {
+              "r": 255,
+              "g": 0,
+              "b": 0,
+              "effect": "steady"
+            }
+          ]
+        }
+      }
+    },
     "update.check": {
       "request": {
         "id": 21,

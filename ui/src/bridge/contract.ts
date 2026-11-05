@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { triggerSchema } from "./contract.base";
+import { consoleFrameSchema, previewSampleSchema } from "./contract.console";
 import { scriptEndSchema, scriptOutputSchema, scriptsRequests } from "./contract.scripts";
 import { settingsRequests, settingsViewSchema } from "./contract.settings";
 
@@ -196,6 +197,8 @@ export const requests = {
       unavailable: z.string().optional(),
     }),
   },
+  // La vista previa de Teclas con el borrador (plan de la 9b, decisión 13): page es la página que se mira. Sólo la ventana.
+  "console.preview": { request: z.strictObject({ config: configSchema, state: previewSampleSchema, page: z.string().optional() }), response: consoleFrameSchema },
   ...scriptsRequests,
   ...settingsRequests,
 } as const;

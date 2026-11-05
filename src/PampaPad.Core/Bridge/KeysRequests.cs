@@ -2,7 +2,8 @@ namespace PampaPad.Core;
 
 /// <summary>
 /// Lo que la pantalla Teclas le pide al núcleo además de guardar (05 §4.1 y §6): suspender y reanudar los atajos globales mientras la
-/// página graba una combinación. Es windowOnly: por el MCP contesta no_permission (BridgePolicy). Con una toma en curso no se suspende:
+/// página graba una combinación, y console.preview, la vista previa de la consola con el borrador (plan de la 9b, decisión 13), que es
+/// read y sólo de la ventana. hotkeys.suspend es windowOnly: por el MCP contesta no_permission (BridgePolicy). Con una toma en curso no se suspende:
 /// las marcas quedarían sin atajos justo mientras se graba (05, Incierto, "si se puede capturar un atajo mientras se graba"); reanudar
 /// sí se puede siempre, porque lo pide la página para dejar todo como estaba.
 /// </summary>
@@ -14,6 +15,9 @@ public static class KeysRequests
         ArgumentNullException.ThrowIfNull(sources);
         bridge.Register<HotkeysSuspendRequest, NoData>(
             RequestNames.HotkeysSuspend, RequestKind.WindowOnly, Doors.Window, (request, _, _) => Task.FromResult(Suspend(sources, request)));
+        bridge.Register<ConsolePreviewRequest, ConsoleFrame>(
+            RequestNames.ConsolePreview, RequestKind.Read, Doors.Window,
+            (request, _, _) => Task.FromResult((Result<ConsoleFrame>)ConsolePreview.Frame(request.Config!, request.Page, request.State, sources.State.Current.Obs)), RequestChecks.ConsolePreview);
     }
 
     private static Result<NoData> Suspend(EditSources sources, HotkeysSuspendRequest request)

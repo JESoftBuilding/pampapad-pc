@@ -71,6 +71,10 @@ public sealed record OptionsListResponse(IReadOnlyList<OptionItem> Items, string
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record HotkeysSuspendRequest(bool Suspended);
 
+/// <summary>console.preview (05 §11; plan de la 9b, decisión 13): el borrador, el estado de muestra y la página que se mira en Teclas. Contesta el ConsoleFrame.</summary>
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed record ConsolePreviewRequest(Config? Config, ConsolePreviewSample State, string? Page = null);
+
 /// <summary>
 /// app.snapshot (01 §5 y 05 §11): versión, versión del esquema, configuración con su huella, estado con su seq, tipos de paso y de
 /// condición, y ajustes. Los problemas van dentro del estado, que es donde los junta el Dispatcher.
