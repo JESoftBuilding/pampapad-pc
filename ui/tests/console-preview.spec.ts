@@ -53,3 +53,51 @@ test("la perilla y la tecla del módulo dicen qué hacen, y elegir una tecla vue
   await page.getByRole("button", { name: "Tecla 5", exact: true }).click();
   await expect(page.getByLabel("Línea 1", { exact: true })).toBeVisible();
 });
+
+test("una respuesta vieja de console.preview que llega después de una nueva no la pisa", async ({ page }) => {
+  // Se retienen los pedidos de la vista previa para contestarlos en el orden que se quiera.
+  await page.evaluate(() => {
+    const fake = window as unknown as { pampapadFake: { request: (name: string, data: unknown) => Promise<unknown> } };
+    const held: Array<(reply: unknown) => void> = [];
+    (window as unknown as { held: typeof held }).held = held;
+    const original = fake.pampapadFake.request.bind(fake.pampapadFake);
+    fake.pampapadFake.request = (name, data) => (name === "console.preview" ? new Promise((resolve) => held.push(resolve)) : original(name, data));
+  });
+  const reply = (index: number, line1: string) =>
+    page.evaluate(
+      ([i, text, base]) => {
+        const data = structuredClone(base as { keys: Array<{ line1: string }> });
+        data.keys[4].line1 = text as string;
+        (window as unknown as { held: Array<(reply: unknown) => void> }).held[i as number]({ ok: true, data });
+      },
+      [index, line1, samples.requests["console.preview"].response.data] as const,
+    );
+  const held = () => page.evaluate(() => (window as unknown as { held: unknown[] }).held.length);
+
+  await page.getByRole("button", { name: "Tecla 5", exact: true }).click();
+  await page.getByLabel("Línea 1", { exact: true }).fill("Vieja");
+  await expect.poll(held).toBe(1);
+  await page.getByLabel("Línea 1", { exact: true }).fill("Nueva");
+  await expect.poll(held).toBe(2);
+
+  await reply(1, "NUEVA");
+  const fresh = await pixels(page);
+  await expect.poll(() => pixels(page)).toBe(fresh);
+  await reply(0, "VIEJA");
+  await page.waitForTimeout(300);
+  expect(await pixels(page)).toBe(fresh);
+});
+
+test("con la perilla elegida en el dibujo, Probar queda deshabilitado", async ({ page }) => {
+  // Las muestras están grabando y Probar se apaga por eso: se detiene para que lo único que lo apague sea la perilla.
+  await page.evaluate(() => {
+    type Emitter = { sampleState(): { seq: number; obs: object }; emit(event: string, data: unknown, seq: number): void };
+    const fake = (window as unknown as { pampapadFake: Emitter }).pampapadFake;
+    const state = fake.sampleState();
+    fake.emit("state", { ...state, seq: state.seq + 1, obs: { ...state.obs, recording: "stopped", takeInProgress: false, streaming: false, recordedMs: 0 } }, state.seq + 1);
+  });
+  await page.getByRole("button", { name: "Tecla 5", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Probar", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Perilla" }).click();
+  await expect(page.getByRole("button", { name: "Probar", exact: true })).toBeDisabled();
+});

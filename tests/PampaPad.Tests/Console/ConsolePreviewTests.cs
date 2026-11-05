@@ -60,6 +60,14 @@ public sealed class ConsolePreviewTests : IAsyncLifetime
     }
 
     [Fact]
+    public void A_page_that_does_not_exist_gives_empty_keys_and_does_not_throw()
+    {
+        ConsoleFrame frame = ConsolePreview.Frame(Sample, "no-existe", ConsolePreviewSample.Recording, ObsState.Initial);
+
+        Assert.All(Enumerable.Range(0, 12), index => Assert.Equal(KeyFace.Empty, frame.Key(index)));
+    }
+
+    [Fact]
     public async Task The_request_draws_the_draft_it_receives_not_the_saved_library()
     {
         using JsonDocument reply = await PreviewAsync("""{"config":{"version":1,"pages":[{"id":"p","name":"P","keys":[{"position":2,"label":"Cámara","shortLabel":["Nueva"],"action":"cam"}]}],"actions":[{"id":"cam","steps":[{"type":"obs.scene","scene":"Cámara"}]}]},"state":"recording","page":"p"}""");
