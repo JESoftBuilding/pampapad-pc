@@ -479,3 +479,24 @@ Se repasa con la placa y el firmware de la consola 0.1.5, la tira y OBS abierto.
   - 8 y 9, la tecla del módulo anda;
   - 10, al desenchufar y reenchufar "tomó todo de una".
 - **Lo que preguntó:** en la página Escenas, elegir una escena vuelve a la principal. No es la 9a: cada acción "Escena: …" de su biblioteca empieza con "Ir a otra página: principal, sólo si la grabación está detenida". Se puede sacar escena por escena.
+
+## Etapa 9b: la consola avisa
+
+Se repasa con la placa y el firmware de la consola 0.1.5, la tira y OBS abierto, como la 9a: la consola suelta del PampaPad instalado, así la copia que se prueba abre COM20. Las filas que graban tocan OBS: antes de cada una, OBS detenido.
+
+| N | Qué hacer | Qué tiene que pasar |
+|---|---|---|
+| 1 | Grabar y silenciar el micrófono desde OBS, con el mouse | `MIC MUDO` en rojo; la tira titila roja 4 veces por segundo; el zumbador suena una vez; un clic de la perilla lo calla por el resto de la toma |
+| 2 | Grabar y silenciar el micrófono desde la tecla del pad | No avisa: el silencio es propio. El renglón chico dice `MIC MUDO` |
+| 3 | Grabar, poner dos marcas y mirar la banda | El renglón chico dice `2 MARCAS` |
+| 4 | Pausar y esperar 3 minutos | `EN PAUSA` en ámbar con `HACE 3:00`, que sigue contando; reanudar lo apaga. Una pausa nueva de 3 minutos en la misma toma avisa de nuevo |
+| 5 | En pausa, apretar una tecla de marca | `NO ENTRO` / `ESTAS EN PAUSA` en ámbar, dos segundos, y se va solo |
+| 6 | Grabar con la cámara tapada o una fuente sin imagen | Al rato de empezar: `OJO` / `GRABANDO CON:` / la falla. El clic lo apaga |
+| 7 | Grabar y cerrar OBS | `SIN OBS` / `OBS SE CERRO` / lo grabado, en rojo, hasta el clic |
+| 8 | En Ajustes, bajar el brillo de la pantalla de la consola y guardar | La consola cambia en el acto y la tarjeta dice "ajustes al día" |
+| 9 | En Ajustes, elegir la página de la tecla del módulo y guardar | Mantener la tecla del módulo la muestra, sin reiniciar |
+| 10 | En Ajustes, apagar la luz de un aviso y repetir la fila 1 | El aviso sale en la pantalla sin la tira |
+| 11 | En Teclas, cambiar la etiqueta corta de una tecla sin guardar | La vista previa cambia antes de guardar y se parece a la consola |
+
+- `still_recording` (3 horas grabando) no se prueba a mano: lo cubren las pruebas con reloj falso.
+- Los textos de los avisos que no están en 04 §5 los eligió el constructor (`AlertTexts.cs`); en el repaso se aprueban o se cambian.
