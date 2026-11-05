@@ -69,9 +69,10 @@ public class ScriptRunnerEdgeTests
     [Fact]
     public async Task A_listener_that_throws_is_dropped_and_the_output_is_still_read()
     {
-        // Si se dejara de leer, el script se trabaría con la salida llena (unos 4 KB) y terminaría en un tope que no pasó.
+        // Si se dejara de leer, el script se trabaría con la salida llena (unos 4 KB) y terminaría en un tope que no pasó. El tope es de
+        // 60 s y no de 10: en la suite tarda unos 4 s con la máquina tranquila, y con otras sesiones cargándola pasaba los 10.
         await using var rig = new ScriptRig();
-        rig.AddCmd("verborragico", "@echo off\nfor /l %%i in (1,1,5000) do echo renglon %%i\necho fin\n", """, "timeoutSec": 10""");
+        rig.AddCmd("verborragico", "@echo off\nfor /l %%i in (1,1,5000) do echo renglon %%i\necho fin\n", """, "timeoutSec": 60""");
         var calls = 0;
 
         Result<ScriptResult> result = await rig.RunAsync("verborragico", onLine: _ =>
