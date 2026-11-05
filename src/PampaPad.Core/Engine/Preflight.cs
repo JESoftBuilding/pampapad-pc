@@ -60,11 +60,28 @@ public sealed class Preflight(IReadOnlyList<ConditionType> conditions, Library l
     /// El chequeo al empezar a grabar (plan de la 9b, decisión 7): la lista de la biblioteca o las de fábrica, sin las de NotAtTakeStart. No
     /// pisa AppState.Preflight, que sigue siendo el de "LISTO" y "REVISAR". El tope lo pone quien lo llama, con ct.
     /// </summary>
-    public Task<PreflightReport> CheckTakeAsync(CancellationToken ct)
+    public async Task<PreflightReport> CheckTakeAsync(CancellationToken ct)
     {
         IReadOnlyList<PreflightCheck>? listed = library.Current.Preflight;
-        return CollectAsync([.. (listed ?? Defaults).Where(check => !NotAtTakeStart.Contains(check.Condition?.Type))], listed is null, Trigger.Internal, ct);
+        TakeStart.Value = true;
+        try
+        {
+            return await CollectAsync([.. (listed ?? Defaults).Where(check => !NotAtTakeStart.Contains(check.Condition?.Type))], listed is null, Trigger.Internal, ct)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            TakeStart.Value = false;
+        }
     }
+
+    /// <summary>
+    /// Si lo que se evalúa es el chequeo al empezar a grabar. obs.cameraNotCovered pide la captura de la cámara "sólo detenido o al arrancar"
+    /// (03 §7): con la toma ya en curso no la pide, salvo acá. Lo encontró el repaso de la 9b (E9b-7): la cámara tapada no avisaba.
+    /// </summary>
+    internal static bool AtTakeStart => TakeStart.Value;
+
+    private static readonly AsyncLocal<bool> TakeStart = new();
 
     private async Task<PreflightReport> CollectAsync(IReadOnlyList<PreflightCheck> list, bool defaults, Trigger requestedBy, CancellationToken ct)
     {

@@ -37,4 +37,27 @@ public sealed class PreflightTakeTests : IDisposable
         Assert.Equal(Trigger.Internal, report.RequestedBy);
         Assert.Null(state.Current.Preflight);
     }
+
+    // 03 §7: la captura de la cámara se pide "sólo detenido o al arrancar". El chequeo al empezar corre ya con la toma en curso y la pide igual;
+    // una comprobación suelta, grabando, sigue sin pedirla. Lo encontró el repaso de la 9b (E9b-7).
+    [Fact]
+    public async Task At_take_start_the_covered_camera_is_checked_although_the_take_is_in_progress()
+    {
+        Directory.CreateDirectory(_temp.Combine("biblioteca"));
+        File.WriteAllText(_temp.Combine("biblioteca", "config.json"), """
+            { "version": 1, "preflight": [ { "condition": { "type": "obs.cameraNotCovered" }, "message": "La cámara está tapada" } ] }
+            """);
+        var library = new CoreLibrary(_temp.Combine("biblioteca"), _temp.Combine("backup"));
+        library.Load();
+        await using ObsSession session = await ObsSession.StartAsync(RecordingState.Recording, obs => obs.CameraCovered = true);
+        await using var log = new Log(_temp.Combine("log"), TimeProvider.System);
+        var preflight = new Preflight(Conditions.Build(new FakeWindows(), session.State, session.Client), library, session.State, log, TimeProvider.System);
+
+        PreflightReport report = await preflight.CheckTakeAsync(CancellationToken.None);
+        ConditionResult loose = await ConditionProbe.EvaluateAsync(session, """{ "type": "obs.cameraNotCovered" }""");
+
+        Assert.Equal(ConditionOutcome.Fail, Assert.Single(report.Checks).Outcome);
+        Assert.Equal(1, session.Obs.Times("GetSourceScreenshot"));
+        Assert.StartsWith("No aplica", loose.Detail, StringComparison.Ordinal);
+    }
 }
