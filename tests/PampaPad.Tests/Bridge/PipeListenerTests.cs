@@ -42,9 +42,11 @@ public sealed class PipeListenerTests : IAsyncLifetime
         });
     }
 
+    // El tope de saludo es el del programa. Con 300 ms en todas, un cliente demorado por la máquina cargada encontraba la tubería ya
+    // cerrada ("Pipe is broken"); el tope corto vive sólo en la prueba del saludo.
     public Task InitializeAsync()
     {
-        Start(TimeSpan.FromMilliseconds(300));
+        _running = new PipeListener(_bridge, _rig.Log, _name, "9.9.9").RunAsync(_life.Token);
         return Task.CompletedTask;
     }
 
@@ -102,10 +104,14 @@ public sealed class PipeListenerTests : IAsyncLifetime
     [Fact]
     public async Task Without_a_hello_in_time_the_connection_closes()
     {
-        await using var client = await ConnectAsync();
+        string name = "PampaPad-test-" + Guid.NewGuid().ToString("N");
+        Task running = new PipeListener(_bridge, _rig.Log, name, "9.9.9", TimeSpan.FromMilliseconds(300)).RunAsync(_life.Token);
+        await using var client = await ConnectAsync(name);
 
         Assert.Null(await client.ReadAsync());
         Assert.Contains(_rig.Log.Recent(), entry => entry.Module == "mcp" && entry.Message.Contains("no saludó", StringComparison.Ordinal));
+        await _life.CancelAsync();
+        await running.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
     [Fact]
@@ -247,16 +253,13 @@ public sealed class PipeListenerTests : IAsyncLifetime
         Assert.StartsWith("""{"hello":""", await client.HelloAsync());
     }
 
-    private void Start(TimeSpan helloTimeout) =>
-        _running = new PipeListener(_bridge, _rig.Log, _name, "9.9.9", helloTimeout).RunAsync(_life.Token);
-
     // Los suscriptores del puente: cada conexión saludada es uno. Por reflexión: el puente no los cuenta para afuera.
     private int Subscribers() =>
         ((Action<string>[])typeof(Bridge).GetField("_sinks", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(_bridge)!).Length;
 
-    private async Task<PipeClient> ConnectAsync()
+    private async Task<PipeClient> ConnectAsync(string? name = null)
     {
-        var stream = new NamedPipeClientStream(".", _name, PipeDirection.InOut, PipeOptions.Asynchronous);
+        var stream = new NamedPipeClientStream(".", name ?? _name, PipeDirection.InOut, PipeOptions.Asynchronous);
         await stream.ConnectAsync(5000);
         return new PipeClient(stream);
     }
