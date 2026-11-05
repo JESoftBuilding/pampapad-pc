@@ -1,15 +1,26 @@
+import { useState } from "react";
+import type { PreviewSample } from "@/bridge/contract.console";
+import { ConsolePreview } from "@/console/ConsolePreview";
+import { useConsolePreview } from "@/console/useConsolePreview";
 import type { ScreenProps } from "@/screens/screen";
 import { Card } from "@/ui/card";
 import { RunResult } from "../common/RunResult";
+import { ConsoleBody, PieceInfo, type Piece } from "./ConsoleBody";
 import { SaveBar } from "../common/SaveBar";
 import { KeyEditor } from "./KeyEditor";
 import { KeyGrid } from "./KeyGrid";
 import { PageSelector } from "./PageSelector";
 import { useKeysModel } from "./useKeysModel";
 
-/** La pantalla Teclas (05 §4.1): la página elegida, sus doce teclas y el editor de la que se toca. Guardar manda config.json entero. */
+/**
+ * La pantalla Teclas (05 §4.1): la página elegida, la consola dibujada con sus doce teclas, el editor de la pieza que se toca y cómo se ve
+ * la pantalla de la consola con el borrador. Guardar manda config.json entero.
+ */
 export function KeysScreen({ bridge, view, editor }: ScreenProps) {
   const model = useKeysModel(bridge, editor);
+  const [sample, setSample] = useState<PreviewSample>("recording");
+  const [piece, setPiece] = useState<Piece>();
+  const frame = useConsolePreview(bridge, editor.draft, model.pageId, sample);
   if (view.snapshot === undefined || editor.draft === undefined) {
     return (
       <Card>
@@ -18,16 +29,35 @@ export function KeysScreen({ bridge, view, editor }: ScreenProps) {
     );
   }
 
+  // Con la perilla o la tecla del módulo elegidas, Probar no corre la acción de la última tecla.
+  const action = piece === undefined ? model.action : undefined;
+  const layer = editor.draft.moduleKey?.layer;
+  const layerName = layer === undefined ? undefined : (model.pages.find((candidate) => candidate.id === layer)?.name ?? layer);
   return (
     <div className="space-y-4" data-fingerprint={view.snapshot.fingerprint}>
       <PageSelector pages={model.pages} current={model.pageId} mainPage={model.mainPage} onSelect={model.selectPage} />
       <div className="grid gap-4 xl:grid-cols-[auto_1fr]">
+        <div className="space-y-4">
+          <Card>
+            <ConsoleBody frame={frame} piece={piece} onPiece={setPiece}>
+              <KeyGrid
+                page={model.page}
+                selected={piece === undefined ? model.position : undefined}
+                problemsOf={model.problemsOf}
+                onSelect={(position) => {
+                  setPiece(undefined);
+                  model.selectKey(position);
+                }}
+              />
+            </ConsoleBody>
+            <p className="mt-3 text-xs text-muted">Elegí una tecla, la perilla o la tecla del módulo.</p>
+          </Card>
+          <ConsolePreview frame={frame} sample={sample} onSample={setSample} />
+        </div>
         <Card>
-          <KeyGrid page={model.page} selected={model.position} problemsOf={model.problemsOf} onSelect={model.selectKey} />
-          <p className="mt-3 text-xs text-muted">La consola dibujada y la pantalla de 320 × 240 llegan con la etapa 9 (pregunta 7 de este plan).</p>
-        </Card>
-        <Card>
-          {model.page === undefined || model.position === undefined ? (
+          {piece !== undefined ? (
+            <PieceInfo piece={piece} layerName={layerName} />
+          ) : model.page === undefined || model.position === undefined ? (
             <p className="text-sm text-muted">Elegí una tecla.</p>
           ) : (
             <KeyEditor
@@ -47,11 +77,11 @@ export function KeysScreen({ bridge, view, editor }: ScreenProps) {
           )}
           <div className="mt-4">
             <RunResult
-              action={model.action}
+              action={action}
               run={editor.run}
               busyReason={editor.busyReason}
               stepTypes={view.snapshot.stepTypes}
-              onTest={() => model.action !== undefined && void editor.test(model.action)}
+              onTest={() => action !== undefined && void editor.test(action)}
               onCancel={() => void editor.cancelTest()}
             />
           </div>

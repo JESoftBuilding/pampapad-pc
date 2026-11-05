@@ -18,6 +18,7 @@ public sealed partial class FakeObs
     {
         var type = (string)d["requestType"]!;
         Received.Enqueue(type);
+        OnRequest?.Invoke(type);
         if (_silent.ContainsKey(type))
         {
             return;

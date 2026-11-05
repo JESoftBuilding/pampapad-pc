@@ -29,6 +29,10 @@ public static class RequestChecks
         ?? (request.Position is < 1 or > Validator.KeyCount ? new Failure(ErrorCodes.InvalidData, $"position va de 1 a {Validator.KeyCount}: no hay una tecla {request.Position}.", "position") : null)
         ?? NullIn(request.ShortLabel, "shortLabel");
 
+    // 05 §11: un borrador que no se puede leer es config_invalid, no invalid_data.
+    public static Failure? ConsolePreview(ConsolePreviewRequest request) =>
+        (Missing(request.Config, "config") ?? Config(request.Config!, "config")) is { } failed ? failed with { Code = ErrorCodes.ConfigInvalid } : null;
+
     public static Failure? SettingsSave(SettingsSaveRequest request) =>
         request is { StartWithWindows: null, SkippedVersion: null, McpEnabled: null, ConsolePort: null }
             ? new Failure(ErrorCodes.InvalidData, "settings.save no trae ningún ajuste: van startWithWindows, skippedVersion, mcpEnabled o consolePort.", "data")

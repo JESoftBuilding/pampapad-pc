@@ -33,9 +33,16 @@ public sealed class Notifier(StateStore state, Library library, Log log, Action<
     {
         // Una prueba de la ventana (action.test) se ve ahí mismo, paso por paso: ni suena, ni muestra un cartel, ni cambia el ícono de la
         // bandeja, y tampoco borra la falla de una acción de verdad (05 §4.2, Propuesto). Lo del MCP, igual: Claude recibe el resultado y lo
-        // cuenta en la sesión (plan de la etapa MCP, decisión 1).
+        // cuenta en la sesión (plan de la etapa MCP, decisión 1). Una marca que falló sí llega a la consola por cualquier vía, y sólo a ella
+        // (plan de la 9b, decisión 7).
         if (result.RequestedBy is Trigger.Window or Trigger.Mcp)
         {
+            if (!result.Ok && result.StepType == ObsMarker.TypeId)
+            {
+                var marker = new RecentFailure(MarkerFailed, NameOf(library.Current, result), result.StepNumber, _clock.GetUtcNow(), result.Failure?.Code);
+                state.Update(s => s with { RecentFailure = marker });
+            }
+
             return;
         }
 
@@ -58,7 +65,7 @@ public sealed class Notifier(StateStore state, Library library, Log log, Action<
         bool mute = config.Console?.MuteSoundWhileRecording ?? ConsoleSettings.DefaultMuteSoundWhileRecording;
         NoticeChannels channels = Decide(obs.Recording, obs.Streaming, mute);
 
-        var recent = new RecentFailure(id, name, result.StepNumber, _clock.GetUtcNow());
+        var recent = new RecentFailure(id, name, result.StepNumber, _clock.GetUtcNow(), result.Failure?.Code);
         state.Update(s => s with { LastFailure = new ActionFailure(id, summary, message), RecentFailure = recent });
         var notice = new Notice(id, summary, message);
         if (channels.Sound)
@@ -78,6 +85,36 @@ public sealed class Notifier(StateStore state, Library library, Log log, Action<
             result.Failure?.Code,
             result.RequestedBy,
             result.RunId);
+    }
+
+    /// <summary>
+    /// Un aviso grave que aparece (plan de la 9b, decisión 9): suena "falló" una vez, con la regla de sonido, que desde la 9b vale sólo para
+    /// la PC. Sin cartel (05 §5). marker_failed no: ya sonó en OnFinished, y la ventana y el MCP no suenan.
+    /// </summary>
+    public void OnAlertAppeared(GraveAlert alert)
+    {
+        ArgumentNullException.ThrowIfNull(alert);
+        if (alert.Id == MarkerFailed)
+        {
+            return;
+        }
+
+        ObsState obs = state.Current.Obs;
+        bool mute = library.Current.Console?.MuteSoundWhileRecording ?? ConsoleSettings.DefaultMuteSoundWhileRecording;
+        bool sound = Decide(obs.Recording, obs.Streaming, mute).Sound;
+        if (sound)
+        {
+            try
+            {
+                playSound(new Notice(alert.Id, AlertTexts.Name(alert.Id), $"{alert.Title} {alert.Line1}".Trim()));
+            }
+            catch (Exception error)
+            {
+                log.Write(LogLevel.Error, "notifier", $"No se pudo avisar por el sonido: {error.Message}", ErrorCodes.InternalError);
+            }
+        }
+
+        log.Write(LogLevel.Info, "notifier", $"Aviso {alert.Id}: sonido de la PC: {(sound ? "sí" : "no")}.");
     }
 
     /// <summary>

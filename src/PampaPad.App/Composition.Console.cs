@@ -40,11 +40,13 @@ internal sealed partial class Composition
         }
 
         _feed?.StartAsync(_life.Token);
+        _alerts?.Start();
     }
 
     // El emisor primero: si no, su última vuelta escribiría en una consola ya cerrada.
     private async Task DisposeConsoleAsync()
     {
+        _alerts?.Dispose();
         if (_feed is not null)
         {
             await _feed.DisposeAsync().ConfigureAwait(false);

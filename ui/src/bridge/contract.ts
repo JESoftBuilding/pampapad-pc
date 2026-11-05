@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { triggerSchema } from "./contract.base";
+import { consoleFrameSchema, previewSampleSchema } from "./contract.console";
 import { scriptEndSchema, scriptOutputSchema, scriptsRequests } from "./contract.scripts";
 import { settingsRequests, settingsViewSchema } from "./contract.settings";
 
@@ -54,6 +55,21 @@ export const stateSchema = z.object({
     settingsFingerprint: z.number().int().optional(),
     settingsInSync: z.boolean().optional(),
   }),
+  // El aviso grave a la vista (GraveAlert, plan de la 9b, E9b-3); falta si no hay ninguno.
+  alert: z
+    .object({
+      id: z.string(),
+      number: z.number().int(),
+      tone: z.number().int(),
+      title: z.string(),
+      line1: z.string(),
+      line2: z.string(),
+      hint: z.string(),
+      since: z.string(),
+      light: z.boolean(),
+      sound: z.boolean(),
+    })
+    .optional(),
 });
 
 // config.json (02 §4), tipado sin cerrar ningún nivel: z.looseObject deja pasar lo que la página no conoce, que vuelve igual en
@@ -75,6 +91,17 @@ export const pageSchema = z.looseObject({ id: z.string().optional(), name: z.str
 export const actionSchema = z.looseObject({ id: z.string().optional(), name: z.string().optional(), steps: z.array(stepSchema).optional() });
 export const bindingSchema = z.looseObject({ hotkey: z.string().optional(), action: z.string().optional() });
 export const preflightCheckSchema = z.looseObject({ condition: conditionSchema.optional(), message: z.string().optional() });
+// El bloque console (02 §4.10), espejo de ConsoleSettings.cs. strip no tiene record en C# y cae en Extra, que acepta cualquier JSON: lleva
+// catch como type y negate, así un strip raro que el núcleo carga no deja a la página sin foto.
+const int = z.number().int().optional();
+export const consoleSchema = z.looseObject({
+  screen: z.looseObject({ brightness: int, dimAfterSec: int, dimBrightness: int, offAfterSec: int }).optional(),
+  sleepAfterSec: int,
+  holdMs: int,
+  alerts: z.record(z.string(), z.looseObject({ light: z.boolean().optional(), sound: z.boolean().optional() })).optional(),
+  strip: z.looseObject({ brightness: z.number().int().optional().catch(undefined) }).optional().catch(undefined),
+  muteSoundWhileRecording: z.boolean().optional(),
+});
 export const configSchema = z.looseObject({
   version: z.number().int().optional(),
   mainPage: z.string().optional(),
@@ -83,7 +110,7 @@ export const configSchema = z.looseObject({
   hotkeys: z.array(bindingSchema).optional(),
   preflight: z.array(preflightCheckSchema).optional(),
   moduleKey: z.looseObject({ layer: z.string().optional() }).optional(),
-  console: z.record(z.string(), z.unknown()).optional(),
+  console: consoleSchema.optional(),
 });
 
 export const fieldSchema = z.object({
@@ -170,6 +197,8 @@ export const requests = {
       unavailable: z.string().optional(),
     }),
   },
+  // La vista previa de Teclas con el borrador (plan de la 9b, decisión 13): page es la página que se mira. Sólo la ventana.
+  "console.preview": { request: z.strictObject({ config: configSchema, state: previewSampleSchema, page: z.string().optional() }), response: consoleFrameSchema },
   ...scriptsRequests,
   ...settingsRequests,
 } as const;

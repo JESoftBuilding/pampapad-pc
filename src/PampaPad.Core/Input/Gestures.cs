@@ -14,12 +14,18 @@ public sealed class Gestures
     public static readonly TimeSpan DefaultFreshness = TimeSpan.FromMilliseconds(150);
 
     private readonly TimeProvider _clock;
-    private readonly TimeSpan _hold;
+    private readonly Func<TimeSpan> _hold;
     private readonly TimeSpan _freshness;
     private readonly Lock _gate = new();
     private readonly List<Held> _held = [];
 
     public Gestures(TimeProvider clock, TimeSpan hold, TimeSpan freshness)
+        : this(clock, () => hold, freshness)
+    {
+    }
+
+    /// <summary>Con el umbral leído en cada gesto: Composition lo saca de la biblioteca actual, así holdMs rige sin reiniciar (plan de la 9b, decisión 12).</summary>
+    public Gestures(TimeProvider clock, Func<TimeSpan> hold, TimeSpan freshness)
     {
         _clock = clock;
         _hold = hold;
@@ -119,6 +125,7 @@ public sealed class Gestures
 
     private void Advance(long now, List<InputEvent> output)
     {
+        var hold = _hold();
         for (var i = 0; i < _held.Count; i++)
         {
             var held = _held[i];
@@ -130,14 +137,14 @@ public sealed class Gestures
                 // Pero si el umbral cayó mientras todavía estaba fresca (hasta SeenAt + freshness), el
                 // mantenido ya valía: sale igual que si alguien hubiera llamado a Tick justo entonces.
                 // Así lo que sale no depende de cada cuánto se llama a Tick (04 §8).
-                if (!held.HoldFired && _clock.GetElapsedTime(held.PressedAt, held.SeenAt) + _freshness > _hold)
+                if (!held.HoldFired && _clock.GetElapsedTime(held.PressedAt, held.SeenAt) + _freshness > hold)
                 {
                     output.Add(new InputEvent(held.Source, held.Control, Gesture.Hold));
                 }
 
                 output.Add(new InputEvent(held.Source, held.Control, Gesture.Release));
             }
-            else if (!held.HoldFired && _clock.GetElapsedTime(held.PressedAt, now) >= _hold)
+            else if (!held.HoldFired && _clock.GetElapsedTime(held.PressedAt, now) >= hold)
             {
                 held.HoldFired = true;
                 output.Add(new InputEvent(held.Source, held.Control, Gesture.Hold));

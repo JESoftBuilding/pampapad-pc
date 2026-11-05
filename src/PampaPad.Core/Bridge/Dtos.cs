@@ -71,6 +71,10 @@ public sealed record OptionsListResponse(IReadOnlyList<OptionItem> Items, string
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record HotkeysSuspendRequest(bool Suspended);
 
+/// <summary>console.preview (05 §11; plan de la 9b, decisión 13): el borrador, el estado de muestra y la página que se mira en Teclas. Contesta el ConsoleFrame.</summary>
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed record ConsolePreviewRequest(Config? Config, ConsolePreviewSample State, string? Page = null);
+
 /// <summary>
 /// app.snapshot (01 §5 y 05 §11): versión, versión del esquema, configuración con su huella, estado con su seq, tipos de paso y de
 /// condición, y ajustes. Los problemas van dentro del estado, que es donde los junta el Dispatcher.
@@ -105,7 +109,7 @@ public sealed record ConditionTypeView(string Id, string Name, IReadOnlyList<Fie
     }
 }
 
-/// <summary>El estado tal como viaja: el de AppState, con el tiempo grabado en milisegundos y el enlace con OBS con guion bajo.</summary>
+/// <summary>El estado tal como viaja: el de AppState, con el tiempo grabado en milisegundos y el enlace con OBS con guion bajo. Alert es el aviso grave a la vista (9b).</summary>
 public sealed record StateView(
     long Seq,
     UpdateState Update,
@@ -117,7 +121,8 @@ public sealed record StateView(
     string ActivePage,
     IReadOnlyList<RunningAction> Running,
     ActionFailure? LastFailure,
-    ConsoleLink Console)
+    ConsoleLink Console,
+    GraveAlert? Alert)
 {
     public static StateView From(AppState state)
     {
@@ -133,7 +138,8 @@ public sealed record StateView(
             state.ActivePage,
             state.Running,
             state.LastFailure,
-            state.Console);
+            state.Console,
+            state.Alert);
     }
 }
 

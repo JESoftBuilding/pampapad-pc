@@ -52,6 +52,7 @@ public static partial class Validator
 
         CheckHold(config, found);
         CheckRequests(config, found);
+        CheckConsole(config, found);
         return found;
     }
 

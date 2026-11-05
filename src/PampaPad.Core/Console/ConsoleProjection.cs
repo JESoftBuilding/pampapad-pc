@@ -47,16 +47,19 @@ public static class ConsoleProjection
             PausedSec: recording == ConsoleRecording.Paused && obs.RecordingChangedOn is { } since ? Math.Max(0, (int)(now - since).TotalSeconds) : 0,
             ActiveMask: active,
             OffMask: off,
-            Flags2: obs.Recording is RecordingState.Recording or RecordingState.Paused || obs.Streaming ? ScreenFlags2.KeepAwake : ScreenFlags2.None);
+            Alert: state.Alert?.Number ?? 0,
+            Flags2: Flags2(obs, state.Alert));
 
-        LedColor led = recording switch
+        // La tira (decisión 2): la de la grabación y, encima, el aviso titilando 4 veces por segundo en su color si su luz está prendida.
+        LedColor led = (state.Alert, recording) switch
         {
-            ConsoleRecording.Recording => Red,
-            ConsoleRecording.Paused => Amber,
+            ({ Light: true } alert, _) => (alert.Tone == 2 ? Red : Amber) with { Effect = LedEffect.Blink4Hz },
+            (_, ConsoleRecording.Recording) => Red,
+            (_, ConsoleRecording.Paused) => Amber,
             _ => LedColor.Off,
         };
 
-        return new ConsoleFrame(screen, keys, SceneLine(state, now), SmallLine(obs), [.. Enumerable.Repeat(led, StripLeds)]);
+        return new ConsoleFrame(screen, keys, SceneLine(state, now), SmallLine(state, screen.Flags), [.. Enumerable.Repeat(led, StripLeds)], AlertOf(state.Alert));
     }
 
     // El byte 1 (04 §7): sin OBS listo es 0, salvo el cambio de colección, que tiene el suyo.
@@ -105,7 +108,8 @@ public static class ConsoleProjection
         _ => false,
     };
 
-    // La escena al aire o, si una acción falló hace menos de 5 s, el aviso leve en ámbar (04:147). marker_failed es grave: es de la 9b.
+    // La escena al aire o, si una acción falló hace menos de 5 s, el aviso leve en ámbar (04:147). marker_failed no va acá: es grave y sale
+    // en el cuerpo, con AppState.Alert (plan de la 9b, E9b-4).
     private static ConsoleText SceneLine(AppState state, DateTimeOffset now)
     {
         if (state.RecentFailure is { NoticeId: Notifier.ActionFailed } failure && now >= failure.At && now - failure.At < FailureShown)
@@ -120,10 +124,43 @@ public static class ConsoleProjection
 
     private static string Letters(string text) => ShortLabels.Cut(ShortLabels.Screen(text), SceneLetters).TrimEnd();
 
-    // El renglón chico: sin OBS, el motivo por ObsLinkState (04 §2); con OBS, MIC MUDO o nada. "N MARCAS" es de la 9b.
-    private static ConsoleText SmallLine(ObsState obs) => new(obs.Link switch
+    // keepAwake con una toma en curso; alertSound si el canal de sonido del aviso está prendido, también grabando (decisión 9). alertLight no:
+    // la consola no lo lee, y el vector del firmware no lo lleva.
+    private static ScreenFlags2 Flags2(ObsState obs, GraveAlert? alert) =>
+        (obs.Recording is RecordingState.Recording or RecordingState.Paused || obs.Streaming ? ScreenFlags2.KeepAwake : ScreenFlags2.None)
+        | (alert is { Sound: true } ? ScreenFlags2.AlertSound : ScreenFlags2.None);
+
+    // Los cuatro textos del aviso grave a la vista, con su número como referencia (plan de la 9b, decisión 10).
+    private static ConsoleAlert? AlertOf(GraveAlert? alert) => alert is null ? null
+        : new ConsoleAlert(alert.Number, new ConsoleText(alert.Title, alert.Tone), new ConsoleText(alert.Line1), new ConsoleText(alert.Line2), new ConsoleText(alert.Hint));
+
+    // Con OBS listo, por prioridad (plan de la 9b, decisión 11): MIC MUDO; si no, la primera falla, la del chequeo al empezar la toma o la
+    // del último chequeo mientras la banda dice REVISAR; si no, durante la toma, las marcas que entraron.
+    private static string ReadyLine(AppState state, ScreenFlags flags)
     {
-        ObsLinkState.Ready => obs.MicMuted ? "MIC MUDO" : "",
+        ObsState obs = state.Obs;
+        if (obs.MicMuted)
+        {
+            return "MIC MUDO";
+        }
+
+        if (obs.TakeInProgress)
+        {
+            return state.TakeCheckFailure ?? obs.TakeMarks switch
+            {
+                <= 0 => "",
+                1 => "1 MARCA",
+                int marks => string.Create(CultureInfo.InvariantCulture, $"{marks} MARCAS"),
+            };
+        }
+
+        return flags.HasFlag(ScreenFlags.PreflightFailed) && state.Preflight?.Failures is [CheckResult first, ..] ? AlertTexts.Failure(first) : "";
+    }
+
+    // El renglón chico: sin OBS, el motivo por ObsLinkState (04 §2); con OBS, ReadyLine.
+    private static ConsoleText SmallLine(AppState state, ScreenFlags flags) => new(state.Obs.Link switch
+    {
+        ObsLinkState.Ready => ReadyLine(state, flags),
         ObsLinkState.Closed => "NO ESTA ABIERTO",
         ObsLinkState.NoWebsocket => "OBS SIN CONEXION",
         ObsLinkState.AuthFailed => "CLAVE RECHAZADA",

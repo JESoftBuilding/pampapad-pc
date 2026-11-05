@@ -13,19 +13,26 @@ public sealed partial class Dispatcher
     // de la capa en que se apretó (si no, la capa quedaría pegada en ese gesto o la acción sería de otra página).
     private readonly string?[] _pressedOn = new string?[Validator.KeyCount + 1];
 
+    /// <summary>El toque del pulsador de la perilla, también grabando: atiende el aviso grave a la vista (plan de la 9b, decisión 8).</summary>
+    public event System.Action? KnobTapped;
+
     // Devuelve true si el evento era de la perilla o de la tecla del módulo, y ya quedó atendido.
     private bool HandleConsoleControl(InputEvent e)
     {
         if (e.Control == Controls.Knob)
         {
-            // Grabando, en pausa, arrancando o deteniendo la perilla se ignora sin aviso ni registro (02 §7, regla 1). El clic atiende avisos
-            // graves, que son de la 9b: por ahora no hace nada.
+            // Grabando, en pausa, arrancando o deteniendo el giro se ignora sin aviso ni registro (02 §7, regla 1). El clic atiende avisos
+            // graves con un toque; Press y Release sueltos no hacen nada.
             if (e.Gesture == Gesture.Turn && _state.Current.Obs.Recording == RecordingState.Stopped)
             {
                 for (int step = 0; step < Math.Abs(e.Value); step++)
                 {
                     _ = Go(e.Value > 0 ? Navigation.Next : Navigation.Previous);
                 }
+            }
+            else if (e.Gesture == Gesture.Tap)
+            {
+                KnobTapped?.Invoke();
             }
 
             return true;

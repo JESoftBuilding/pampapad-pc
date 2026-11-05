@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace PampaPad.Core;
 
 /// <summary>El byte 1 de ScreenState, el estado de grabación que dibuja la banda (WireMessages.h:14).</summary>
@@ -37,12 +39,12 @@ public enum ScreenFlags2 : byte
 
 /// <summary>
 /// Lo que lleva un ScreenState 0x40, campo por campo (04 §7). Los segundos que no entran quedan en el tope; el byte 10 va en 0.
-/// SpanKey es 1 a 12 o 0; Canvas, la cobertura en % con el bit 7 "no llena"; las máscaras, un bit por tecla desde la 1.
+/// Las banderas viajan por el puente en número, como en el cable (console.preview). SpanKey es 1 a 12 o 0; Canvas, la cobertura en % con el bit 7 "no llena"; las máscaras, un bit por tecla desde la 1.
 /// </summary>
 public sealed record ScreenFrame(
     int Page,
     ConsoleRecording Recording,
-    ScreenFlags Flags = ScreenFlags.None,
+    [property: JsonConverter(typeof(JsonNumberEnumConverter<ScreenFlags>))] ScreenFlags Flags = ScreenFlags.None,
     int RecordedSec = 0,
     int PausedSec = 0,
     int SpanKey = 0,
@@ -51,7 +53,7 @@ public sealed record ScreenFrame(
     int OffMask = 0,
     int Alert = 0,
     int LabelsVersion = 1,
-    ScreenFlags2 Flags2 = ScreenFlags2.None,
+    [property: JsonConverter(typeof(JsonNumberEnumConverter<ScreenFlags2>))] ScreenFlags2 Flags2 = ScreenFlags2.None,
     int SpanSec = 0);
 
 /// <summary>El rol de una tecla, bits 0 a 3 de su estilo (WireMessages.h:76). No se renumera: el desconocido se dibuja Normal.</summary>

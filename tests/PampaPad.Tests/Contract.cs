@@ -138,6 +138,9 @@ public class Contract
                 [RequestNames.ConsolePorts] = Pair(
                     Envelope.Request(23, RequestNames.ConsolePorts, new NoData()),
                     Envelope.Response(23, new ConsolePortsResponse([new ConsolePortView("COM1", "Puerto de comunicaciones", null), new ConsolePortView("COM20", "USB-Enhanced-SERIAL CH343", "1A86:55D3")]))),
+                [RequestNames.ConsolePreview] = Pair(
+                    Envelope.Request(24, RequestNames.ConsolePreview, new ConsolePreviewRequest(config, ConsolePreviewSample.Recording, "grabacion")),
+                    Envelope.Response(24, ConsolePreview.Frame(config, "grabacion", ConsolePreviewSample.Recording, ObsState.Initial))),
                 [RequestNames.UpdateCheck] = Pair(Envelope.Request(21, RequestNames.UpdateCheck, new NoData()), Envelope.Response(21, new NoData())),
                 [RequestNames.UpdateSkip] = Pair(Envelope.Request(22, RequestNames.UpdateSkip, new NoData()), Envelope.Response(22, new NoData())),
                 [RequestNames.ScriptsTest] = Pair(Envelope.Request(19, RequestNames.ScriptsTest, new ScriptsTestRequest("bancocam")), Envelope.Response(19, new ActionTestResponse(RunId))),
@@ -227,6 +230,7 @@ public class Contract
         ActivePage = "grabacion",
         Running = [new RunningAction(RunId, "marca-largo", Trigger.Key)],
         Console = new ConsoleLink(ConsoleLinkState.Connected, "COM20") { Firmware = "0.1.5", Capabilities = 0xC7, Energy = 0, SettingsFingerprint = 0x6BEB, SettingsInSync = true },
+        Alert = new GraveAlert(AlertTexts.MicMuted, 2, 2, "MIC MUDO", "ESTAS GRABANDO", "", "MIC: ABRIR   CLICK: YA SE", At, Light: true, Sound: true),
     });
 
     private static LogEntry[] SampleLog() =>

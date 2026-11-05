@@ -55,6 +55,13 @@ public sealed class ObsMarker(ObsClient obs, StateStore state) : StepType<Marker
         }
 
         ObsResponse response = await obs.RequestAsync(Markers.RequestType, new { chapterName = Markers.Title(type, p.Label) }, ct).ConfigureAwait(false);
-        return new StepResult(Markers.Interpret(response, known.Recording));
+        Failure? failure = Markers.Interpret(response, known.Recording);
+        if (failure is null)
+        {
+            // "7 MARCAS" en el renglón chico (plan de la 9b, decisión 11). ObsMirror lo vuelve a 0 al empezar a grabar.
+            state.Update(s => s with { Obs = s.Obs with { TakeMarks = s.Obs.TakeMarks + 1 } });
+        }
+
+        return new StepResult(failure);
     }
 }

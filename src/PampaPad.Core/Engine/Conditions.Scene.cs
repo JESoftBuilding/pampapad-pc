@@ -102,7 +102,7 @@ public static partial class Conditions
 
     /// <summary>
     /// La cámara no está tapada ni en negro (03 §7): captura de la fuente, no de la escena, en bmp de 160 de ancho, y el desvío del brillo.
-    /// Sólo con la fuente activa y sólo detenido: con una toma en curso no se pide una captura y no aplica.
+    /// Sólo con la fuente activa, y sólo detenido o al arrancar (Preflight.AtTakeStart): con una toma en curso no se pide una captura y no aplica.
     /// </summary>
     public static ConditionType Covered(ObsQueries obs, StateStore state) => new(
         CameraNotCovered,
@@ -110,7 +110,7 @@ public static partial class Conditions
         [Source],
         async (p, ct) =>
         {
-            if (state.Current.Obs.Link == ObsLinkState.Ready && state.Current.Obs.TakeInProgress)
+            if (state.Current.Obs.Link == ObsLinkState.Ready && state.Current.Obs.TakeInProgress && !Preflight.AtTakeStart)
             {
                 return Verdict.NotApplicable("con una toma en curso no se pide una captura de la cámara.");
             }

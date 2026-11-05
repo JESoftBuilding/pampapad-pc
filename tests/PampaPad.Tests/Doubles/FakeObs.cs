@@ -55,6 +55,9 @@ public sealed partial class FakeObs : IAsyncDisposable
     /// <summary>El requestType de cada pedido que llegó, en orden.</summary>
     public ConcurrentQueue<string> Received { get; } = new();
 
+    /// <summary>Se llama al llegar cada pedido suelto, antes de atenderlo: la prueba mira ahí qué sabía el programa al mandarlo.</summary>
+    public Action<string>? OnRequest { get; set; }
+
     /// <summary>Con port 0 el sistema elige un puerto libre; con un número, vuelve a abrir en ese.</summary>
     public static FakeObs Start(int port = 0, string? password = null)
     {

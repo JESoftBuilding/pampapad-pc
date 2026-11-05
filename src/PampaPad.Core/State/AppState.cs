@@ -63,6 +63,12 @@ public sealed record AppState
     /// <summary>La última acción que falló, con su hora: la consola la muestra 5 s en la línea de escena (04:147). Dismiss no la borra.</summary>
     public RecentFailure? RecentFailure { get; init; }
 
+    /// <summary>El aviso grave a la vista, o null. Lo escribe sólo AlertWatch (plan de la 9b, E9b-3).</summary>
+    public GraveAlert? Alert { get; init; }
+
+    /// <summary>La primera falla del chequeo al empezar esta toma, en letras de la consola: el renglón chico (decisión 11). No es AppState.Preflight.</summary>
+    public string? TakeCheckFailure { get; init; }
+
     /// <summary>El enlace con la consola por cable y el puerto que dice local.json. Sin puerto, apagada.</summary>
     public ConsoleLink Console { get; init; } = ConsoleLink.None;
 }
@@ -74,5 +80,8 @@ public sealed record RunningAction(Guid RunId, string ActionId, Trigger Requeste
 /// <summary>NoticeId es el id del aviso (marker_failed o action_failed); Summary, "Falló acción: paso n (tipo)".</summary>
 public sealed record ActionFailure(string NoticeId, string Summary, string Message);
 
-/// <summary>Lo que necesita el aviso leve de la consola: el id del aviso, el nombre de la acción, el número del paso que falló y cuándo.</summary>
-public sealed record RecentFailure(string NoticeId, string ActionName, int? Step, DateTimeOffset At);
+/// <summary>
+/// Lo que necesitan los avisos de la consola: el id del aviso, el nombre de la acción, el número del paso que falló, cuándo y el código del
+/// error, del que sale el texto de marker_failed (plan de la 9b, E9b-2).
+/// </summary>
+public sealed record RecentFailure(string NoticeId, string ActionName, int? Step, DateTimeOffset At, string? Code = null);

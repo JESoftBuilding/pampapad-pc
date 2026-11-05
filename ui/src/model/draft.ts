@@ -128,22 +128,86 @@ export function sameConfig(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-/**
- * Callar el sonido con una toma en curso (console.muteSoundWhileRecording, 02 §4.10). Verdadero es el valor por defecto y no se escribe:
- * se quita el campo y, si el bloque console queda vacío, el bloque. Lo desconocido del bloque se conserva.
- */
-export function setMuteSound<C extends ConfigLike & { console?: Record<string, unknown> }>(config: C, mute: boolean): C {
-  const block: Record<string, unknown> = { ...(config.console ?? {}) };
-  if (mute) {
-    delete block.muteSoundWhileRecording;
+type Json = Record<string, unknown>;
+const isObject = (value: unknown): value is Json => typeof value === "object" && value !== null && !Array.isArray(value);
+
+// Escribe value en la ruta, o la quita si es undefined. Un objeto que queda vacío en el camino se quita también: lo de fábrica no se escribe
+// (05 §4.5) y un bloque vacío no queda en el archivo. Lo demás de cada nivel es el mismo objeto.
+function setPath<C extends object>(target: C, path: readonly string[], value: unknown): C {
+  const [head, ...rest] = path;
+  const current = target as Json;
+  if (value === undefined && rest.length > 0 && !isObject(current[head])) {
+    return target;   // nada que quitar: un nivel que no es objeto, escrito a mano, queda como está
+  }
+
+  const inner = rest.length === 0 ? value : setPath(isObject(current[head]) ? current[head] : {}, rest, value);
+  const next: Json = { ...current };
+  if (inner === undefined || (isObject(inner) && Object.keys(inner).length === 0)) {
+    delete next[head];
   } else {
-    block.muteSoundWhileRecording = false;
+    next[head] = inner;
   }
 
-  const next: C = { ...config, console: block };
-  if (Object.keys(block).length === 0) {
-    delete next.console;
-  }
+  return next as C;
+}
 
-  return next;
+function getPath(target: unknown, path: readonly string[]): unknown {
+  return path.reduce<unknown>((at, name) => (isObject(at) ? at[name] : undefined), target);
+}
+
+/** Los valores de fábrica del bloque console (02 §4.10, su único dueño): los mismos que ConsoleSettingsWire y Gestures. */
+export const consoleDefaults = {
+  "screen.brightness": 80,
+  "screen.dimAfterSec": 60,
+  "screen.dimBrightness": 15,
+  "screen.offAfterSec": 300,
+  sleepAfterSec: 0,
+  holdMs: 1000,
+  "strip.brightness": 25,
+  muteSoundWhileRecording: true,
+} as const;
+export type ConsolePath = keyof typeof consoleDefaults;
+type ConsoleValue<P extends ConsolePath> = (typeof consoleDefaults)[P] extends boolean ? boolean : number;
+
+/** Lo que vale un ajuste de la consola en el borrador: lo escrito si es del tipo de su valor de fábrica; si no, el de fábrica. */
+export function consoleValue<P extends ConsolePath>(config: ConfigLike, path: P): ConsoleValue<P> {
+  const value = getPath(config.console, path.split("."));
+  return (typeof value === typeof consoleDefaults[path] ? value : consoleDefaults[path]) as ConsoleValue<P>;
+}
+
+/** Escribe un ajuste de la consola; el valor de fábrica se quita en vez de escribirse, así lo no tocado no llega al archivo. */
+export function setConsoleValue<C extends ConfigLike, P extends ConsolePath>(config: C, path: P, value: ConsoleValue<P>): C {
+  return setPath(config, ["console", ...path.split(".")], value === consoleDefaults[path] ? undefined : value);
+}
+
+/** Los avisos con canales en console.alerts: los graves de 04 §5, en su orden, y no_pc. */
+export const alertIds = ["marker_failed", "mic_muted", "long_pause", "still_recording", "obs_lost", "recording_with_failure", "no_pc"] as const;
+export type AlertId = (typeof alertIds)[number];
+export type AlertChannel = "light" | "sound";
+
+// Los graves vienen con luz y sonido; no_pc, sólo con luz (04 §6).
+const alertDefault = (id: AlertId, channel: AlertChannel) => !(id === "no_pc" && channel === "sound");
+
+export function alertChannel(config: ConfigLike, id: AlertId, channel: AlertChannel): boolean {
+  const value = getPath(config.console, ["alerts", id, channel]);
+  return typeof value === "boolean" ? value : alertDefault(id, channel);
+}
+
+export function setAlertChannel<C extends ConfigLike>(config: C, id: AlertId, channel: AlertChannel, on: boolean): C {
+  return setPath(config, ["console", "alerts", id, channel], on === alertDefault(id, channel) ? undefined : on);
+}
+
+/** La página que se ve mientras se mantiene la tecla del módulo (moduleKey.layer); null es "Sin asignar" y quita el campo. */
+export function setModuleLayer<C extends ConfigLike>(config: C, pageId: string | null): C {
+  return setPath(config, ["moduleKey", "layer"], pageId ?? undefined);
+}
+
+/** "Volver a los valores por defecto" (05 §4.5): borra el bloque console entero y no toca nada más. */
+export function resetConsole<C extends ConfigLike>(config: C): C {
+  return setPath(config, ["console"], undefined);
+}
+
+/** Callar los sonidos de la PC con una toma en curso (console.muteSoundWhileRecording, 02 §4.10). Verdadero es de fábrica y no se escribe. */
+export function setMuteSound<C extends ConfigLike>(config: C, mute: boolean): C {
+  return setConsoleValue(config, "muteSoundWhileRecording", mute);
 }
