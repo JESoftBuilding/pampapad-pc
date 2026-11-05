@@ -150,7 +150,8 @@ function cell(f: ConsoleFrame, key: number, out: List) {
   const r = zones.cell(key);
   out.fillRect(r.x, r.y, r.w, r.h, colors.bg);
   const face = f.keys[key] ?? { role: "none", line1: "", line2: "", hold: false, big: false };
-  const role = roles.indexOf(face.role);
+  const known = roles.indexOf(face.role);
+  const role = known < 0 ? 1 : known; // el rol que no se conoce se dibuja normal (DrawList.h)
   const s = f.screen;
   const active = ((s.activeMask >> key) & 1) === 1;
   const off = ((s.offMask >> key) & 1) === 1;
