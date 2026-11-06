@@ -202,6 +202,20 @@ export function setModuleLayer<C extends ConfigLike>(config: C, pageId: string |
   return setPath(config, ["moduleKey", "layer"], pageId ?? undefined);
 }
 
+/** La acción del doble toque de la tecla del módulo (moduleKey.doubleTap, 02 §4.1); null es "Sin asignar" y quita el campo. */
+export function setModuleDoubleTap<C extends ConfigLike>(config: C, actionId: string | null): C {
+  return setPath(config, ["moduleKey", "doubleTap"], actionId ?? undefined);
+}
+
+/** Qué hace la perilla en una página (knob, 02 §4.2); null es "Cambia de página", el de fábrica, y quita el campo. */
+export function setPageKnob<C extends ConfigLike>(config: C, pageId: string, knob: string | null): C {
+  if (!(config.pages ?? []).some((page) => page.id === pageId)) {
+    return config;
+  }
+
+  return { ...config, pages: config.pages!.map((page) => (page.id === pageId ? setPath(page, ["knob"], knob ?? undefined) : page)) };
+}
+
 /** "Volver a los valores por defecto" (05 §4.5): borra el bloque console entero y no toca nada más. */
 export function resetConsole<C extends ConfigLike>(config: C): C {
   return setPath(config, ["console"], undefined);

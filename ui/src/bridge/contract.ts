@@ -89,7 +89,7 @@ export const keySchema = z.looseObject({
   hotkey: z.string().optional(),
   onHold: holdSchema.optional(),
 });
-export const pageSchema = z.looseObject({ id: z.string().optional(), name: z.string().optional(), type: z.string().optional(), keys: z.array(keySchema).optional(), show: z.boolean().optional() });
+export const pageSchema = z.looseObject({ id: z.string().optional(), name: z.string().optional(), type: z.string().optional(), keys: z.array(keySchema).optional(), show: z.boolean().optional(), knob: z.string().optional() });
 export const actionSchema = z.looseObject({ id: z.string().optional(), name: z.string().optional(), steps: z.array(stepSchema).optional() });
 export const bindingSchema = z.looseObject({ hotkey: z.string().optional(), action: z.string().optional() });
 export const preflightCheckSchema = z.looseObject({ condition: conditionSchema.optional(), message: z.string().optional() });
@@ -111,7 +111,7 @@ export const configSchema = z.looseObject({
   actions: z.array(actionSchema).optional(),
   hotkeys: z.array(bindingSchema).optional(),
   preflight: z.array(preflightCheckSchema).optional(),
-  moduleKey: z.looseObject({ layer: z.string().optional() }).optional(),
+  moduleKey: z.looseObject({ layer: z.string().optional(), doubleTap: z.string().optional() }).optional(),
   console: consoleSchema.optional(),
 });
 

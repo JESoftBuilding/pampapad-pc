@@ -1,6 +1,8 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import type { ConsoleFrame } from "@/bridge/contract.console";
 import { ConsoleCanvas } from "@/console/ConsolePreview";
+import { Field } from "@/ui/field";
+import { Select } from "@/ui/select";
 import { cn } from "@/ui/utils";
 
 /** Lo que se elige en la consola dibujada además de una tecla (05 §4.1). */
@@ -41,15 +43,42 @@ function Row({ name, does }: { name: string; does: string }) {
   );
 }
 
-/** Qué hacen la perilla y la tecla del módulo (05 §4.1). En la primera versión son informativas: no se configuran acá. */
-export function PieceInfo({ piece, layerName }: { piece: Piece; layerName?: string }) {
+// Los valores de knob que esta versión conoce (02 §4.2); sin el campo es "pages".
+const knobChoices = [
+  { value: "pages", label: "Cambia de página" },
+  { value: "brightness", label: "Brillo de las luces" },
+];
+
+type PieceProps = {
+  piece: Piece;
+  layerName?: string;
+  /** La acción del doble toque, por nombre; undefined es Sin asignar. */
+  doubleTapName?: string;
+  /** El knob de la página que se edita; undefined si no hay página. */
+  knob?: string;
+  onKnob: (knob: string | null) => void;
+};
+
+/** Qué hacen la perilla y la tecla del módulo (05 §4.1). La perilla se elige por página; lo del módulo se cambia en Ajustes. */
+export function PieceInfo({ piece, layerName, doubleTapName, knob, onKnob }: PieceProps) {
+  const id = useId();
   if (piece === "knob") {
+    const value = knob ?? "pages";
     return (
       <div className="space-y-2">
-        <h2 className="font-display text-sm uppercase tracking-wide text-muted">Perilla · todas las páginas</h2>
-        <Row name="Girar" does="Cambia de página" />
+        <h2 className="font-display text-sm uppercase tracking-wide text-muted">Perilla · esta página</h2>
+        <Field label="En esta página, la perilla" htmlFor={id}>
+          <Select id={id} value={value} onChange={(event) => onKnob(event.target.value === "pages" ? null : event.target.value)}>
+            {!knobChoices.some((choice) => choice.value === value) && <option value={value}>{value} (no la conoce este programa)</option>}
+            {knobChoices.map((choice) => (
+              <option key={choice.value} value={choice.value}>
+                {choice.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
         <Row name="Apretar" does="Atiende el aviso de la consola" />
-        <p className="text-xs text-muted">En esta versión la perilla no se configura: hace siempre esto.</p>
+        <p className="text-xs text-muted">Con Brillo de las luces, girarla sube y baja el brillo de la tira, también grabando. Apretarla atiende el aviso en todas las páginas.</p>
       </div>
     );
   }
@@ -59,7 +88,8 @@ export function PieceInfo({ piece, layerName }: { piece: Piece; layerName?: stri
       <h2 className="font-display text-sm uppercase tracking-wide text-muted">Tecla del módulo · todas las páginas</h2>
       <Row name="Mantener" does={layerName === undefined ? "Nada: no tiene página asignada" : `Muestra ${layerName}`} />
       <Row name="Mantener y apretar 1 a 4" does="Va a esa página" />
-      <p className="text-xs text-muted">La página que muestra se elige en Ajustes, en «Cómo se cambia de página».</p>
+      <Row name="Doble toque" does={doubleTapName ?? "Sin asignar"} />
+      <p className="text-xs text-muted">La página que muestra y el doble toque se eligen en Ajustes, en «Cómo se cambia de página».</p>
     </div>
   );
 }

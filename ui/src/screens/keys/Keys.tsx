@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { PreviewSample } from "@/bridge/contract.console";
 import { ConsolePreview } from "@/console/ConsolePreview";
 import { useConsolePreview } from "@/console/useConsolePreview";
+import { setPageKnob } from "@/model/draft";
 import type { ScreenProps } from "@/screens/screen";
 import { Card } from "@/ui/card";
 import { RunResult } from "../common/RunResult";
@@ -33,6 +34,9 @@ export function KeysScreen({ bridge, view, editor }: ScreenProps) {
   const action = piece === undefined ? model.action : undefined;
   const layer = editor.draft.moduleKey?.layer;
   const layerName = layer === undefined ? undefined : (model.pages.find((candidate) => candidate.id === layer)?.name ?? layer);
+  const doubleTap = editor.draft.moduleKey?.doubleTap;
+  const doubleTapName = doubleTap === undefined ? undefined : (model.actions.find((candidate) => candidate.id === doubleTap)?.name ?? `${doubleTap} (no existe)`);
+  const pageId = model.page?.id;
   return (
     <div className="space-y-4" data-fingerprint={view.snapshot.fingerprint}>
       <PageSelector pages={model.pages} current={model.pageId} mainPage={model.mainPage} onSelect={model.selectPage} />
@@ -56,7 +60,13 @@ export function KeysScreen({ bridge, view, editor }: ScreenProps) {
         </div>
         <Card>
           {piece !== undefined ? (
-            <PieceInfo piece={piece} layerName={layerName} />
+            <PieceInfo
+              piece={piece}
+              layerName={layerName}
+              doubleTapName={doubleTapName}
+              knob={model.page?.knob}
+              onKnob={(knob) => pageId !== undefined && editor.setDraft((current) => setPageKnob(current, pageId, knob))}
+            />
           ) : model.page === undefined || model.position === undefined ? (
             <p className="text-sm text-muted">Elegí una tecla.</p>
           ) : (

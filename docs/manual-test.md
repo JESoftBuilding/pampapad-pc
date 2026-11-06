@@ -518,3 +518,18 @@ Se repasa con la placa y el firmware de la consola 0.1.5, la tira y OBS abierto,
 - **La tecla Pausa** de su biblioteca reanuda con un toque y pausa si se mantiene: no es de la 9b.
 - **Las tomas de prueba** (seis, de 11:45 a 12:24) fueron a la papelera, a pedido de Emmanuel.
 - **Los textos de los avisos:** Emmanuel los vio en la consola y no pidió cambios.
+
+## 1.3.0: las luces desde la consola
+
+Se repasa con la v1.3.0 instalada, la consola 0.2.1, la tira y la página de luces armada (`luces`, con `knob: "brightness"`, y la acción `abrir-luces` en el doble toque de la tecla del módulo). Las filas que graban tocan OBS: antes de cada una, OBS detenido.
+
+| N | Qué hacer | Qué tiene que pasar |
+|---|---|---|
+| 1 | Desde cualquier página, un doble toque de la tecla del módulo; después otro | El primero abre las luces; el segundo vuelve a la página donde estaba |
+| 2 | En las luces, la tecla 1, los colores, los efectos y girar la perilla | La tecla 1 prende y apaga; los colores y los efectos andan; la perilla sube y baja el brillo |
+| 3 | Grabando, un doble toque de la tecla del módulo y girar la perilla | Se abren las luces, la perilla cambia el brillo y la tecla de grabar no está |
+| 4 | Un toque solo de la tecla del módulo, desde otra página | Vuelve a la principal, apenas más lento que antes |
+| 5 | Desenchufar la PC con la consola prendida | La consola hace sonar su aviso de fábrica |
+| 6 | Pasar a una escena de nombre largo | El nombre se corta antes del porcentaje de la batería |
+| 7 | En Ajustes, "Cómo se cambia de página", elegir una acción en "Doble toque de la tecla del módulo", guardar, y después "Sin asignar" | Con la acción, el doble toque la corre sin reiniciar; con "Sin asignar", el toque solo vuelve a la principal sin demora |
+| 8 | En Teclas, elegir otra página, la perilla en el dibujo, "Brillo de las luces", y guardar | En esa página la perilla cambia el brillo; en las demás sigue cambiando de página |

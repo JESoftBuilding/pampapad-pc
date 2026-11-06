@@ -18,7 +18,9 @@ import {
   setAlertChannel,
   setConsoleValue,
   setKey,
+  setModuleDoubleTap,
   setModuleLayer,
+  setPageKnob,
   setMuteSound,
   setStep,
   slug,
@@ -188,6 +190,26 @@ describe("los ajustes de la consola", () => {
     expect(chosen.moduleKey).toEqual({ layer: "grabacion" });
     expect(setModuleLayer(chosen, null)).toEqual(bare);
     expect(setModuleLayer(minimal, null).moduleKey).toEqual({ inventado: "en moduleKey" });
+  });
+
+  it("el doble toque de la tecla del módulo se elige y se quita sin tocar la capa, y moduleKey vacío desaparece", () => {
+    const chosen = setModuleDoubleTap(bare, "abrir-luces");
+    expect(chosen.moduleKey).toEqual({ doubleTap: "abrir-luces" });
+    expect(setModuleDoubleTap(chosen, null)).toEqual(bare);
+
+    const both = setModuleLayer(chosen, "grabacion");
+    expect(setModuleDoubleTap(both, null).moduleKey).toEqual({ layer: "grabacion" });
+    expect(setModuleLayer(both, null).moduleKey).toEqual({ doubleTap: "abrir-luces" });
+    expect(setModuleDoubleTap(minimal, "abrir-luces").moduleKey).toEqual({ layer: "grabacion", inventado: "en moduleKey", doubleTap: "abrir-luces" });
+  });
+
+  it("la perilla de una página: brightness se escribe, Cambia de página quita el campo y las otras páginas no se tocan", () => {
+    const two: ConfigLike = { pages: [{ id: "grabacion", inventado: "en la página" }, { id: "luces" }] };
+    const bright = setPageKnob(two, "luces", "brightness");
+    expect(bright.pages).toEqual([{ id: "grabacion", inventado: "en la página" }, { id: "luces", knob: "brightness" }]);
+    expect(bright.pages?.[0]).toBe(two.pages?.[0]);
+    expect(setPageKnob(bright, "luces", null)).toEqual(two);
+    expect(setPageKnob(two, "no-existe", "brightness")).toBe(two);
   });
 
   it("volver a los valores por defecto quita el bloque console entero y nada más", () => {

@@ -15,7 +15,7 @@ export function StepForm({ step, type, conditionTypes, pages, bridge, onChange }
           <Textarea aria-label="El paso, tal cual está en config.json" readOnly value={JSON.stringify(step, null, 2)} />
         </div>
       ) : (
-        type.fields.map((field) => <StepField key={field.name} field={field} value={step[field.name]} onChange={(value) => onChange(withValue(step, field.name, read(type, field.name, value)))} bridge={bridge} pages={pages} />)
+        type.fields.map((field) => <StepField key={field.name} field={field} value={step[field.name]} onChange={(value) => onChange(withValue(step, field.name, read(type, field.name, value)))} bridge={bridge} pages={pages} stepType={type.id} />)
       )}
       {type?.id === "lights" && <LightsHelp />}
       <OnlyIfEditor onlyIf={step.onlyIf} conditionTypes={conditionTypes} pages={pages} bridge={bridge} onChange={(onlyIf) => onChange(withOnlyIf(step, onlyIf))} />
