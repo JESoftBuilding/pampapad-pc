@@ -37,6 +37,11 @@ public readonly record struct InputState(ushort Buttons, byte Knob = 0)
 /// </summary>
 public readonly record struct Hello(byte Level, string Version, byte Capabilities, byte Energy, bool JustBooted, ushort SettingsFingerprint);
 
+/// <summary>
+/// El saludo del receptor, 0x32 (04 §7): la versión de su firmware y si escuchó a la consola en los últimos 3 s (bit 0 del estado).
+/// </summary>
+public readonly record struct ReceiverHello(string Version, bool HearsConsole);
+
 /// <summary>Un comando para la tira de luces: los 5 bytes de LightCommand en DeviceProtocol.h (04 §7). Cmd va de 1 a 5.</summary>
 public sealed record LightCommand(byte Cmd, byte R, byte G, byte B, byte Value);
 
@@ -45,6 +50,7 @@ public static partial class ConsoleProtocol
 {
     public const byte InputStateType = 0x30;
     public const byte HelloType = 0x31;
+    public const byte ReceiverHelloType = 0x32;
     public const byte LightCommandType = 0x10;
     public const int KeyCount = 12;
     public const int KeyMask = (1 << KeyCount) - 1;
@@ -52,6 +58,7 @@ public static partial class ConsoleProtocol
     public const int ModuleKeyBit = 1 << 13;
     public const int InputStateLength = 8;
     public const int HelloLength = 8;
+    public const int ReceiverHelloLength = 5;
 
     /// <summary>El tope del firmware en los dos sentidos (ConsoleWire.h:32-34): '#', seis dígitos y base64. La válida más larga tiene 63.</summary>
     public const int MaxLineLength = 64;
@@ -124,6 +131,21 @@ public static partial class ConsoleProtocol
             (byte)(payload[5] & 0x03),
             (payload[5] & 0x80) != 0,
             (ushort)(payload[6] | (payload[7] << 8)));
+        return true;
+    }
+
+    /// <summary>Justo 5 bytes: el saludo del receptor no tiene regla de crecimiento en 04 §7, y otro largo es una línea mal formada.</summary>
+    public static bool TryDecodeReceiverHello(ReadOnlySpan<byte> payload, out ReceiverHello hello)
+    {
+        if (payload.Length != ReceiverHelloLength)
+        {
+            hello = default;
+            return false;
+        }
+
+        hello = new ReceiverHello(
+            string.Create(CultureInfo.InvariantCulture, $"{payload[0]}.{payload[1]}.{payload[2]}"),
+            (payload[3] & 0x01) != 0);
         return true;
     }
 

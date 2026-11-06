@@ -56,6 +56,9 @@ export const stateSchema = z.object({
     energy: z.number().int().optional(),
     settingsFingerprint: z.number().int().optional(),
     settingsInSync: z.boolean().optional(),
+    // El receptor por radio, del último ReceiverHello; falta por cable (plan de la 1.4.0, decisión 2). Con hearsConsole en falso
+    // y el enlace conectado, la consola está sin señal.
+    receiver: z.object({ firmware: z.string(), hearsConsole: z.boolean() }).optional(),
   }),
   // El aviso grave a la vista (GraveAlert, plan de la 9b, E9b-3); falta si no hay ninguno.
   alert: z
