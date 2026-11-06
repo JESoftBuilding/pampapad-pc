@@ -158,4 +158,39 @@ public class SerialConsoleSendTests
         Assert.All(results, r => Assert.True(r.Ok, r.Failure?.Message));
         Assert.Contains(cable.Written, new[] { $"{Toggle}\n{Violet}\n", $"{Violet}\n{Toggle}\n" });
     }
+
+    // Repaso de la 1.4.0: el receptor 0.1.0 dejaba de aceptar bytes con la lectura viva, y el programa escribió 11 minutos sin que el
+    // registro dijera nada. Una escritura que vence se anota una vez por conexión; un desenchufe no, porque lo anota la lectura.
+    [Fact]
+    public async Task A_write_that_times_out_with_the_port_open_is_logged_once_per_connection()
+    {
+        await using var rig = new SerialConsoleRig();
+        var cable = new MemoryPipe();
+        rig.NextOpensStream(cable);
+        await rig.Source.StartAsync(CancellationToken.None);
+        await Poll.Until(() => rig.Link == ConsoleLinkState.Connected);
+        cable.WriteError = new TimeoutException("Se agotó el tiempo de espera del semáforo.");
+
+        Assert.False((await rig.Source.SendAsync(Toggle, CancellationToken.None)).Ok);
+        Assert.False((await rig.Source.SendAsync(Violet, CancellationToken.None)).Ok);
+
+        var stuck = rig.Log.Recent().Where(e => e.Module == SerialConsole.SourceId && e.Level == LogLevel.Warning).ToList();
+        var warning = Assert.Single(stuck);
+        Assert.StartsWith("La consola no acepta lo que escribe la PC: ", warning.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_write_that_fails_because_the_cable_left_is_not_logged_by_the_writer()
+    {
+        await using var rig = new SerialConsoleRig();
+        var cable = new MemoryPipe();
+        rig.NextOpensStream(cable);
+        await rig.Source.StartAsync(CancellationToken.None);
+        await Poll.Until(() => rig.Link == ConsoleLinkState.Connected);
+        cable.WriteError = new IOException("El dispositivo no está conectado.");
+
+        Assert.False((await rig.Source.SendAsync(Toggle, CancellationToken.None)).Ok);
+
+        Assert.DoesNotContain(rig.Log.Recent(), e => e.Module == SerialConsole.SourceId && e.Message.StartsWith("La consola no acepta", StringComparison.Ordinal));
+    }
 }
