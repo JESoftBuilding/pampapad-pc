@@ -564,3 +564,17 @@ Se repasa con la copia de desarrollo de `receptor-pc` y el puerto en "Automátic
   - fila 4: se desenchufó el receptor a las 08:36:42 y el cable quedó tomado a las 08:36:44,8. Un intento anterior (08:17) dio `Access denied` porque un monitor de PlatformIO tenía COM20, y se reintentó cada 2 s como debía;
   - fila 5: el doble toque abrió las luces por radio (09:35:09) y los colores corrieron desde las teclas (`luces-azul`, `-rojo`, `-verde`, `-ambar`, de 09:40:57 a 09:42:20);
   - además: soltar y volver a tomar el puerto anduvo con "Automático" (08:27:48 y 08:28:42, para cargar la 0.1.2). Con el receptor 0.1.2: 0 pérdidas en 7,5 minutos (08:36:07).
+
+## 1.5.0: la principal sigue a OBS
+
+Se repasa con la copia de desarrollo de `perfil-por-aplicacion`, contra una copia de la biblioteca real con la página `escritorio`, sus cuatro scripts y `mainPageWithoutObs: "escritorio"`. Antes: la instalada cerrada (bandeja, Salir), OBS cerrado y la consola con el receptor o con el cable. Las filas 5 y 6 cambian las pantallas y prenden el Proxmox: van con Emmanuel adelante.
+
+| N | Qué hacer | Qué tiene que pasar |
+|---|---|---|
+| 1 | Con OBS cerrado, abrir PampaPad | La consola muestra Escritorio |
+| 2 | Abrir OBS; después cerrarlo | En unos 2 s pasa a Grabación; al cerrarlo vuelve a Escritorio. Cada cambio deja una línea en el registro ("OBS se abrió: la principal es grabacion.") |
+| 3 | Con OBS abierto, salir de PampaPad y volver a abrirlo | Arranca en Grabación |
+| 4 | Con la perilla, ir a Escenas y cerrar OBS. Abrir las luces con el doble toque y abrir OBS | Se queda en Escenas. Luces queda encima, y el toque solo lleva a Grabación |
+| 5 | Las teclas 3, 2 y 1 de Escritorio, y después la 3 | Cambian los monitores como Ctrl+Alt+F3, F2 y F1; la 3 vuelve a los tres |
+| 6 | La tecla Servidor | Termina enseguida; en unos minutos el registro dice cómo terminó. Con el Proxmox prendido, "ya estaba prendido" |
+| 7 | En Ajustes, "Principal sin OBS" en "La misma que la principal", guardar; después volver a Escritorio | Con OBS cerrado la consola se queda en Grabación, como en la 1.4.0. Con Escritorio, vuelve a Escritorio |

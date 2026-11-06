@@ -29,6 +29,19 @@ public static partial class Validator
             found.Add(Error("mainPage", ProblemCodes.PageNotFound, $"mainPage nombra la página \"{main}\", que no existe."));
         }
 
+        // Como el target de page.go (PageGo.Check): tiene que poder ser la base. Con problema se ignora y rige mainPage (Config.ResolveMainPage).
+        if (config.MainPageWithoutObs is { } withoutObs)
+        {
+            if (config.FindPage(withoutObs) is not { } page)
+            {
+                found.Add(Error("mainPageWithoutObs", ProblemCodes.PageNotFound, $"mainPageWithoutObs nombra la página \"{withoutObs}\", que no existe."));
+            }
+            else if (!Dispatcher.IsKeys(page))
+            {
+                found.Add(Error("mainPageWithoutObs", ProblemCodes.PageNotFound, $"mainPageWithoutObs nombra la página \"{withoutObs}\", de tipo {page.Type}, que no es de teclas: no puede ser la base."));
+            }
+        }
+
         if (config.ModuleKey?.Layer is { } layer && !pages.Contains(layer))
         {
             found.Add(Error("moduleKey.layer", ProblemCodes.PageNotFound, $"moduleKey.layer nombra la página \"{layer}\", que no existe."));

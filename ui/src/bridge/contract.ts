@@ -113,6 +113,7 @@ export const consoleSchema = z.looseObject({
 export const configSchema = z.looseObject({
   version: z.number().int().optional(),
   mainPage: z.string().optional(),
+  mainPageWithoutObs: z.string().optional(),
   pages: z.array(pageSchema).optional(),
   actions: z.array(actionSchema).optional(),
   hotkeys: z.array(bindingSchema).optional(),

@@ -266,3 +266,25 @@ test("sin comando, la tarjeta Claude dice que no está disponible en la copia de
   await expect(claude(page).getByText("No disponible en la copia de desarrollo")).toBeVisible();
   await expect(claude(page).getByRole("button", { name: "Copiar" })).toHaveCount(0);
 });
+
+test("la principal sin OBS: elegir Escritorio manda el campo y La misma que la principal lo borra", async ({ page }) => {
+  await withConfig(page, {
+    mainPageWithoutObs: undefined,
+    pages: [
+      { id: "grabacion", name: "Grabación", keys: [] },
+      { id: "sin-pc", name: "Sin la PC", type: "local" },
+      { id: "escritorio", name: "Escritorio", keys: [] },
+    ],
+  });
+  const withoutObs = card(page, "Páginas que se muestran").getByLabel("Principal sin OBS");
+  await expect(withoutObs.getByRole("option")).toHaveText(["La misma que la principal", "Grabación", "Escritorio"]);
+
+  await withoutObs.selectOption("escritorio");
+  await page.getByRole("button", { name: "Guardar", exact: true }).click();
+  expect((await lastSaved(page))?.mainPageWithoutObs).toBe("escritorio");
+
+  await withoutObs.selectOption("");
+  await page.getByRole("button", { name: "Guardar", exact: true }).click();
+  await expect.poll(async () => (await calls(page, "config.save")).length).toBe(2);
+  expect(await lastSaved(page)).not.toHaveProperty("mainPageWithoutObs");
+});

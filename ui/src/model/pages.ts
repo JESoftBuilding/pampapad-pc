@@ -1,8 +1,8 @@
 // Las páginas que se muestran, en Ajustes (05 §4.5): el orden, la principal, show y el nombre. Cada operación devuelve una copia con lo
 // mínimo cambiado, como draft.ts. mainPage es uno solo, así que elegir la principal deja una sola. Puro y sin importar nada.
 
-type PageLike = { id?: string; name?: string; show?: boolean; [extra: string]: unknown };
-export type PagesConfigLike = { mainPage?: string; pages?: PageLike[]; [extra: string]: unknown };
+type PageLike = { id?: string; name?: string; show?: boolean; type?: string; [extra: string]: unknown };
+export type PagesConfigLike = { mainPage?: string; mainPageWithoutObs?: string; pages?: PageLike[]; [extra: string]: unknown };
 
 /** La principal: mainPage o, si falta, la primera de pages (02 §4.1). */
 export function mainPageOf(config: PagesConfigLike): string | undefined {
@@ -26,6 +26,18 @@ export function movePage<C extends PagesConfigLike>(config: C, index: number, de
 
 export function setMainPage<C extends PagesConfigLike>(config: C, id: string): C {
   return { ...config, mainPage: id };
+}
+
+/** La principal con OBS cerrado (02 §7, regla 9). undefined es "la misma que la principal": borra el campo, sin escribir null (02 §3). */
+export function setMainPageWithoutObs<C extends PagesConfigLike>(config: C, id: string | undefined): C {
+  const next = { ...config };
+  if (id === undefined) {
+    delete next.mainPageWithoutObs;
+  } else {
+    next.mainPageWithoutObs = id;
+  }
+
+  return next;
 }
 
 function setPage<C extends PagesConfigLike>(config: C, index: number, edit: (page: PageLike) => PageLike): C {

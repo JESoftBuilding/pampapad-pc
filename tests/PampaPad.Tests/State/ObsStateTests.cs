@@ -61,4 +61,20 @@ public class ObsStateTests
         Assert.Equal(RecordingState.Recording, cut.Recording);
         Assert.True(cut.Streaming);
     }
+
+    [Theory]
+    [InlineData(ObsLinkState.Closed, false)]
+    [InlineData(ObsLinkState.NoWebsocket, true)]
+    [InlineData(ObsLinkState.AuthFailed, true)]
+    [InlineData(ObsLinkState.Loading, true)]
+    [InlineData(ObsLinkState.Ready, true)]
+    [InlineData(ObsLinkState.Switching, true)]
+    [InlineData(ObsLinkState.Lost, true)]
+    [InlineData(ObsLinkState.Kicked, true)]
+    [InlineData(ObsLinkState.Exiting, true)]
+    public void Obs_is_open_in_every_link_but_closed(ObsLinkState link, bool open)
+    {
+        // 02 §7, regla 9: abierto es que corre obs64, se pueda hablar con él o no.
+        Assert.Equal(open, (ObsState.Initial with { Link = link }).IsOpen);
+    }
 }

@@ -46,9 +46,9 @@ test("cambiar la etiqueta corta pide la vista previa con el borrador nuevo y la 
 test("el selector de estado pide la vista previa en el estado elegido, y ×2 la agranda", async ({ page }) => {
   await page.getByRole("group", { name: "Estado de la grabación en la vista previa" }).getByRole("button", { name: "En pausa" }).click();
   await expect.poll(async () => (await previews(page)).at(-1)?.state).toBe("paused");
-  await page.getByRole("button", { name: "Sin OBS" }).click();
+  await page.getByRole("button", { name: "Sin OBS", exact: true }).click();
   await expect.poll(async () => (await previews(page)).at(-1)?.state).toBe("noObs");
-  await expect(page.getByRole("button", { name: "Sin OBS" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Sin OBS", exact: true })).toHaveAttribute("aria-pressed", "true");
 
   const canvas = page.getByRole("img", { name: "La pantalla de la consola en su resolución real" });
   await expect(canvas).toHaveCSS("width", "320px");

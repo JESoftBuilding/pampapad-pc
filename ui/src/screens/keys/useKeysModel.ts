@@ -98,6 +98,7 @@ export function useKeysModel(bridge: Bridge, editor: Editor) {
     actions,
     action,
     mainPage: editor.draft?.mainPage ?? pages[0]?.id,
+    mainPageWithoutObs: editor.draft?.mainPageWithoutObs,
     problemsOf,
     selectPage: (id: string) => setSelection({ pageId: id, position: undefined }),
     selectKey: (at: number) => setSelection({ pageId, position: at }),

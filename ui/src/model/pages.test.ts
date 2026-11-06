@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mainPageOf, movePage, renamePage, setMainPage, setPageShown, type PagesConfigLike } from "./pages";
+import { mainPageOf, movePage, renamePage, setMainPage, setMainPageWithoutObs, setPageShown, type PagesConfigLike } from "./pages";
 
 const config: PagesConfigLike = { pages: [{ id: "grabacion", name: "Grabación" }, { id: "escenas", name: "Escenas", show: false }, { id: "sala", name: "Sala" }] };
 
@@ -36,5 +36,14 @@ describe("pages", () => {
     const renamed = renamePage(config, 2, "Taller");
     expect(renamed.pages?.[2]).toEqual({ id: "sala", name: "Taller" });
     expect(renamed.pages?.[0]).toBe(config.pages?.[0]);
+  });
+
+  it("la principal sin OBS se pone y se borra sin tocar lo demás", () => {
+    const set = setMainPageWithoutObs({ ...config, mainPage: "grabacion" }, "sala");
+    expect(set).toEqual({ ...config, mainPage: "grabacion", mainPageWithoutObs: "sala" });
+    const cleared = setMainPageWithoutObs(set, undefined);
+    expect(cleared).toEqual({ ...config, mainPage: "grabacion" });
+    expect("mainPageWithoutObs" in cleared).toBe(false);
+    expect(cleared.pages).toBe(config.pages);
   });
 });

@@ -32,6 +32,9 @@ public sealed record ObsState
     // "Se graba o se está en pausa" (spec 03 §5): todo estado distinto de stopped.
     public bool TakeInProgress => Recording != RecordingState.Stopped;
 
+    // OBS abierto es que corre obs64, se pueda hablar con él o no (02 §7, regla 9): todo enlace distinto de closed.
+    public bool IsOpen => Link != ObsLinkState.Closed;
+
     // Cambia el enlace. En closed ni se graba ni se transmite; en los demás cortes vale lo último que se supo.
     public ObsState WithLink(ObsLinkState link) => link == ObsLinkState.Closed
         ? this with { Link = link, Recording = RecordingState.Stopped, Streaming = false, Recorded = TimeSpan.Zero }

@@ -197,6 +197,7 @@ public class Contract
         {
           "version": 1,
           "mainPage": "grabacion",
+          "mainPageWithoutObs": "grabacion",
           "pages": [
             { "id": "grabacion", "name": "Grabación", "keys": [
               { "position": 5, "label": "Short", "action": "marca-short", "hotkey": "Ctrl+Shift+Alt+F9" },

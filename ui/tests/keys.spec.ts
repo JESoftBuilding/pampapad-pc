@@ -33,6 +33,8 @@ test("abre en Teclas, con la grilla de 12 y la etiqueta corta de la tecla 5", as
   await expect(page.getByRole("button", { name: "Tecla 5", exact: true })).toContainText("SHORT");
   await expect(page.getByRole("button", { name: "Tecla 1", exact: true })).toContainText("—");
   await expect(page.getByRole("button", { name: "Grabación" })).toContainText("principal");
+  // La muestra del contrato tiene mainPageWithoutObs en grabacion: lleva las dos marcas.
+  await expect(page.getByRole("button", { name: "Grabación" })).toContainText("sin OBS");
 });
 
 test("elegir una tecla vacía, ponerle etiqueta y acción, y guardar manda la configuración entera con la huella de la foto", async ({ page }) => {

@@ -99,4 +99,29 @@ public sealed class ConfigCanonTests : IAsyncLifetime
         Assert.Equal("{\n  \"version\": 1\n}\n", Write(Order(Read("""{ "version": 1 }"""))));
         Assert.Equal("{\n  \"actions\": []\n}\n", Write(Order(Read("""{ "actions": [] }"""))));
     }
+
+    [Fact]
+    public void The_main_page_without_obs_comes_out_the_same_right_after_mainPage()
+    {
+        // 02 §3, regla 8: el orden canónico es el de la declaración, y MainPageWithoutObs va después de MainPage.
+        const string written = """
+            {
+              "version": 1,
+              "mainPage": "grabacion",
+              "mainPageWithoutObs": "escritorio",
+              "pages": [
+                {
+                  "id": "grabacion"
+                },
+                {
+                  "id": "escritorio"
+                }
+              ]
+            }
+
+            """;
+
+        Assert.Equal(written, Write(Order(Read(written))));
+        Assert.Equal(written, Write(Order(Read("""{ "mainPageWithoutObs": "escritorio", "pages": [ { "id": "grabacion" }, { "id": "escritorio" } ], "mainPage": "grabacion", "version": 1 }"""))));
+    }
 }

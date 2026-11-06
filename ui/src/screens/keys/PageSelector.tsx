@@ -2,8 +2,20 @@ import type { Page } from "@/bridge/contract";
 import { Badge } from "@/ui/badge";
 import { cn } from "@/ui/utils";
 
-/** Las páginas de pages en su orden, con la principal marcada (05 §4.1). Crear, renombrar y ordenar se hace en Ajustes (etapa 8). */
-export function PageSelector({ pages, current, mainPage, onSelect }: { pages: Page[]; current?: string; mainPage?: string; onSelect: (id: string) => void }) {
+/** Las páginas de pages en su orden, con la principal y la principal sin OBS marcadas (05 §4.1). Crear, renombrar y ordenar se hace en Ajustes (etapa 8). */
+export function PageSelector({
+  pages,
+  current,
+  mainPage,
+  mainPageWithoutObs,
+  onSelect,
+}: {
+  pages: Page[];
+  current?: string;
+  mainPage?: string;
+  mainPageWithoutObs?: string;
+  onSelect: (id: string) => void;
+}) {
   return (
     <nav aria-label="Páginas" className="flex flex-wrap gap-2">
       {pages.map((page, index) => (
@@ -19,6 +31,7 @@ export function PageSelector({ pages, current, mainPage, onSelect }: { pages: Pa
         >
           {page.name ?? page.id ?? "(sin id)"}
           {page.id !== undefined && page.id === mainPage && <Badge tone="warn">principal</Badge>}
+          {page.id !== undefined && page.id === mainPageWithoutObs && <Badge tone="warn">sin OBS</Badge>}
           {page.type !== undefined && page.type !== "keys" && <Badge>{page.type}</Badge>}
         </button>
       ))}

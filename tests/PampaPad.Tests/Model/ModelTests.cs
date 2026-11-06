@@ -53,7 +53,7 @@ public class ModelTests
 
         Assert.Null(config.Version);
         Assert.Null(config.Pages);
-        Assert.Null(config.ResolveMainPage());
+        Assert.Null(config.ResolveMainPage(obsOpen: true));
         Assert.Equal("{}\n", Canonical(config));
     }
 
@@ -90,7 +90,7 @@ public class ModelTests
         Config config = Read(File.ReadAllText(Data("config.v1.json")));
 
         Assert.Equal(1, config.Version);
-        Assert.Equal("grabacion", config.ResolveMainPage());
+        Assert.Equal("grabacion", config.ResolveMainPage(obsOpen: true));
         Assert.Equal(3, config.Pages!.Count);
         Assert.Equal(10, config.Pages[0].Keys!.Count);
         Assert.Equal(16, config.Actions!.Count);
@@ -108,7 +108,7 @@ public class ModelTests
     {
         Config config = Read("""{ "pages": [ { "id": "uno" }, { "id": "dos" } ] }""");
 
-        Assert.Equal("uno", config.ResolveMainPage());
+        Assert.Equal("uno", config.ResolveMainPage(obsOpen: true));
     }
 
     [Fact]

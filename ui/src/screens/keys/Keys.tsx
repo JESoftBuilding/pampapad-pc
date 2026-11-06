@@ -39,7 +39,7 @@ export function KeysScreen({ bridge, view, editor }: ScreenProps) {
   const pageId = model.page?.id;
   return (
     <div className="space-y-4" data-fingerprint={view.snapshot.fingerprint}>
-      <PageSelector pages={model.pages} current={model.pageId} mainPage={model.mainPage} onSelect={model.selectPage} />
+      <PageSelector pages={model.pages} current={model.pageId} mainPage={model.mainPage} mainPageWithoutObs={model.mainPageWithoutObs} onSelect={model.selectPage} />
       <div className="grid gap-4 xl:grid-cols-[auto_1fr]">
         <div className="space-y-4">
           <Card>

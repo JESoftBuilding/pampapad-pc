@@ -127,4 +127,18 @@ public sealed class ConfigCheckTests : IAsyncLifetime
 
         Assert.Equal(executor.Check(action), executor.Check(action, candidate));
     }
+
+    [Theory]
+    [InlineData("sala", "mainPageWithoutObs nombra la página \"sala\", que no existe.")]
+    [InlineData("sin-pc", "mainPageWithoutObs nombra la página \"sin-pc\", de tipo local, que no es de teclas: no puede ser la base.")]
+    public void A_main_page_without_obs_that_does_not_exist_or_is_not_of_keys_is_problem_4(string target, string message)
+    {
+        // 02 §10, problema 4 (1.5.0): tiene que poder ser la base, como el target de page.go.
+        Config candidate = Read(Loaded.Replace("\"mainPage\": \"grabacion\",", $"\"mainPage\": \"grabacion\", \"mainPageWithoutObs\": \"{target}\",", StringComparison.Ordinal)
+            .Replace("{ \"id\": \"escenas\", \"name\": \"Escenas\", \"keys\": [] }", "{ \"id\": \"escenas\", \"name\": \"Escenas\", \"keys\": [] }, { \"id\": \"sin-pc\", \"name\": \"Sin la PC\", \"type\": \"local\" }", StringComparison.Ordinal));
+
+        Problem problem = Assert.Single(All(candidate));
+
+        Assert.Equal(("mainPageWithoutObs", ProblemCodes.PageNotFound, Severity.Error, message), (problem.Where, problem.Code, problem.Severity, problem.Message));
+    }
 }
