@@ -91,9 +91,9 @@ test("la página de la tecla del módulo se elige y se quita, y Sin asignar no d
   expect(await lastSaved(page)).not.toHaveProperty("moduleKey");
 });
 
-test("apagar el sonido de un aviso lo escribe en console.alerts, y no_pc viene sólo con luz", async ({ page }) => {
+test("apagar el sonido de un aviso lo escribe en console.alerts, y no_pc viene con luz y sonido (0.2.1)", async ({ page }) => {
   const alerts = card(page, "Avisos");
-  await expect(alerts.getByRole("switch", { name: "Sonido: Sin PC" })).toHaveAttribute("aria-checked", "false");
+  await expect(alerts.getByRole("switch", { name: "Sonido: Sin PC" })).toHaveAttribute("aria-checked", "true");
   await expect(alerts.getByRole("switch", { name: "Luz: Sin PC" })).toHaveAttribute("aria-checked", "true");
 
   await alerts.getByRole("switch", { name: "Sonido: Micrófono silenciado grabando" }).click();
@@ -120,4 +120,19 @@ test("Volver a los valores por defecto pide confirmación y borra sólo el bloqu
   expect(saved?.moduleKey).toEqual({ layer: "grabacion" });
   expect(saved?.pages).toBeDefined();
   await expect(screenCard(page).getByRole("button", { name: "Volver a los valores por defecto" })).toBeDisabled();
+});
+
+test("el doble toque de la tecla del módulo se elige y se quita sin tocar la capa, y una acción que no existe se ve", async ({ page }) => {
+  await withConfig(page, { moduleKey: { layer: "grabacion", doubleTap: "fantasma" } });
+  const doubleTap = card(page, "Cómo se cambia de página").getByLabel("Doble toque de la tecla del módulo");
+  await expect(doubleTap.locator("option:checked")).toHaveText("fantasma (no existe)");
+  await expect(card(page, "Cómo se cambia de página").getByText("el toque solo espera un instante")).toBeVisible();
+
+  await doubleTap.selectOption({ label: "Marca: short" });
+  await save(page);
+  expect((await lastSaved(page))?.moduleKey).toEqual({ layer: "grabacion", doubleTap: "marca-short" });
+
+  await doubleTap.selectOption({ label: "Sin asignar" });
+  await save(page);
+  expect((await lastSaved(page))?.moduleKey).toEqual({ layer: "grabacion" });
 });

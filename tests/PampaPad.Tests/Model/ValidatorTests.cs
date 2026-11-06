@@ -53,6 +53,7 @@ public class ValidatorTests
     [InlineData("""{ "version": 1, "actions": [ { "id": "x", "name": "X", "steps": [ { "marker": "short" } ] } ] }""", "actions[0].steps[0].type", "field_missing")]
     [InlineData("""{ "version": 1, "mainPage": "otra", "pages": [ { "id": "a", "name": "A" } ] }""", "mainPage", "page_not_found")]
     [InlineData("""{ "version": 1, "moduleKey": { "layer": "capa" }, "pages": [ { "id": "a", "name": "A" } ] }""", "moduleKey.layer", "page_not_found")]
+    [InlineData("""{ "version": 1, "moduleKey": { "doubleTap": "nada" }, "pages": [ { "id": "a", "name": "A" } ] }""", "moduleKey.doubleTap", "action_not_found")]
     [InlineData("""{ "version": 1, "preflight": [ { "condition": { "type": "obs.profileIs" } } ] }""", "preflight[0].message", "field_missing")]
     [InlineData("""{ "version": 1, "preflight": [ { "message": "x" } ] }""", "preflight[0].condition", "field_missing")]
     public void Finds_a_problem_of_the_file(string json, string where, string code)

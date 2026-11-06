@@ -46,6 +46,17 @@ public class DtosTests
         Assert.True(view.Obs.TakeInProgress);
     }
 
+    // La página encima viaja en app.snapshot y, por él, en state_read del MCP (plan de la 1.3.0, L-3).
+    [Fact]
+    public void The_overlay_page_travels_as_overlay_page_and_without_one_it_is_not_there()
+    {
+        string with = JsonSerializer.Serialize(StateView.From(AppState.Initial with { ActivePage = "luces", OverlayPage = "luces" }), Json.Compact);
+        string without = JsonSerializer.Serialize(StateView.From(AppState.Initial), Json.Compact);
+
+        Assert.Contains("\"overlayPage\":\"luces\"", with);
+        Assert.DoesNotContain("overlayPage", without);
+    }
+
     [Fact]
     public void The_initial_state_travels_in_camel_case_and_without_nulls()
     {

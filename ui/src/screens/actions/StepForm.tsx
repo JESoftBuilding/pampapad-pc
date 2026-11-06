@@ -15,7 +15,7 @@ export function StepForm({ step, type, conditionTypes, pages, bridge, onChange }
           <Textarea aria-label="El paso, tal cual está en config.json" readOnly value={JSON.stringify(step, null, 2)} />
         </div>
       ) : (
-        type.fields.map((field) => <StepField key={field.name} field={field} value={step[field.name]} onChange={(value) => onChange(withValue(step, field.name, read(type, field.name, value)))} bridge={bridge} pages={pages} />)
+        type.fields.map((field) => <StepField key={field.name} field={field} value={step[field.name]} onChange={(value) => onChange(withValue(step, field.name, read(type, field.name, value)))} bridge={bridge} pages={pages} stepType={type.id} />)
       )}
       {type?.id === "lights" && <LightsHelp />}
       <OnlyIfEditor onlyIf={step.onlyIf} conditionTypes={conditionTypes} pages={pages} bridge={bridge} onChange={(onlyIf) => onChange(withOnlyIf(step, onlyIf))} />
@@ -36,7 +36,7 @@ function LightsHelp() {
       <li>color: el color del selector; prende la tira.</li>
       <li>brightness: de 0 a 255. brightness no prende la tira: si está apagada, no se ve nada.</li>
       <li>adjustBrightness: de -127 a 127, sin el 0. Sube o baja el brillo.</li>
-      <li>preset: de 0 a 5: violeta, ámbar, blanco, rojo, verde y azul.</li>
+      <li>preset: de 0 a 5, los colores: violeta, ámbar, blanco, rojo, verde y azul; de 6 a 9, los efectos: respiración, ciclo de colores, vela y amanecer.</li>
       <li>La tira no avisa si recibió: el paso termina bien con la tira apagada o lejos.</li>
     </ul>
   );

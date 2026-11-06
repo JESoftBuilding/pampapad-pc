@@ -3,7 +3,7 @@ using System.Globalization;
 namespace PampaPad.Core;
 
 /// <summary>
-/// Lo que hizo un control (02 §6). Press, Release y Turn llegan de la consola; Tap y Hold se reconocen en la PC.
+/// Lo que hizo un control (02 §6). Press, Release y Turn llegan de la consola; Tap, Hold y DoubleTap se reconocen en la PC.
 /// Los atajos de teclado entregan Tap directo: Windows no avisa cuando la tecla se suelta.
 /// </summary>
 public enum Gesture
@@ -13,6 +13,9 @@ public enum Gesture
     Turn,
     Tap,
     Hold,
+
+    /// <summary>Dos toques seguidos, sólo de un control que lo pide (Gestures, wantsDoubleTap).</summary>
+    DoubleTap,
 }
 
 /// <summary>Lo que llega de una fuente de entrada. Source es el Id de la fuente; Value, los pasos de la perilla o el lugar del atajo en la lista general.</summary>

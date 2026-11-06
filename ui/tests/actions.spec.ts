@@ -244,3 +244,18 @@ test("un action.finished de una corrida que no lanzó esta pantalla, como una de
   await expect(page.getByRole("button", { name: "Cancelar la prueba" })).toBeVisible();
   await expect(page.getByText("Ajena.")).toHaveCount(0);
 });
+
+test("el paso Abrir una página encima ofrece sólo páginas de teclas, sin main, next ni previous", async ({ page }) => {
+  await page.getByLabel("Nombre de la acción nueva").fill("Abrir luces");
+  await page.getByRole("button", { name: "Crear acción" }).click();
+  await page.getByLabel("Tipo de paso").selectOption("page.overlay");
+  await page.getByRole("button", { name: "Agregar paso" }).click();
+  const target = page.getByLabel("Página", { exact: true });
+  await expect(target.locator("option")).toHaveText(["—", "grabacion"]);
+  await target.selectOption("grabacion");
+  await page.getByRole("button", { name: "Guardar" }).click();
+
+  await expect(page.getByText("Guardado.")).toBeVisible();
+  const saves = (await calls(page, "config.save")) as SaveCall[];
+  expect(saves[0].config.actions.at(-1)?.steps).toEqual([{ type: "page.overlay", target: "grabacion" }]);
+});

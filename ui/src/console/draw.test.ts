@@ -33,6 +33,11 @@ describe("la pantalla de la consola, como la dibuja el firmware", () => {
     expect(cell.ops).toContainEqual(expect.objectContaining({ kind: "text", text: "LUZ?" }));
   });
 
+  it("la línea de escena entra en 21 letras, como en la consola 0.2.1", () => {
+    const long = { ...frame(), sceneLine: { text: "VERTICAL PANTALLA + BA", tone: 0 } };
+    expect(zoneOps(long)[1].ops).toContainEqual(expect.objectContaining({ kind: "text", text: "VERTICAL PANTALLA + B" }));
+  });
+
   it("la A de la letra de 6 × 8 es la de Adafruit, píxel por píxel", () => {
     const gfx = new Gfx();
     gfx.text(0, 0, 1, 1, "A");

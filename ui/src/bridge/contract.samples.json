@@ -92,7 +92,7 @@
               "rejected": 1
             },
             "basePage": "grabacion",
-            "activePage": "grabacion",
+            "activePage": "luces",
             "running": [
               {
                 "runId": "0f8fad5b-d9cb-469f-a165-70867728950e",
@@ -120,7 +120,8 @@
               "since": "2026-10-14T23:30:00-03:00",
               "light": true,
               "sound": true
-            }
+            },
+            "overlayPage": "luces"
           },
           "stepTypes": [
             {
@@ -302,6 +303,19 @@
             {
               "id": "page.go",
               "name": "Ir a otra página",
+              "group": "Cadenas",
+              "fields": [
+                {
+                  "name": "target",
+                  "label": "Página",
+                  "kind": "page",
+                  "optional": false
+                }
+              ]
+            },
+            {
+              "id": "page.overlay",
+              "name": "Abrir una página encima",
               "group": "Cadenas",
               "fields": [
                 {
@@ -1366,7 +1380,7 @@
           "rejected": 1
         },
         "basePage": "grabacion",
-        "activePage": "grabacion",
+        "activePage": "luces",
         "running": [
           {
             "runId": "0f8fad5b-d9cb-469f-a165-70867728950e",
@@ -1394,7 +1408,8 @@
           "since": "2026-10-14T23:30:00-03:00",
           "light": true,
           "sound": true
-        }
+        },
+        "overlayPage": "luces"
       }
     },
     "log": {

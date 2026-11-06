@@ -38,10 +38,15 @@ public sealed record Config
         id is null ? null : Actions.Indexed().Select(action => action.Item).FirstOrDefault(action => action.Id == id);
 }
 
-/// <summary>La tecla del módulo: <c>layer</c> es la página que rige mientras se la mantiene. Se construye con la consola.</summary>
+/// <summary>
+/// La tecla del módulo: <c>layer</c> es la página que rige mientras se la mantiene y <c>doubleTap</c>, la acción del doble toque
+/// (plan de la 1.3.0, decisión 8). Se construye con la consola.
+/// </summary>
 public sealed record ModuleKey
 {
     public string? Layer { get; init; }
+
+    public string? DoubleTap { get; init; }
 
     [JsonExtensionData]
     public Dictionary<string, JsonElement> Extra { get; init; } = [];

@@ -72,15 +72,17 @@ internal sealed partial class Composition : IAsyncDisposable
         // lights escribe por la consola, que se arma más abajo: también llega tarde, por la composición (etapa 8b).
         Dispatcher? dispatcher = null;
         Composition? composition = null;
+        // La perilla en brightness manda por el mismo camino que lights (plan de la 1.3.0, decisión 7); page.overlay, como page.go, al Dispatcher.
         var output = new ScriptOutputSink();
+        Func<string, CancellationToken, Task<Result>> sendToConsole = (line, ct) => composition!.SendToConsoleAsync(line, ct);
         (IReadOnlyList<IStepType> catalog, IReadOnlyList<ConditionType> conditions, Executor executor, ScriptRunner scripts) =
-            ComposeChains(library, state, obs, windows, log, clock, target => dispatcher!.Go(target), output, (line, ct) => composition!.SendToConsoleAsync(line, ct));
+            ComposeChains(library, state, obs, windows, log, clock, target => dispatcher!.Go(target), output, sendToConsole, target => dispatcher!.ToggleOverlay(target));
         var preflight = new Preflight(conditions, library, state, log, clock);
 
         // El umbral de mantener sale de console.holdMs de la biblioteca actual en cada gesto; si no está, es un segundo (02 §4.10).
-        // En vivo: lo cambia Ajustes y rige sin reiniciar (plan de la 9b, decisión 12).
-        var gestures = new Gestures(clock, () => Gestures.HoldFrom(library.Current.Console?.HoldMs), Gestures.DefaultFreshness);
-        dispatcher = new Dispatcher(library, state, executor, gestures, log);
+        // En vivo: lo cambia Ajustes y rige sin reiniciar (plan de la 9b, decisión 12). El doble toque, igual: moduleKey.doubleTap (plan de la 1.3.0).
+        var gestures = new Gestures(clock, () => Gestures.HoldFrom(library.Current.Console?.HoldMs), Gestures.DefaultFreshness, Gestures.ModuleKeyDoubleTap(() => library.Current));
+        dispatcher = new Dispatcher(library, state, executor, gestures, log, sendToConsole);
         var updater = new Updater(state, settings, log, clock);
         composition = new Composition(log, state, obs, updater);
         composition.Library = library;

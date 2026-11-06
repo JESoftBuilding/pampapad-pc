@@ -8,6 +8,17 @@ type PreviewCall = { config: { pages: Array<{ id: string; keys: Array<{ position
 const previews = (page: Page) =>
   page.evaluate(() => (window as unknown as { pampapadFake: Fake }).pampapadFake.calls.filter((call) => call.name === "console.preview").map((call) => call.data)) as Promise<PreviewCall[]>;
 
+const lastSave = (page: Page) =>
+  page.evaluate(() => (window as unknown as { pampapadFake: Fake }).pampapadFake.calls.filter((call) => call.name === "config.save").at(-1)?.data as { config: Record<string, unknown> } | undefined);
+
+const withConfig = (page: Page, patch: Record<string, unknown>) =>
+  page.evaluate(async (more) => {
+    type Emitter = { request(name: string, data: unknown): Promise<{ data: { config: object; fingerprint: string } }>; emit(event: string, data: unknown, seq: number): void };
+    const fake = (window as unknown as { pampapadFake: Emitter }).pampapadFake;
+    const reply = await fake.request("app.snapshot", {});
+    fake.emit("config.changed", { config: { ...reply.data.config, ...more }, fingerprint: reply.data.fingerprint }, 500);
+  }, patch);
+
 const pixels = (page: Page) => page.getByRole("img", { name: "La pantalla de la consola en su resolución real" }).evaluate((canvas) => (canvas as HTMLCanvasElement).toDataURL());
 
 test.beforeEach(async ({ page }) => {
@@ -100,4 +111,26 @@ test("con la perilla elegida en el dibujo, Probar queda deshabilitado", async ({
   await expect(page.getByRole("button", { name: "Probar", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "Perilla" }).click();
   await expect(page.getByRole("button", { name: "Probar", exact: true })).toBeDisabled();
+});
+
+test("la perilla se elige por página: Brillo de las luces escribe knob sólo en esa, y un valor desconocido se ve tal cual", async ({ page }) => {
+  await withConfig(page, { pages: [{ id: "grabacion", name: "Grabación", keys: [], knob: "volumen" }, { id: "luces", name: "Luces", keys: [] }] });
+  await page.getByRole("button", { name: "Perilla" }).click();
+  const knob = page.getByLabel("En esta página, la perilla");
+  await expect(knob.locator("option:checked")).toHaveText("volumen (no la conoce este programa)");
+
+  await page.getByRole("button", { name: "Luces" }).click();
+  await expect(knob.locator("option:checked")).toHaveText("Cambia de página");
+  await knob.selectOption({ label: "Brillo de las luces" });
+  await page.getByRole("button", { name: "Guardar", exact: true }).click();
+  await expect(page.getByText("Guardado.")).toBeVisible();
+  expect((await lastSave(page))?.config.pages).toEqual([{ id: "grabacion", name: "Grabación", keys: [], knob: "volumen" }, { id: "luces", name: "Luces", keys: [], knob: "brightness" }]);
+});
+
+test("la tecla del módulo dice la acción del doble toque y que se cambia en Ajustes", async ({ page }) => {
+  await page.getByRole("button", { name: "Tecla del módulo" }).click();
+  await expect(page.getByText("Sin asignar")).toBeVisible();
+  await withConfig(page, { moduleKey: { doubleTap: "marca-short" } });
+  await expect(page.getByText("Marca: short")).toBeVisible();
+  await expect(page.getByText("se eligen en Ajustes")).toBeVisible();
 });

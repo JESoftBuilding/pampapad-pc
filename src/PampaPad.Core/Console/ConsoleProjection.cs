@@ -9,7 +9,7 @@ namespace PampaPad.Core;
 public static class ConsoleProjection
 {
     public const int StripLeds = 8;
-    public const int SceneLetters = 25;
+    public const int SceneLetters = 21;
 
     /// <summary>Lo que dura el aviso leve de una acción que falló en la línea de escena (04:147).</summary>
     public static readonly TimeSpan FailureShown = TimeSpan.FromSeconds(5);

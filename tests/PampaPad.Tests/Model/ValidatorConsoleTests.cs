@@ -26,6 +26,21 @@ public class ValidatorConsoleTests
             """));
     }
 
+    // La perilla por página (plan de la 1.3.0, decisión 7): un valor que no conoce no frena, y los dos que conoce no dan nada.
+    [Theory]
+    [InlineData("""{ "id": "a", "knob": "volumen" }""", 1)]
+    [InlineData("""{ "id": "a", "knob": "pages" }""", 0)]
+    [InlineData("""{ "id": "a", "knob": "brightness" }""", 0)]
+    [InlineData("""{ "id": "a" }""", 0)]
+    public void An_unknown_knob_is_a_warning_at_its_page(string page, int count)
+    {
+        Problem[] problems = [.. Validator.Validate(JsonSerializer.Deserialize<Config>($$"""{ "version": 1, "pages": [ {{page}} ] }""", Json.Options)!)
+            .Where(problem => problem.Where.EndsWith(".knob", StringComparison.Ordinal))];
+
+        Assert.Equal(count, problems.Length);
+        Assert.All(problems, problem => Assert.Equal(("pages[0].knob", ProblemCodes.KnobUnknown, Severity.Warning), (problem.Where, problem.Code, problem.Severity)));
+    }
+
     [Fact]
     public void An_alert_that_does_not_exist_is_a_warning_at_its_place()
     {

@@ -11,6 +11,7 @@ public static partial class Validator
 
     private static void CheckConsole(Config config, List<Problem> found)
     {
+        CheckKnobs(config, found);
         if (config.Console is not { } console)
         {
             return;
@@ -29,6 +30,18 @@ public static partial class Validator
         foreach (string id in (console.Alerts?.Keys ?? []).Where(id => id != AlertTexts.NoPc && !AlertTexts.Priority.Contains(id)))
         {
             found.Add(Warning($"console.alerts.{id}", ProblemCodes.AlertUnknown, $"console.alerts nombra el aviso \"{id}\", que no existe: van los graves y no_pc."));
+        }
+    }
+
+    // La perilla de cada página (plan de la 1.3.0, decisión 7): un valor que no conoce se conserva y el giro sigue recorriendo las páginas.
+    private static void CheckKnobs(Config config, List<Problem> found)
+    {
+        foreach ((int index, Page page) in config.Pages.Indexed())
+        {
+            if (page.Knob is { } knob && knob is not (Page.KnobPages or Page.KnobBrightness))
+            {
+                found.Add(Warning($"pages[{index}].knob", ProblemCodes.KnobUnknown, $"La página tiene knob \"{knob}\", que no existe: van {Page.KnobPages} y {Page.KnobBrightness}."));
+            }
         }
     }
 

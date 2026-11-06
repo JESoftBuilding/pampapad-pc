@@ -15,18 +15,21 @@ public sealed partial class Dispatcher
     private readonly Executor _executor;
     private readonly Gestures _gestures;
     private readonly Log _log;
+    private readonly Func<string, CancellationToken, Task<Result>>? _sendToConsole;
     private readonly Lock _gate = new();
     private readonly Lock _refreshing = new();
     private readonly Dictionary<string, Run> _running = [];
     private readonly List<IInputSource> _sources = [];
 
-    public Dispatcher(Library library, StateStore state, Executor executor, Gestures gestures, Log log)
+    /// <summary>sendToConsole es el SendToConsole de las cadenas: por ahí manda el brillo la perilla (Dispatcher.Console.cs).</summary>
+    public Dispatcher(Library library, StateStore state, Executor executor, Gestures gestures, Log log, Func<string, CancellationToken, Task<Result>>? sendToConsole = null)
     {
         _library = library;
         _state = state;
         _executor = executor;
         _gestures = gestures;
         _log = log;
+        _sendToConsole = sendToConsole;
         _library.Changed += _ => Refresh();
         Refresh();
 

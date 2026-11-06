@@ -8,7 +8,8 @@ import { Switch } from "@/ui/switch";
 import { Textarea } from "@/ui/textarea";
 import { useOptions, type OptionsName } from "../common/useOptions";
 
-type Props = { field: FieldSpec; value: unknown; onChange: (value: unknown) => void; bridge: Bridge; pages: Page[] };
+// stepType es el tipo del paso que lleva el campo; en una condición falta.
+type Props = { field: FieldSpec; value: unknown; onChange: (value: unknown) => void; bridge: Bridge; pages: Page[]; stepType?: string };
 
 /** Un campo de un paso o de una condición, según su clase (01 §6, paso 5): un caso por FieldKind. El valor vacío quita el parámetro. */
 export function StepField(props: Props) {
@@ -158,24 +159,34 @@ function ListField({ field, value, onChange, bridge, list, free = false }: Props
   );
 }
 
-/** El destino de page.go: una página de teclas, o next, previous o main (02 §5). */
-function PageField({ field, value, onChange, pages }: Props) {
+// next, previous y main valen en page.go (02 §5); page.overlay pide una página de teclas con nombre y el validador los marca page_not_found.
+const relativePages = [
+  { id: "main", label: "main (la principal)" },
+  { id: "next", label: "next (la siguiente)" },
+  { id: "previous", label: "previous (la anterior)" },
+];
+
+/** El destino de page.go o de page.overlay: una página de teclas y, menos en page.overlay, next, previous o main. */
+function PageField({ field, value, onChange, pages, stepType }: Props) {
   const id = useId();
   const text = typeof value === "string" ? value : "";
   const ids = pages.filter((page) => page.id !== undefined && (page.type === undefined || page.type === "keys")).map((page) => page.id!);
+  const relative = stepType === "page.overlay" ? [] : relativePages;
   return (
     <Field label={field.label} htmlFor={id}>
       <Select id={id} value={text} onChange={(event) => onChange(event.target.value)}>
         <option value="">—</option>
-        {text !== "" && !ids.includes(text) && !["next", "previous", "main"].includes(text) && <option value={text}>{text} (no es una página de teclas)</option>}
+        {text !== "" && !ids.includes(text) && !relative.some((item) => item.id === text) && <option value={text}>{text} (no es una página de teclas)</option>}
         {ids.map((pageId) => (
           <option key={pageId} value={pageId}>
             {pageId}
           </option>
         ))}
-        <option value="main">main (la principal)</option>
-        <option value="next">next (la siguiente)</option>
-        <option value="previous">previous (la anterior)</option>
+        {relative.map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.label}
+          </option>
+        ))}
       </Select>
     </Field>
   );
