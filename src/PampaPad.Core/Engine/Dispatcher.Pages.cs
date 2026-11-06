@@ -51,7 +51,7 @@ public sealed partial class Dispatcher
         lock (_refreshing)
         {
             Config config = _library.Current;
-            string main = config.ResolveMainPage() ?? "";
+            string main = config.ResolveMainPage(_state.Current.Obs.IsOpen) ?? "";
             if (target is not (Navigation.Main or Navigation.Next or Navigation.Previous))
             {
                 if (config.FindPage(target) is not { } page)
@@ -82,7 +82,8 @@ public sealed partial class Dispatcher
     }
 
     // La regla 2 (02 §7): si la grabación arranca con otra página de base, o con una encima, se vuelve a la principal en el acto, y queda
-    // ahí (regla 8). El suscriptor del estado sólo encola (StateStore): aplicar la página registra atajos, que espera al hilo de Windows.
+    // ahí (regla 8). Y la regla 9: al abrirse o cerrarse OBS cambia la principal. El suscriptor del estado sólo encola (StateStore): aplicar
+    // la página registra atajos, que espera al hilo de Windows.
     private void OnStateChanged(AppState before, AppState after)
     {
         string? overlay = Volatile.Read(ref _overlay);
@@ -90,6 +91,34 @@ public sealed partial class Dispatcher
             && (Volatile.Read(ref _chosen) is not null || overlay is not null))
         {
             ThreadPool.QueueUserWorkItem(_ => ReturnToMain(overlay));
+        }
+
+        if (before.Obs.IsOpen != after.Obs.IsOpen && _library.Current.MainPageWithoutObs is not null)
+        {
+            ThreadPool.QueueUserWorkItem(_ => FollowObs());
+        }
+    }
+
+    // Vuelve a aplicar la página con la principal de ahora, no con la del aviso: de dos cambios seguidos, el último manda. La línea del
+    // registro sale sólo si la principal cambió.
+    private void FollowObs()
+    {
+        try
+        {
+            lock (_refreshing)
+            {
+                string before = _state.Current.MainPage;
+                ApplyPage(_library.Current);
+                AppState now = _state.Current;
+                if (now.MainPage != before)
+                {
+                    _log.Info("dispatcher", $"OBS se {(now.Obs.IsOpen ? "abrió" : "cerró")}: la principal es {now.MainPage}.");
+                }
+            }
+        }
+        catch (Exception error)
+        {
+            _log.Error("dispatcher", $"No se pudo seguir a OBS con la página principal: {error.Message}", ErrorCodes.InternalError);
         }
     }
 
@@ -124,12 +153,13 @@ public sealed partial class Dispatcher
     }
 
     // Calcula la página que rige y se la aplica a cada fuente. Sólo bajo _refreshing. Grabando, o si la página elegida ya no está en el
-    // archivo o dejó de ser de teclas, la base vuelve a ser la principal.
+    // archivo o dejó de ser de teclas, la base vuelve a ser la principal. La elegida que pasa a ser la principal (regla 9) desde ahí la sigue.
     private void ApplyPage(Config config)
     {
-        string main = config.ResolveMainPage() ?? "";
-        RecordingState recording = _state.Current.Obs.Recording;
-        if (recording != RecordingState.Stopped || (_chosen is not null && (config.FindPage(_chosen) is not { } chosen || !IsKeys(chosen))))
+        ObsState obs = _state.Current.Obs;
+        string main = config.ResolveMainPage(obs.IsOpen) ?? "";
+        RecordingState recording = obs.Recording;
+        if (recording != RecordingState.Stopped || _chosen == main || (_chosen is not null && (config.FindPage(_chosen) is not { } chosen || !IsKeys(chosen))))
         {
             _chosen = null;
         }
@@ -180,7 +210,7 @@ public sealed partial class Dispatcher
     // La página cuyas teclas valen ahora: la capa si se la mantiene; si no, la de encima o la base, y grabando la principal aunque la base
     // del estado no haya cambiado todavía (reglas 1, 3 y 8). Un atajo de tecla pasa overlay en null: es de la base que lo registró.
     private static string KeysPage(Config config, AppState now, string? layer, string? overlay = null) =>
-        Navigation.Resolve(new NavigationInput(now.BasePage, layer, now.Obs.Recording, config.ResolveMainPage() ?? "", null, [], overlay)).ActivePage;
+        Navigation.Resolve(new NavigationInput(now.BasePage, layer, now.Obs.Recording, config.ResolveMainPage(now.Obs.IsOpen) ?? "", null, [], overlay)).ActivePage;
 
     // Las páginas del recorrido de next y previous: las que no tienen show en falso, en su orden (02 §7, regla 5). Sólo las de teclas:
     // la local no está en el recorrido (regla 7) y un tipo reservado o desconocido se saltea (02 §4.2).

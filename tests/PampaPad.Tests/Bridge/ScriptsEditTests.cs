@@ -51,6 +51,18 @@ public sealed class ScriptsEditTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Write_without_waiting_takes_a_limit_past_the_one_of_the_action()
+    {
+        // El tope de 60 s es de la acción, y sin esperar el paso termina al lanzar: el script del servidor de Escritorio lleva 300 (02 §9).
+        string folder = _rig.AddCmd("servidor", "@echo off\n");
+
+        await OkAsync("scripts.write", $$"""{"id":"servidor","manifest":{"entry":"servidor.cmd","name":"Servidor","wait":false,"timeoutSec":300},"expectedFingerprint":"{{Fingerprint(folder)}}"}""");
+
+        using JsonDocument written = JsonDocument.Parse(File.ReadAllText(Path.Combine(folder, "script.json")));
+        Assert.Equal(300, written.RootElement.GetProperty("timeoutSec").GetInt32());
+    }
+
+    [Fact]
     public async Task Write_with_an_old_fingerprint_does_not_write()
     {
         string folder = _rig.AddCmd("hola", "@echo off\n");
@@ -66,6 +78,9 @@ public sealed class ScriptsEditTests : IAsyncLifetime
     [InlineData("""{"entry":"noesta.cmd"}""", "manifest.entry")]
     [InlineData("""{"entry":"hola.cmd","timeoutSec":0}""", "manifest.timeoutSec")]
     [InlineData("""{"entry":"hola.cmd","timeoutSec":60}""", "manifest.timeoutSec")]
+    [InlineData("""{"entry":"hola.cmd","wait":true,"timeoutSec":300}""", "manifest.timeoutSec")]
+    [InlineData("""{"entry":"hola.cmd","timeoutSec":300}""", "manifest.timeoutSec")]
+    [InlineData("""{"entry":"hola.cmd","wait":false,"timeoutSec":0}""", "manifest.timeoutSec")]
     public async Task Write_refuses_an_entry_that_is_not_there_and_a_limit_out_of_1_to_59(string manifest, string where)
     {
         string folder = _rig.AddCmd("hola", "@echo off\n");

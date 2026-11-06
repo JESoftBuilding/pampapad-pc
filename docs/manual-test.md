@@ -564,3 +564,27 @@ Se repasa con la copia de desarrollo de `receptor-pc` y el puerto en "Automátic
   - fila 4: se desenchufó el receptor a las 08:36:42 y el cable quedó tomado a las 08:36:44,8. Un intento anterior (08:17) dio `Access denied` porque un monitor de PlatformIO tenía COM20, y se reintentó cada 2 s como debía;
   - fila 5: el doble toque abrió las luces por radio (09:35:09) y los colores corrieron desde las teclas (`luces-azul`, `-rojo`, `-verde`, `-ambar`, de 09:40:57 a 09:42:20);
   - además: soltar y volver a tomar el puerto anduvo con "Automático" (08:27:48 y 08:28:42, para cargar la 0.1.2). Con el receptor 0.1.2: 0 pérdidas en 7,5 minutos (08:36:07).
+
+## 1.5.0: la principal sigue a OBS
+
+Se repasa con la copia de desarrollo de `perfil-por-aplicacion`, contra una copia de la biblioteca real con la página `escritorio`, sus cuatro scripts y `mainPageWithoutObs: "escritorio"`. Antes: la instalada cerrada (bandeja, Salir), OBS cerrado y la consola con el receptor o con el cable. Las filas 5 y 6 cambian las pantallas y prenden el Proxmox: van con Emmanuel adelante.
+
+| N | Qué hacer | Qué tiene que pasar |
+|---|---|---|
+| 1 | Con OBS cerrado, abrir PampaPad | La consola muestra Escritorio |
+| 2 | Abrir OBS; después cerrarlo | En unos 2 s pasa a Grabación; al cerrarlo vuelve a Escritorio. Cada cambio deja una línea en el registro ("OBS se abrió: la principal es grabacion.") |
+| 3 | Con OBS abierto, salir de PampaPad y volver a abrirlo | Arranca en Grabación |
+| 4 | Con la perilla, ir a Escenas y cerrar OBS. Abrir las luces con el doble toque de la tecla del módulo (la de la pantalla, no el pulsador del encoder) y abrir OBS | Se queda en Escenas. Luces queda encima, y el toque solo de la tecla del módulo lleva a Grabación |
+| 5 | Las teclas 3, 2 y 1 de Escritorio, y después la 3 | Cambian los monitores como Ctrl+Alt+F3, F2 y F1; la 3 vuelve a los tres |
+| 6 | La tecla Servidor | Termina enseguida; en unos minutos el registro dice cómo terminó. Con el Proxmox prendido, "ya estaba prendido" |
+| 7 | En Ajustes, "Principal sin OBS" en "La misma que la principal", guardar; después volver a Escritorio | Con OBS cerrado la consola se queda en Grabación, como en la 1.4.0. Con Escritorio, vuelve a Escritorio |
+
+- **El repaso del 2026-11-06**, con `acd0109`, contra la copia de la biblioteca de P-3 (`D:\repos\pampapad-construccion\P-3-biblioteca`), el receptor 0.1.2 (COM5) y la consola 0.3.1:
+  - fila 1: la copia arrancó a las 15:06:16 con OBS cerrado y la biblioteca sin problemas, y la consola quedó en Escritorio: sus teclas corrieron desde las 15:06:57 (`monitores-uno`);
+  - fila 2: OBS arrancó a las 17:08:45 (según su propio registro) y la principal pasó a Grabación a las 17:08:45,48, con el enlace todavía en `NoWebsocket` (el websocket respondió a las 17:08:55). Al cerrarlo, OBS avisó a las 17:27:30,9, su registro se cerró a las 17:27:33 y la principal volvió a Escritorio a las 17:27:36,5. Se abrió otra vez a las 17:27:49 y la principal fue Grabación a las 17:27:52,2. Las tres veces dejaron su línea: "OBS se abrió: la principal es grabacion." y "OBS se cerró: la principal es escritorio.";
+  - fila 3: con OBS abierto, la copia se reinició a las 17:29:06. La detuve desde la sesión, no desde la bandeja. El enlace pasó a `Loading` a las 17:29:06,99, la consola se conectó a las 17:29:07,00 y la principal fue Grabación a las 17:29:07,03. Al arrancar, la principal es la de sin OBS hasta que el enlace responde. Esos 30 ms no se vieron: según Emmanuel, la consola arrancó directo en Grabación;
+  - fila 4: con Escenas de base (la perilla, 16:06:38) y Luces encima (el doble toque, 16:08:59; los colores corrieron a las 17:05), abrir OBS (17:08:45) no cerró Luces, y el toque solo de la tecla del módulo llevó a Grabación (17:09:14). La primera mitad, ir a Escenas y cerrar OBS, no quedó en el registro: Emmanuel la dio por probada;
+  - fila 5: la 1 y la 2 corrieron desde la consola tres veces cada una, de 15:06:57 a 15:11:31. La 2 dijo "ASUS -> DisplayPort: True" las tres veces, y una segunda pulsación mientras corría se ignoró (15:07:00 y 15:09:18). La 1 dejaba el ASUS y no el LG: Windows había cambiado los números `\\.\DISPLAYn`, y ese día el DISPLAY2 era el ASUS. Se arregló fuera del programa: `uno.cmd`, `dos.cmd` y `tres.cmd` de `D:\Herramientas\multimonitortool` nombran cada monitor por su Short Monitor ID (`GSM5B55`, `AUS2752`, `GSM59A9`). Con eso la 1 dejó sólo el LG (15:11:11, según Emmanuel). La 3 no quedó en el registro ni en el `log.txt` de MultiMonitorTool: Emmanuel la dio por probada;
+  - fila 6: no quedó en el registro, porque no hay ninguna corrida de `prender-servidor`. Emmanuel la dio por probada;
+  - fila 7: no dejó rastro. Guardar "Principal sin OBS" escribe la biblioteca, y la copia no cambió desde las 14:37 (P-3). Emmanuel la dio por probada;
+  - además: el receptor perdió la señal 21 veces en la tarde (de 15:28 a 17:48), casi siempre por unos 2 s. La instalada la perdió 6 veces entre las 13:18 y las 13:58, y el 5 de noviembre ninguna de las dos. No viene de la 1.5.0: va a Hallazgos.
