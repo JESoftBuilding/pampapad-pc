@@ -8,11 +8,11 @@ namespace PampaPad.Core;
 /// </summary>
 public static class ConsoleSettingsWire
 {
-    // La clave 7, no_pc: bit 0 la tira y bit 1 el zumbador; por defecto sólo la tira (04 §6, consola.py:24).
+    // La clave 7, no_pc: bit 0 la tira y bit 1 el zumbador; por defecto los dos desde la consola 0.2.1 (04 §7).
     public static IReadOnlyList<(byte Key, ushort Value)> Pairs(ConsoleSettings? settings)
     {
         var noPc = settings?.Alerts?.GetValueOrDefault(AlertTexts.NoPc);
-        var noPcChannels = (noPc?.Light ?? true ? 1 : 0) | (noPc?.Sound ?? false ? 2 : 0);
+        var noPcChannels = (noPc?.Light ?? true ? 1 : 0) | (noPc?.Sound ?? true ? 2 : 0);
         return
         [
             (1, Word(settings?.Screen?.Brightness ?? 80)),

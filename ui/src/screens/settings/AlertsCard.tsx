@@ -15,7 +15,8 @@ const alertNames: Record<AlertId, string> = {
 };
 
 /**
- * Avisos (05 §4.5): Luz (la tira) y Sonido (el zumbador) por aviso grave y por no_pc, en console.alerts; la pantalla va siempre. Callar
+ * Avisos (05 §4.5): Luz (la tira) y Sonido (el zumbador) por aviso grave y por no_pc, en console.alerts, todos con los dos de fábrica
+ * (no_pc también desde la consola 0.2.1); la pantalla va siempre. Callar
  * con una toma en curso vale sólo para los sonidos de la PC: el zumbador suena también grabando (plan de la 9b, decisión 9).
  */
 export function AlertsCard({ config, setDraft }: { config: Config; setDraft: (change: (current: Config) => Config) => void }) {

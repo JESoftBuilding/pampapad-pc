@@ -166,16 +166,16 @@ describe("los ajustes de la consola", () => {
     expect(setMuteSound(setMuteSound(bare, false), true)).toEqual(bare);
   });
 
-  it("un canal de aviso: los graves vienen con luz y sonido, no_pc sólo con luz", () => {
+  it("un canal de aviso: los graves vienen con luz y sonido, no_pc también (0.2.1)", () => {
     expect(alertChannel(bare, "mic_muted", "sound")).toBe(true);
     expect(alertChannel(bare, "no_pc", "light")).toBe(true);
-    expect(alertChannel(bare, "no_pc", "sound")).toBe(false);
+    expect(alertChannel(bare, "no_pc", "sound")).toBe(true);
 
     const quiet = setAlertChannel(bare, "mic_muted", "sound", false);
     expect(quiet.console).toEqual({ alerts: { mic_muted: { sound: false } } });
     expect(alertChannel(quiet, "mic_muted", "sound")).toBe(false);
     expect(setAlertChannel(quiet, "mic_muted", "sound", true)).toEqual(bare);
-    expect(setAlertChannel(bare, "no_pc", "sound", true).console).toEqual({ alerts: { no_pc: { sound: true } } });
+    expect(setAlertChannel(bare, "no_pc", "sound", false).console).toEqual({ alerts: { no_pc: { sound: false } } });
   });
 
   it("un canal vuelto a fábrica deja lo inventado del aviso", () => {

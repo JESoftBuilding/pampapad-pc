@@ -91,9 +91,9 @@ test("la página de la tecla del módulo se elige y se quita, y Sin asignar no d
   expect(await lastSaved(page)).not.toHaveProperty("moduleKey");
 });
 
-test("apagar el sonido de un aviso lo escribe en console.alerts, y no_pc viene sólo con luz", async ({ page }) => {
+test("apagar el sonido de un aviso lo escribe en console.alerts, y no_pc viene con luz y sonido (0.2.1)", async ({ page }) => {
   const alerts = card(page, "Avisos");
-  await expect(alerts.getByRole("switch", { name: "Sonido: Sin PC" })).toHaveAttribute("aria-checked", "false");
+  await expect(alerts.getByRole("switch", { name: "Sonido: Sin PC" })).toHaveAttribute("aria-checked", "true");
   await expect(alerts.getByRole("switch", { name: "Luz: Sin PC" })).toHaveAttribute("aria-checked", "true");
 
   await alerts.getByRole("switch", { name: "Sonido: Micrófono silenciado grabando" }).click();

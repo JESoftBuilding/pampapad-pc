@@ -105,13 +105,13 @@ public class ConsoleProjectionTests
     }
 
     [Fact]
-    public void The_scene_line_is_the_scene_on_air_in_capitals_up_to_25_letters()
+    public void The_scene_line_is_the_scene_on_air_in_capitals_up_to_21_letters()
     {
         AppState state = State();
         state = state with { Obs = state.Obs with { SceneName = "Vertical Pantalla + Banco con cámara" } };
 
         Assert.Equal(new ConsoleText("CAMARA"), Project(State()).SceneLine);
-        Assert.Equal(new ConsoleText("VERTICAL PANTALLA + BANCO"), Project(state).SceneLine);
+        Assert.Equal(new ConsoleText("VERTICAL PANTALLA + B"), Project(state).SceneLine);
     }
 
     [Fact]
@@ -124,7 +124,7 @@ public class ConsoleProjectionTests
         Assert.Equal(new ConsoleText("CAMARA"), ConsoleProjection.Project(failed, Sample, Now + TimeSpan.FromSeconds(1)).SceneLine);
         Assert.Equal(new ConsoleText("CAMARA"), Project(failed with { RecentFailure = recent with { NoticeId = Notifier.MarkerFailed } }).SceneLine);
         Assert.Equal(
-            new ConsoleText("FALLO: UNA ACCION CON UN", 1),
+            new ConsoleText("FALLO: UNA ACCION CON", 1),
             Project(failed with { RecentFailure = recent with { ActionName = "una acción con un nombre largo", Step = null } }).SceneLine);
     }
 

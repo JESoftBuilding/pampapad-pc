@@ -24,6 +24,7 @@ public class InvocationTests
     [InlineData(Gesture.Turn, "turn")]
     [InlineData(Gesture.Tap, "tap")]
     [InlineData(Gesture.Hold, "hold")]
+    [InlineData(Gesture.DoubleTap, "doubleTap")]
     public void The_gesture_travels_with_the_word_of_the_spec(Gesture gesture, string word)
     {
         Assert.Equal($"\"{word}\"", JsonSerializer.Serialize(gesture, Json.Compact));
@@ -33,7 +34,7 @@ public class InvocationTests
     public void The_enums_have_exactly_the_values_of_the_spec_and_nobody_added_one()
     {
         Assert.Equal(6, Enum.GetValues<Trigger>().Length);
-        Assert.Equal(5, Enum.GetValues<Gesture>().Length);
+        Assert.Equal(6, Enum.GetValues<Gesture>().Length);
     }
 
     [Fact]

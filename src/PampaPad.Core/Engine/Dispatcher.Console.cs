@@ -9,6 +9,9 @@ public sealed partial class Dispatcher
     // Si mientras estaba apretada se tocó otra tecla: entonces soltarla no es un toque y no vuelve a la principal.
     private bool _moduleCombined;
 
+    // Si el apretar anterior de la tecla del módulo fue combinación: el primero de un doble toque no puede serlo (plan de la 1.3.0, decisión 4).
+    private bool _previousCombined;
+
     // La página en que se apretó cada tecla de la consola: un toque o un mantenido que sale al soltar, con la del módulo ya suelta, es
     // de la capa en que se apretó (si no, la capa quedaría pegada en ese gesto o la acción sería de otra página).
     private readonly string?[] _pressedOn = new string?[Validator.KeyCount + 1];
@@ -55,6 +58,14 @@ public sealed partial class Dispatcher
                 // Va en el código: ninguna configuración lo pisa (02 §6). Grabando ya rige la principal y Go falla sin cambiar nada.
                 _ = Go(Navigation.Main);
                 break;
+            case Gesture.DoubleTap when !Volatile.Read(ref _moduleCombined) && !Volatile.Read(ref _previousCombined):
+                // Como la acción de una tecla de la consola, también grabando: lo que no vale grabando lo frenan sus pasos.
+                if (_library.Current.ModuleKey?.DoubleTap is { } action)
+                {
+                    _ = Launch(action, new Invocation(Guid.NewGuid(), Trigger.Key, e.Source, e.Control, e.Gesture, e.Value));
+                }
+
+                break;
         }
 
         return true;
@@ -66,6 +77,7 @@ public sealed partial class Dispatcher
         {
             if (held)
             {
+                _previousCombined = _moduleCombined;
                 _moduleCombined = false;
             }
 

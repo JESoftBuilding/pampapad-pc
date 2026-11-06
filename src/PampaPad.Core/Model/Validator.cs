@@ -34,6 +34,11 @@ public static partial class Validator
             found.Add(Error("moduleKey.layer", ProblemCodes.PageNotFound, $"moduleKey.layer nombra la página \"{layer}\", que no existe."));
         }
 
+        if (config.ModuleKey?.DoubleTap is { } doubleTap)
+        {
+            CheckActionRef(doubleTap, "moduleKey.doubleTap", actions, found);
+        }
+
         Dictionary<Hotkey, string> general = GeneralHotkeys(config, actions, found);
         foreach ((int index, Page page) in config.Pages.Indexed())
         {

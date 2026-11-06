@@ -142,7 +142,7 @@ function sceneLine(f: ConsoleFrame, out: List) {
   const t = f.sceneLine;
   const bg = t.tone === TONE_AMBER ? colors.amber : t.tone === TONE_RED ? colors.red : colors.bandStopped;
   out.fillRect(0, 64, 320, 24, bg);
-  out.text(10, 68, 2, t.tone === TONE_AMBER ? colors.dark : colors.light, t.text, 25);
+  out.text(10, 68, 2, t.tone === TONE_AMBER ? colors.dark : colors.light, t.text, 21);
 }
 
 // ConsoleView.h, cell: sin teclas apretadas ni barra de mantener, que son de la consola sola.

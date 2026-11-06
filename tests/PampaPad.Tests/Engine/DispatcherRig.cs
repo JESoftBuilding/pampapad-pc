@@ -32,7 +32,7 @@ internal sealed class DispatcherRig : IAsyncDisposable
         var steps = new IStepType[] { Marker, Scene, Record, Mute, Request, Script, WaitWindow, Page };
         ConditionType[] conditions = [FakeCondition.Met(Conditions.WindowExists).Type, FakeCondition.Met(Conditions.RecordingIs).Type];
         Executor = new Executor(steps, conditions, TimeProvider.System);
-        Dispatcher = new Dispatcher(Library, State, Executor, new Gestures(clock ?? TimeProvider.System, Gestures.HoldFrom(null), Gestures.DefaultFreshness), Log);
+        Dispatcher = new Dispatcher(Library, State, Executor, new Gestures(clock ?? TimeProvider.System, () => Gestures.HoldFrom(null), Gestures.DefaultFreshness, Gestures.ModuleKeyDoubleTap(() => Library.Current)), Log);
         Dispatcher.Finished += Finished.Enqueue;
         Hotkeys = new HotkeySource(Windows, State, Log);
         _ = Hotkeys.StartAsync(CancellationToken.None);

@@ -185,16 +185,16 @@ export const alertIds = ["marker_failed", "mic_muted", "long_pause", "still_reco
 export type AlertId = (typeof alertIds)[number];
 export type AlertChannel = "light" | "sound";
 
-// Los graves vienen con luz y sonido; no_pc, sólo con luz (04 §6).
-const alertDefault = (id: AlertId, channel: AlertChannel) => !(id === "no_pc" && channel === "sound");
+// Todos vienen con luz y sonido: no_pc también, desde la consola 0.2.1 (04 §7).
+const alertDefault = true;
 
 export function alertChannel(config: ConfigLike, id: AlertId, channel: AlertChannel): boolean {
   const value = getPath(config.console, ["alerts", id, channel]);
-  return typeof value === "boolean" ? value : alertDefault(id, channel);
+  return typeof value === "boolean" ? value : alertDefault;
 }
 
 export function setAlertChannel<C extends ConfigLike>(config: C, id: AlertId, channel: AlertChannel, on: boolean): C {
-  return setPath(config, ["console", "alerts", id, channel], on === alertDefault(id, channel) ? undefined : on);
+  return setPath(config, ["console", "alerts", id, channel], on === alertDefault ? undefined : on);
 }
 
 /** La página que se ve mientras se mantiene la tecla del módulo (moduleKey.layer); null es "Sin asignar" y quita el campo. */

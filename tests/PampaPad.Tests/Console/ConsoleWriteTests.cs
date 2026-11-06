@@ -7,7 +7,7 @@ namespace PampaPad.Tests;
 /// <summary>Los mensajes de la PC a la consola contra los vectores del firmware 0.1.5 (test_consolewire/test_main.cpp:48-133), byte a byte (E9-3).</summary>
 public class ConsoleWriteTests
 {
-    private static readonly (byte Key, ushort Value)[] Defaults = [(1, 80), (2, 15), (3, 60), (4, 300), (5, 0), (6, 1000), (7, 1), (8, 25)];
+    private static readonly (byte Key, ushort Value)[] Defaults = [(1, 80), (2, 15), (3, 60), (4, 300), (5, 0), (6, 1000), (7, 3), (8, 25)];
 
     [Fact]
     public void The_screen_state_vector_is_recording_2052_seconds_with_key_1_active()
@@ -127,7 +127,7 @@ public class ConsoleWriteTests
     [Fact]
     public void The_settings_vector_is_the_eight_defaults_with_its_fingerprint_little_endian()
     {
-        Assert.Equal("#441011NBIRCAFQAAIPAAM8AAQsAQUAAAboAwcBAAgZAA==", ConsoleProtocol.SettingsLine(Defaults, 0x1234));
+        Assert.Equal("#441011NBIRCAFQAAIPAAM8AAQsAQUAAAboAwcDAAgZAA==", ConsoleProtocol.SettingsLine(Defaults, 0x1234));
     }
 
     [Fact]
@@ -163,9 +163,9 @@ public class ConsoleWriteTests
         var pairs = ConsoleSettingsWire.Pairs(null);
 
         Assert.Equal(Defaults, pairs);
-        // binascii.crc_hqx(pares, 0) de tools/consola.py:65-68, con los valores de fábrica.
-        Assert.Equal(0x6BEB, ConsoleSettingsWire.Fingerprint(pairs));
-        Assert.Equal(ConsoleProtocol.SettingsLine(Defaults, 0x6BEB), ConsoleSettingsWire.Line(null));
+        // binascii.crc_hqx(pares, 0) de tools/consola.py:65-68, con los valores de fábrica de la 0.2.1 (no_pc con luz y sonido).
+        Assert.Equal(0x2F68, ConsoleSettingsWire.Fingerprint(pairs));
+        Assert.Equal(ConsoleProtocol.SettingsLine(Defaults, 0x2F68), ConsoleSettingsWire.Line(null));
     }
 
     [Fact]
