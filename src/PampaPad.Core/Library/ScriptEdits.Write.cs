@@ -11,8 +11,9 @@ public static partial class ScriptEdits
     /// Escribe los archivos de texto que vengan y al final script.json, cada uno por AtomicWrite. Sin files, sólo la ficha y la carpeta
     /// tiene que existir; con files, si no existe se crea, con la huella esperada vacía. Todo lo que puede rechazarse se mira antes de
     /// escribir: un rechazo deja la carpeta como estaba. Nada se escribe fuera de scripts/&lt;id&gt;/. Lo que el programa no conoce de la
-    /// ficha y está en el disco queda. entry tiene que ser un archivo de la carpeta después de escribir, y timeoutSec ir de 1 a 59: por
-    /// debajo del tope de 60 s de una acción (decisión 35).
+    /// ficha y está en el disco queda. entry tiene que ser un archivo de la carpeta después de escribir, y timeoutSec ir de 1 a 59 si la
+    /// ficha espera (wait verdadero o ausente): por debajo del tope de 60 s de una acción (decisión 35). Sin esperar, el paso termina al
+    /// lanzar y ese tope no le llega: timeoutSec va de 1 para arriba (02 §9).
     /// </summary>
     public static Result<ScriptsWriteResponse> Write(ScriptsSources sources, ScriptsWriteRequest request)
     {
@@ -62,10 +63,13 @@ public static partial class ScriptEdits
                 return Result<ScriptsWriteResponse>.Fail(ErrorCodes.InvalidData, $"entry va el nombre de un archivo de scripts\\{id}, y \"{manifest.Entry}\" no está.", "manifest.entry");
             }
 
-            if (manifest.TimeoutSec is int seconds && (seconds < 1 || seconds >= Executor.ActionTimeout.TotalSeconds))
+            bool waits = manifest.Wait != false;
+            if (manifest.TimeoutSec is int seconds && (seconds < 1 || (waits && seconds >= Executor.ActionTimeout.TotalSeconds)))
             {
-                return Result<ScriptsWriteResponse>.Fail(
-                    ErrorCodes.InvalidData, $"timeoutSec va en segundos, de 1 a {Executor.ActionTimeout.TotalSeconds - 1:0}: con {Executor.ActionTimeout.TotalSeconds:0} vence antes el tope de la acción.", "manifest.timeoutSec");
+                string message = waits
+                    ? $"timeoutSec va en segundos, de 1 a {Executor.ActionTimeout.TotalSeconds - 1:0}: con {Executor.ActionTimeout.TotalSeconds:0} vence antes el tope de la acción. Sin esperar (wait en falso) no hay tope."
+                    : "timeoutSec va en segundos, de 1 para arriba: sin esperar no hay tope.";
+                return Result<ScriptsWriteResponse>.Fail(ErrorCodes.InvalidData, message, "manifest.timeoutSec");
             }
 
             try
