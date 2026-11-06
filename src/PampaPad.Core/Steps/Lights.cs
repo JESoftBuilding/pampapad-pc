@@ -14,9 +14,14 @@ public sealed class Lights(Func<string, CancellationToken, Task<Result>>? send) 
 {
     public const string TypeId = "lights";
 
+    /// <summary>El tope de adjustBrightness, para los dos lados: viaja con signo en un byte (04 §7).</summary>
+    public const int MaxAdjust = 127;
+
     // Los seis presets de luces-rgb, en su orden: violeta, ámbar, blanco, rojo, verde y azul (lib/core/Presets.h:88-97). Allá se agregan al
     // final y no se reordenan; si suman uno, este tope sube con ellos.
     private const int LastPreset = 5;
+
+    private const byte AdjustCmd = 3;
 
     private static readonly string[] Commands = ["power", "color", "brightness", "adjustBrightness", "preset"];
 
@@ -88,7 +93,7 @@ public sealed class Lights(Func<string, CancellationToken, Task<Result>>? send) 
         (byte cmd, int min, int max, string rule) = p.Command switch
         {
             "brightness" => ((byte)2, 0, 255, "Con brightness, value es un entero de 0 a 255."),
-            "adjustBrightness" => ((byte)3, -127, 127, "Con adjustBrightness, value es un entero de -127 a 127, distinto de 0."),
+            "adjustBrightness" => (AdjustCmd, -MaxAdjust, MaxAdjust, "Con adjustBrightness, value es un entero de -127 a 127, distinto de 0."),
             "preset" => ((byte)4, 0, LastPreset, $"Con preset, value es el número del preset, de 0 a {LastPreset}."),
             _ => ((byte)0, 0, 0, ""),
         };
@@ -99,7 +104,7 @@ public sealed class Lights(Func<string, CancellationToken, Task<Result>>? send) 
 
         // Sólo un número de JSON: "50" entre comillas es texto y no vale, como 1.5.
         if (p.Value is not { ValueKind: JsonValueKind.Number } number || !number.TryGetInt32(out int value)
-            || value < min || value > max || (cmd == 3 && value == 0))
+            || value < min || value > max || (cmd == AdjustCmd && value == 0))
         {
             return Invalid("value", rule);
         }
@@ -108,6 +113,10 @@ public sealed class Lights(Func<string, CancellationToken, Task<Result>>? send) 
         command = new LightCommand(cmd, 0, 0, 0, unchecked((byte)value));
         return null;
     }
+
+    /// <summary>La línea de un adjustBrightness, de -127 a 127: la que manda el giro de la perilla en brightness (plan de la 1.3.0, decisión 7).</summary>
+    public static string AdjustBrightnessLine(int value) =>
+        ConsoleProtocol.LightLine(new LightCommand(AdjustCmd, 0, 0, 0, unchecked((byte)value)));
 
     private static bool TryColor(string? text, out byte r, out byte g, out byte b)
     {

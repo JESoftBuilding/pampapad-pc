@@ -54,6 +54,9 @@ public static class ProblemCodes
     /// <summary>Un aviso de console.alerts que no es grave ni no_pc (plan de la 9b, decisión 15). No frena: el cable lo ignora.</summary>
     public const string AlertUnknown = "alert_unknown";
 
+    /// <summary>Un knob de página que no es pages ni brightness (plan de la 1.3.0, decisión 7). No frena: el giro recorre las páginas.</summary>
+    public const string KnobUnknown = "knob_unknown";
+
     /// <summary>Un valor del bloque console fuera de su rango de 02 §4.10 (decisión 15). No frena: el cable ya recorta.</summary>
     public const string ConsoleOutOfRange = "console_out_of_range";
 }

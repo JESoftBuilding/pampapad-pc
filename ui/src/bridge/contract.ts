@@ -43,6 +43,8 @@ export const stateSchema = z.object({
   hotkeys: z.object({ registered: z.number().int(), rejected: z.number().int() }),
   basePage: z.string(),
   activePage: z.string(),
+  // La página encima de page.overlay (02 §7, regla 8; plan de la 1.3.0); falta si no hay ninguna.
+  overlayPage: z.string().optional(),
   running: z.array(z.object({ runId: z.string(), actionId: z.string(), requestedBy: triggerSchema })),
   lastFailure: z.object({ noticeId: z.string(), summary: z.string(), message: z.string() }).optional(),
   // Lo del Hello falta hasta que la consola salude en este enlace (plan de la 9a, decisión 13).

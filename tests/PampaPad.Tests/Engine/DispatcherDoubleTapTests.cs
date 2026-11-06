@@ -68,6 +68,7 @@ public class DispatcherDoubleTapTests
         _clock.Advance(TimeSpan.FromMilliseconds(100));
         Tap(rig);
         Settle(rig);
+        await Quiet(rig);
 
         Assert.Equal("en-capa", Assert.Single(rig.Finished).ActionId);
     }
@@ -86,6 +87,7 @@ public class DispatcherDoubleTapTests
         Send(rig, Controls.ModuleKey, Gesture.Release);
         await Poll.Until(() => rig.Finished.Count == 1);
         Settle(rig);
+        await Quiet(rig);
 
         Assert.Equal("en-capa", Assert.Single(rig.Finished).ActionId);
         Assert.Equal("sala", rig.State.Current.BasePage);
@@ -114,6 +116,14 @@ public class DispatcherDoubleTapTests
     {
         Send(rig, Controls.ModuleKey, Gesture.Press);
         Send(rig, Controls.ModuleKey, Gesture.Release);
+    }
+
+    // Launch corre en Task.Run: una acción del doble que se lanzó por error podría terminar después del Assert.Single. Se espera a que no
+    // quede ninguna en curso y un poco más, porque la corrida sale de Running antes de avisar por Finished (Dispatcher.RunAsync).
+    private static async Task Quiet(DispatcherRig rig)
+    {
+        await Poll.Until(() => rig.State.Current.Running.Count == 0);
+        await Task.Delay(TimeSpan.FromMilliseconds(100));
     }
 
     // Deja pasar la ventana del doble toque: un toque guardado sale con el Tick.

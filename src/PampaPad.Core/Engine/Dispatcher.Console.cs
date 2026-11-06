@@ -16,6 +16,9 @@ public sealed partial class Dispatcher
     // de la capa en que se apretó (si no, la capa quedaría pegada en ese gesto o la acción sería de otra página).
     private readonly string?[] _pressedOn = new string?[Validator.KeyCount + 1];
 
+    /// <summary>Cuánto cambia el brillo cada detente de la perilla en brightness: lo mismo que hace el firmware sin PC (decisión 45).</summary>
+    public const int BrightnessPerDetent = 16;
+
     /// <summary>El toque del pulsador de la perilla, también grabando: atiende el aviso grave a la vista (plan de la 9b, decisión 8).</summary>
     public event System.Action? KnobTapped;
 
@@ -24,9 +27,14 @@ public sealed partial class Dispatcher
     {
         if (e.Control == Controls.Knob)
         {
-            // Grabando, en pausa, arrancando o deteniendo el giro se ignora sin aviso ni registro (02 §7, regla 1). El clic atiende avisos
+            // Con knob en brightness en la página que se ve, el giro es brillo, también grabando (plan de la 1.3.0, decisión 7). Si no,
+            // grabando, en pausa, arrancando o deteniendo el giro se ignora sin aviso ni registro (02 §7, regla 1). El clic atiende avisos
             // graves con un toque; Press y Release sueltos no hacen nada.
-            if (e.Gesture == Gesture.Turn && _state.Current.Obs.Recording == RecordingState.Stopped)
+            if (e.Gesture == Gesture.Turn && e.Value != 0 && KnobIsBrightness())
+            {
+                _ = AdjustBrightnessAsync(e.Value);
+            }
+            else if (e.Gesture == Gesture.Turn && _state.Current.Obs.Recording == RecordingState.Stopped)
             {
                 for (int step = 0; step < Math.Abs(e.Value); step++)
                 {
@@ -82,13 +90,38 @@ public sealed partial class Dispatcher
             }
 
             _moduleHeld = held;
+            PublishActive(_library.Current);
+        }
+    }
 
-            // Sólo cambia la página que se ve: las fuentes siguen con la base, y una capa no vuelve a registrar atajos (02 §7, regla 6).
+    // Si la página que se ve (la capa, la de encima o la base) tiene la perilla en brillo.
+    private bool KnobIsBrightness()
+    {
+        lock (_refreshing)
+        {
             Config config = _library.Current;
-            string main = config.ResolveMainPage() ?? "";
-            AppState now = _state.Current;
-            string active = Navigation.Resolve(new NavigationInput(now.BasePage, HeldLayer(config), now.Obs.Recording, main, null, [])).ActivePage;
-            _state.Update(s => s with { ActivePage = active });
+            return config.FindPage(KeysPage(config, _state.Current, HeldLayer(config), _overlay))?.Knob == Page.KnobBrightness;
+        }
+    }
+
+    // El adjustBrightness del paso lights, por el mismo camino, sin correr una acción: un giro no deja corridas en el registro. Una falla
+    // queda como advertencia y no suena (decisión 7).
+    private async Task AdjustBrightnessAsync(int detents)
+    {
+        try
+        {
+            string line = Lights.AdjustBrightnessLine(Math.Clamp(BrightnessPerDetent * detents, -Lights.MaxAdjust, Lights.MaxAdjust));
+            Result sent = _sendToConsole is { } send
+                ? await send(line, CancellationToken.None).ConfigureAwait(false)
+                : Result.Fail(ErrorCodes.ConsoleDisconnected, "No hay consola en este programa.");
+            if (sent.Failure is { } failure)
+            {
+                _log.Warning("dispatcher", $"La perilla no pudo cambiar el brillo: {failure.Message}", failure.Code);
+            }
+        }
+        catch (Exception error)
+        {
+            _log.Warning("dispatcher", $"La perilla no pudo cambiar el brillo: {error.Message}", ErrorCodes.InternalError);
         }
     }
 
@@ -104,10 +137,10 @@ public sealed partial class Dispatcher
             if (e.Gesture == Gesture.Press)
             {
                 _moduleCombined |= _moduleHeld;
-                _pressedOn[position] = KeysPage(config, now, HeldLayer(config));
+                _pressedOn[position] = KeysPage(config, now, HeldLayer(config), _overlay);
             }
 
-            return _pressedOn[position] ?? KeysPage(config, now, null);
+            return _pressedOn[position] ?? KeysPage(config, now, null, _overlay);
         }
     }
 }

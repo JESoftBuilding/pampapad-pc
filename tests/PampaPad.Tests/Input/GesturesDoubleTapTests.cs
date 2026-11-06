@@ -124,6 +124,21 @@ public class GesturesDoubleTapTests
         Assert.Empty(_gestures.Tick());
     }
 
+    // Revisión de la tanda 1: sacar doubleTap entre el segundo apretar y su soltar no pierde los dos toques; sale un toque.
+    [Fact]
+    public void Taking_double_tap_away_during_the_second_press_lets_a_tap_out()
+    {
+        _gestures.Feed(Press());
+        _gestures.Feed(Release());
+        Advance(100);
+        _gestures.Feed(Press());
+        _wanted = false;
+
+        AssertEvents(_gestures.Feed(Release()), Release(), Tap());
+        Advance(1000);
+        Assert.Empty(_gestures.Tick());
+    }
+
     [Fact]
     public void A_press_at_300_ms_is_too_late_the_saved_tap_comes_out_before_it()
     {

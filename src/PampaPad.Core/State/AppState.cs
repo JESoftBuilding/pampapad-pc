@@ -48,8 +48,11 @@ public sealed record AppState
     /// <summary>La página principal (mainPage, o la primera): el texto de ayuda nombra la base cuando no es esta (05 §3).</summary>
     public string MainPage { get; init; } = "";
 
-    /// <summary>La página que rige: la base o, con la consola, la capa de la tecla del módulo mientras se la mantiene.</summary>
+    /// <summary>La página que rige: la base o, con la consola, la capa de la tecla del módulo mientras se la mantiene, o la página encima.</summary>
     public string ActivePage { get; init; } = "";
+
+    /// <summary>La página encima de page.overlay, o null (02 §7, regla 8). La capa mantenida rige sobre ella.</summary>
+    public string? OverlayPage { get; init; }
 
     /// <summary>Las acciones en curso (01 §4.5).</summary>
     public IReadOnlyList<RunningAction> Running { get; init; } = [];

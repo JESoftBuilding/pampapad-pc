@@ -1,9 +1,13 @@
 namespace PampaPad.Core;
 
-/// <summary>Cycle son los ids de las páginas con show, en orden: lo usan next, previous y, más adelante, la perilla.</summary>
-public sealed record NavigationInput(string BasePage, string? HeldLayer, RecordingState Recording, string MainPage, string? Destination, IReadOnlyList<string> Cycle);
+/// <summary>
+/// Cycle son los ids de las páginas con show, en orden: lo usan next, previous y la perilla. Overlay es la página encima de page.overlay,
+/// o null (plan de la 1.3.0, decisión 6).
+/// </summary>
+public sealed record NavigationInput(string BasePage, string? HeldLayer, RecordingState Recording, string MainPage, string? Destination, IReadOnlyList<string> Cycle, string? Overlay = null);
 
-public sealed record NavigationResult(string ActivePage, string BasePage, Failure? Failure);
+/// <summary>Overlay es la página encima que queda: un destino que cambia la base la saca.</summary>
+public sealed record NavigationResult(string ActivePage, string BasePage, Failure? Failure, string? Overlay = null);
 
 /// <summary>
 /// El único dueño de qué página rige (02 §7). Es una función pura: no guarda nada.
@@ -39,8 +43,12 @@ public static class Navigation
             };
         }
 
-        // Reglas 3 y 4: la capa rige mientras se mantiene la tecla del módulo, también grabando, y no toca la base.
-        return new NavigationResult(input.HeldLayer ?? basePage, basePage, failure);
+        // Regla 8: un pedido de página que no falla cierra la página encima, aunque la base no cambie (el toque del módulo en la principal).
+        // Grabando el pedido falla y la página encima queda.
+        string? overlay = input.Destination is not null && failure is null ? null : input.Overlay;
+
+        // Reglas 3 y 4: la capa rige mientras se mantiene la tecla del módulo, también grabando, y no toca la base; gana a la página encima.
+        return new NavigationResult(input.HeldLayer ?? overlay ?? basePage, basePage, failure, overlay);
     }
 
     // Regla 5: después de la última sigue la primera. Desde una página que no está en el recorrido, next va a la primera y previous a la última.

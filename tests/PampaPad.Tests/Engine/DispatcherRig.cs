@@ -16,7 +16,14 @@ internal sealed class DispatcherRig : IAsyncDisposable
 
     private readonly TempFolder _temp = new();
 
-    public DispatcherRig(string? config, Action<FakeSystemHotkeys>? beforeWindows = null, Action<FakeStep>? beforeDispatcher = null, bool attach = true, TimeProvider? clock = null)
+    /// <summary>send es el SendToConsole que recibe el despachador: el puerto falso por el que la perilla manda el brillo.</summary>
+    public DispatcherRig(
+        string? config,
+        Action<FakeSystemHotkeys>? beforeWindows = null,
+        Action<FakeStep>? beforeDispatcher = null,
+        bool attach = true,
+        TimeProvider? clock = null,
+        Func<string, CancellationToken, Task<Result>>? send = null)
     {
         Directory.CreateDirectory(_temp.Combine("biblioteca"));
         if (config is not null)
@@ -29,10 +36,11 @@ internal sealed class DispatcherRig : IAsyncDisposable
         Library.Load();
         beforeWindows?.Invoke(Windows);
         beforeDispatcher?.Invoke(Marker);
-        var steps = new IStepType[] { Marker, Scene, Record, Mute, Request, Script, WaitWindow, Page };
+        // page.overlay es el de verdad: lo único que hace es pedirle al despachador que ponga o saque la página encima.
+        var steps = new IStepType[] { Marker, Scene, Record, Mute, Request, Script, WaitWindow, Page, new PageOverlay(Library, target => Dispatcher!.ToggleOverlay(target)) };
         ConditionType[] conditions = [FakeCondition.Met(Conditions.WindowExists).Type, FakeCondition.Met(Conditions.RecordingIs).Type];
         Executor = new Executor(steps, conditions, TimeProvider.System);
-        Dispatcher = new Dispatcher(Library, State, Executor, new Gestures(clock ?? TimeProvider.System, () => Gestures.HoldFrom(null), Gestures.DefaultFreshness, Gestures.ModuleKeyDoubleTap(() => Library.Current)), Log);
+        Dispatcher = new Dispatcher(Library, State, Executor, new Gestures(clock ?? TimeProvider.System, () => Gestures.HoldFrom(null), Gestures.DefaultFreshness, Gestures.ModuleKeyDoubleTap(() => Library.Current)), Log, send);
         Dispatcher.Finished += Finished.Enqueue;
         Hotkeys = new HotkeySource(Windows, State, Log);
         _ = Hotkeys.StartAsync(CancellationToken.None);

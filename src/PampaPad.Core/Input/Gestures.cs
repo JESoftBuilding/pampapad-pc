@@ -31,8 +31,8 @@ public sealed class Gestures
     {
     }
 
-    /// <summary>Con el umbral leído en cada gesto: Composition lo saca de la biblioteca actual, así holdMs rige sin reiniciar (plan de la 9b, decisión 12).</summary>
     /// <summary>
+    /// Con el umbral leído en cada gesto: Composition lo saca de la biblioteca actual, así holdMs rige sin reiniciar (plan de la 9b, decisión 12).
     /// wantsDoubleTap se pregunta por control en cada gesto: sólo donde dice que sí el toque espera la ventana del doble toque.
     /// Sin él, o diciendo que no, nada cambia y no hay demora (plan de la 1.3.0, decisión 1).
     /// </summary>
@@ -111,17 +111,19 @@ public sealed class Gestures
                         break;
                     }
 
-                    if (released.Second)
+                    var wants = _wantsDoubleTap(raw.Control);
+                    if (released.Second && wants)
                     {
                         output.Add(raw with { Gesture = Gesture.DoubleTap });
                     }
-                    else if (_wantsDoubleTap(raw.Control))
+                    else if (!released.Second && wants)
                     {
                         // Sale como Tap desde Advance cuando pase la ventana sin otro Press.
                         _saved.Add(new Held(raw.Source, raw.Control, now));
                     }
                     else
                     {
+                        // Sin doble toque, o si se lo sacaron con el segundo apretar en curso: un toque común.
                         output.Add(raw with { Gesture = Gesture.Tap });
                     }
 

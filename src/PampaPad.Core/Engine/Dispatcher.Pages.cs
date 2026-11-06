@@ -12,6 +12,35 @@ public sealed partial class Dispatcher
     // La base que eligió page.go; null es la principal. Se escribe sólo bajo _refreshing.
     private string? _chosen;
 
+    // La página encima de page.overlay; null es ninguna (02 §7, regla 8). Se escribe sólo bajo _refreshing.
+    private string? _overlay;
+
+    /// <summary>
+    /// Pone target encima de la página que se ve, o la saca si ya estaba: es lo que hace page.overlay (02 §5 y §7, regla 8). Vale grabando:
+    /// no cambia la base ni las fuentes, sólo lo que se ve. Una página que no existe, o que no es de teclas, falla con config_invalid.
+    /// </summary>
+    public Failure? ToggleOverlay(string target)
+    {
+        lock (_refreshing)
+        {
+            Config config = _library.Current;
+            if (config.FindPage(target) is not { } page)
+            {
+                return new Failure(ErrorCodes.ConfigInvalid, $"La página \"{target}\" no existe: no se abrió encima.");
+            }
+
+            if (!IsKeys(page))
+            {
+                return new Failure(ErrorCodes.ConfigInvalid, $"La página \"{target}\" es de tipo {page.Type}, que no es de teclas: no se abrió encima.");
+            }
+
+            _overlay = _overlay == target ? null : target;
+            PublishActive(config);
+            _log.Info("dispatcher", _overlay is null ? $"Se cerró la página encima {target}." : $"Página encima: {target}.");
+            return null;
+        }
+    }
+
     /// <summary>
     /// Cambia la página base: es lo que hace page.go (02 §5). Con una toma en curso falla con navigation_blocked y la base sigue en la
     /// principal (regla 1). Una página que no existe, o que no es de teclas, falla con config_invalid sin cambiar nada. Vuelve a aplicar
@@ -38,43 +67,54 @@ public sealed partial class Dispatcher
                 }
             }
 
-            NavigationResult result = Navigation.Resolve(new NavigationInput(_chosen ?? main, HeldLayer(config), _state.Current.Obs.Recording, main, target, Cycle(config)));
+            NavigationResult result = Navigation.Resolve(new NavigationInput(_chosen ?? main, HeldLayer(config), _state.Current.Obs.Recording, main, target, Cycle(config), _overlay));
             if (result.Failure is { } blocked)
             {
                 return blocked;
             }
 
             _chosen = result.BasePage == main ? null : result.BasePage;
+            _overlay = result.Overlay;
             ApplyPage(config);
             _log.Info("dispatcher", $"Página base: {result.BasePage}.");
             return null;
         }
     }
 
-    // La regla 2 (02 §7): si la grabación arranca con otra página de base, se vuelve a la principal en el acto, y queda ahí. El suscriptor
-    // del estado sólo encola (StateStore): aplicar la página registra atajos, que espera al hilo de Windows.
+    // La regla 2 (02 §7): si la grabación arranca con otra página de base, o con una encima, se vuelve a la principal en el acto, y queda
+    // ahí (regla 8). El suscriptor del estado sólo encola (StateStore): aplicar la página registra atajos, que espera al hilo de Windows.
     private void OnStateChanged(AppState before, AppState after)
     {
-        if (before.Obs.Recording == RecordingState.Stopped && after.Obs.Recording != RecordingState.Stopped && Volatile.Read(ref _chosen) is not null)
+        string? overlay = Volatile.Read(ref _overlay);
+        if (before.Obs.Recording == RecordingState.Stopped && after.Obs.Recording != RecordingState.Stopped
+            && (Volatile.Read(ref _chosen) is not null || overlay is not null))
         {
-            ThreadPool.QueueUserWorkItem(_ => ReturnToMain());
+            ThreadPool.QueueUserWorkItem(_ => ReturnToMain(overlay));
         }
     }
 
-    private void ReturnToMain()
+    // overlay es la página encima que había al arrancar: si se la cerró y se abrió otra ya grabando antes de que esto corra, esa queda.
+    private void ReturnToMain(string? overlay)
     {
         try
         {
             lock (_refreshing)
             {
-                if (_chosen is not { } from || _state.Current.Obs.Recording == RecordingState.Stopped)
+                bool closes = overlay is not null && _overlay == overlay;
+                if ((_chosen is null && !closes) || _state.Current.Obs.Recording == RecordingState.Stopped)
                 {
                     return;
                 }
 
+                string from = _chosen ?? overlay ?? "";
                 _chosen = null;
+                if (closes)
+                {
+                    _overlay = null;
+                }
+
                 ApplyPage(_library.Current);
-                _log.Info("dispatcher", $"La grabación arrancó con la página {from} de base: se vuelve a la principal (02 §7, regla 2).");
+                _log.Info("dispatcher", $"La grabación arrancó con la página {from} a la vista: se vuelve a la principal (02 §7, regla 2; con la página encima, regla 8).");
             }
         }
         catch (Exception error)
@@ -94,7 +134,13 @@ public sealed partial class Dispatcher
             _chosen = null;
         }
 
-        NavigationResult navigation = Navigation.Resolve(new NavigationInput(_chosen ?? main, HeldLayer(config), recording, main, null, Cycle(config)));
+        // La página encima que dejó de existir, o de ser de teclas, al recargar la biblioteca se va (regla 8).
+        if (_overlay is not null && (config.FindPage(_overlay) is not { } overlaid || !IsKeys(overlaid)))
+        {
+            _overlay = null;
+        }
+
+        NavigationResult navigation = Navigation.Resolve(new NavigationInput(_chosen ?? main, HeldLayer(config), recording, main, null, Cycle(config), _overlay));
         (int pageIndex, Page? page) = config.Pages.Indexed().FirstOrDefault(candidate => navigation.BasePage.Length > 0 && candidate.Item.Id == navigation.BasePage);
         IInputSource[] sources;
         lock (_gate)
@@ -118,13 +164,23 @@ public sealed partial class Dispatcher
             BasePage = navigation.BasePage,
             ActivePage = navigation.ActivePage,
             MainPage = main,
+            OverlayPage = navigation.Overlay,
         });
     }
 
-    // La página cuyas teclas valen ahora: la capa si se la mantiene; si no, la base, y grabando la principal aunque la base del estado no
-    // haya cambiado todavía (reglas 1 y 3).
-    private static string KeysPage(Config config, AppState now, string? layer) =>
-        Navigation.Resolve(new NavigationInput(now.BasePage, layer, now.Obs.Recording, config.ResolveMainPage() ?? "", null, [])).ActivePage;
+    // Sólo cambia la página que se ve, con la base del estado: las fuentes siguen con la base, y ni la capa ni la página encima vuelven a
+    // registrar atajos (02 §7, regla 6). Bajo _refreshing.
+    private void PublishActive(Config config)
+    {
+        string? overlay = _overlay;
+        string active = KeysPage(config, _state.Current, HeldLayer(config), overlay);
+        _state.Update(s => s with { ActivePage = active, OverlayPage = overlay });
+    }
+
+    // La página cuyas teclas valen ahora: la capa si se la mantiene; si no, la de encima o la base, y grabando la principal aunque la base
+    // del estado no haya cambiado todavía (reglas 1, 3 y 8). Un atajo de tecla pasa overlay en null: es de la base que lo registró.
+    private static string KeysPage(Config config, AppState now, string? layer, string? overlay = null) =>
+        Navigation.Resolve(new NavigationInput(now.BasePage, layer, now.Obs.Recording, config.ResolveMainPage() ?? "", null, [], overlay)).ActivePage;
 
     // Las páginas del recorrido de next y previous: las que no tienen show en falso, en su orden (02 §7, regla 5). Sólo las de teclas:
     // la local no está en el recorrido (regla 7) y un tipo reservado o desconocido se saltea (02 §4.2).

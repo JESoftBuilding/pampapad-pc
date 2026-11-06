@@ -122,7 +122,8 @@ public sealed record StateView(
     IReadOnlyList<RunningAction> Running,
     ActionFailure? LastFailure,
     ConsoleLink Console,
-    GraveAlert? Alert)
+    GraveAlert? Alert,
+    string? OverlayPage)
 {
     public static StateView From(AppState state)
     {
@@ -139,7 +140,8 @@ public sealed record StateView(
             state.Running,
             state.LastFailure,
             state.Console,
-            state.Alert);
+            state.Alert,
+            state.OverlayPage);
     }
 }
 
