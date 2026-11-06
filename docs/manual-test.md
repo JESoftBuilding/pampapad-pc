@@ -542,3 +542,25 @@ Se repasa con la v1.3.0 instalada, la consola 0.2.1, la tira y la página de luc
   - filas 4 a 6: bien, según Emmanuel. El cable se sacó a las 23:22:26 y la consola volvió a saludar a las 23:22:38;
   - filas 7 y 8: no se hicieron con la placa; las cubre Playwright;
   - **lo que pidió Emmanuel en el repaso:** que la tira de la consola se prenda LED por LED mientras sube el brillo. Va al firmware, porque la consola ve pasar cada `adjustBrightness`, con la PC y sin ella.
+
+## 1.4.0: el receptor en la PC
+
+Se repasa con la copia de desarrollo de `receptor-pc` y el puerto en "Automático". Hacen falta el receptor (Zero, COM5), la consola 0.3.0 en modo radio y su cable (CH343, COM20).
+
+| N | Qué hacer | Qué tiene que pasar |
+|---|---|---|
+| 1 | Abrir la PampaPad con el receptor y la consola enchufados | "Automático" toma el receptor: "Consola conectada por radio", COM5 |
+| 2 | Apagar la consola | En unos 3 s, "consola sin señal". Una acción de luces desde la ventana sigue andando |
+| 3 | Prender la consola | Saluda sola, con los ajustes al día y las teclas por radio |
+| 4 | Desenchufar el receptor, con la consola por cable | En unos 2 s toma el cable, COM20 |
+| 5 | La página de luces de la 1.3.0 por radio | El doble toque la abre y los colores andan |
+
+- **El repaso del 2026-11-06**, con `d1d4ccf` y después `b8f58d2`, contra una copia de la biblioteca real (`D:\repos\pampapad-construccion\R-4-biblioteca`):
+  - **Primero se trabó el receptor 0.1.0:** con la 1.3.0 y con la 1.4.0, la PC no le llegaba (`usb 0 lineas`, la pantalla del pad decía "sin PC") y las escrituras vencían a los 500 ms, con la lectura viva. Si la PC escribe mientras la Zero arranca, la FIFO de entrada del USB-Serial-JTAG queda llena y `HWCDC::begin()` borra su aviso. Ni un reinicio por RTS la vacía. Lo arregló la sesión del firmware en el receptor 0.1.1 (tira lo viejo al arrancar, `usb viejos N`). La 0.1.2 es la misma más fría. Del programa salió `b8f58d2`: una escritura que vence se anota una vez por conexión;
+  - **abrir la Zero recién enumerada la reinicia** (`rst:0x15`), aunque DTR y RTS vayan en false. Con la Zero ya corriendo, abrir no la reinicia. Con la 0.1.1 y la 0.1.2 da igual: a las 08:25:02 y a las 09:33:49 arrancó con `usb viejos 48`, y la escritura siguió andando;
+  - fila 1: "Automático" tomó el receptor las tres veces (08:09:37, 08:25:02 y 09:33:49), con el saludo `El receptor saluda: firmware 0.1.x, escucha a la consola`;
+  - fila 2: `consola sin señal` a las 09:42:37. Con la consola apagada, `luces-blanco` y `luces-vela` corrieron desde la ventana (09:42:44 y 09:42:51) y la tira cambió, según Emmanuel;
+  - fila 3: la consola volvió a saludar a las 09:43:05, con `El receptor volvió a escuchar a la consola`. En todo el repaso no hubo ningún aviso de ajustes sin confirmar;
+  - fila 4: se desenchufó el receptor a las 08:36:42 y el cable quedó tomado a las 08:36:44,8. Un intento anterior (08:17) dio `Access denied` porque un monitor de PlatformIO tenía COM20, y se reintentó cada 2 s como debía;
+  - fila 5: el doble toque abrió las luces por radio (09:35:09) y los colores corrieron desde las teclas (`luces-azul`, `-rojo`, `-verde`, `-ambar`, de 09:40:57 a 09:42:20);
+  - además: soltar y volver a tomar el puerto anduvo con "Automático" (08:27:48 y 08:28:42, para cargar la 0.1.2). Con el receptor 0.1.2: 0 pérdidas en 7,5 minutos (08:36:07).
