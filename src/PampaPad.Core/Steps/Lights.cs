@@ -19,7 +19,8 @@ public sealed class Lights(Func<string, CancellationToken, Task<Result>>? send) 
 
     // Los seis presets de luces-rgb, en su orden: violeta, ámbar, blanco, rojo, verde y azul (lib/core/Presets.h:88-97). Allá se agregan al
     // final y no se reordenan; si suman uno, este tope sube con ellos.
-    private const int LastPreset = 5;
+    // 0 a 5 son los colores y 6 a 9 los efectos de la placa de las luces (luces-rgb ffe4612 y 7cb0a20; plan de la 1.3.0, decisión 9).
+    private const int LastPreset = 9;
 
     private const byte AdjustCmd = 3;
 

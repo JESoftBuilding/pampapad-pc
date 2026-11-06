@@ -30,6 +30,7 @@ public class LightsTests
     [InlineData("""{ "type": "lights", "command": "adjustBrightness", "value": 127 }""", 3, 0, 0, 0, 127)]
     [InlineData("""{ "type": "lights", "command": "preset", "value": 0 }""", 4, 0, 0, 0, 0)]
     [InlineData("""{ "type": "lights", "command": "preset", "value": 5 }""", 4, 0, 0, 0, 5)]
+    [InlineData("""{ "type": "lights", "command": "preset", "value": 9 }""", 4, 0, 0, 0, 9)]
     [InlineData("""{ "type": "lights", "command": "color", "color": "#6d5df6" }""", 1, 0x6D, 0x5D, 0xF6, 0)]
     [InlineData("""{ "type": "lights", "command": "color", "color": "#FFA500" }""", 1, 0xFF, 0xA5, 0x00, 0)]
     public async Task Each_command_builds_its_five_bytes_and_one_line_reaches_the_console(string json, byte cmd, byte r, byte g, byte b, byte value)
@@ -62,7 +63,7 @@ public class LightsTests
     [InlineData("""{ "type": "lights", "command": "adjustBrightness", "value": 0 }""", "value")]
     [InlineData("""{ "type": "lights", "command": "adjustBrightness", "value": 128 }""", "value")]
     [InlineData("""{ "type": "lights", "command": "adjustBrightness", "value": -128 }""", "value")]
-    [InlineData("""{ "type": "lights", "command": "preset", "value": 6 }""", "value")]
+    [InlineData("""{ "type": "lights", "command": "preset", "value": 10 }""", "value")]
     [InlineData("""{ "type": "lights", "command": "preset", "value": -1 }""", "value")]
     [InlineData("""{ "type": "lights", "command": "power", "value": "medio" }""", "value")]
     [InlineData("""{ "type": "lights", "command": "power", "value": 1 }""", "value")]
