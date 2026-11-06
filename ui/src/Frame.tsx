@@ -51,7 +51,7 @@ function StatusStrip({ view }: { view: SnapshotView }) {
       {obs.link === "ready" && obs.recording === "recording" && <Badge tone="bad">Grabando {clock(obs.recordedMs)}</Badge>}
       {obs.link === "ready" && obs.recording === "paused" && <Badge tone="warn">En pausa</Badge>}
       {obs.link === "ready" && obs.streaming && <Badge tone="brand">Transmitiendo</Badge>}
-      <Badge tone={link.state === "connected" ? "ok" : link.state === "waiting" ? "warn" : "neutral"}>{consoleText(link.state, link.port, link)}</Badge>
+      <Badge tone={link.state === "connected" ? (link.receiver?.hearsConsole === false ? "warn" : "ok") : link.state === "waiting" ? "warn" : "neutral"}>{consoleText(link.state, link.port, link)}</Badge>
     </div>
   );
 }

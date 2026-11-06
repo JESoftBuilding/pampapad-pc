@@ -18,7 +18,7 @@ test("abre en Estado con la foto de las muestras", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1, name: "Estado" })).toBeVisible();
   await expect(strip.getByText("OBS conectado")).toBeVisible();
   await expect(strip.getByText("Grabando 0:12:34")).toBeVisible();
-  await expect(strip.getByText("Consola conectada · firmware 0.1.5 · ajustes al día")).toBeVisible();
+  await expect(strip.getByText("Consola conectada por radio · firmware 0.1.5 · ajustes al día")).toBeVisible();
   await expect(page.getByText("Versión 0.2.1")).toBeVisible();
   await expect(page.getByText("El chequeo previo llega en la etapa 5")).toBeVisible();
   await expect(page.getByRole("list", { name: "Atajos que rechazó Windows" })).toContainText("Ctrl+Shift+Alt+F6");

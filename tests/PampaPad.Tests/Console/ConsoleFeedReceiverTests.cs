@@ -84,6 +84,26 @@ public class ConsoleFeedReceiverTests
         Assert.Equal(2, rig.Sent.Count(s => ConsoleFeedRig.Type(s.Line) == Screen));
     }
 
+    [Fact]
+    public async Task Losing_the_signal_in_the_middle_of_a_round_does_not_leave_an_old_settings_in_sync()
+    {
+        await using var rig = new ConsoleFeedRig();
+        rig.Connect(rig.OwnFingerprint);
+        Hears(rig, true);
+        Assert.Null(rig.Store.Current.Console.SettingsInSync);
+
+        // El ReceiverHello en falso llega después de que la vuelta tomó su foto, con la huella propia, y antes de que escriba SettingsInSync.
+        rig.OnConfig = () =>
+        {
+            rig.OnConfig = null;
+            LosesSignal(rig);
+        };
+        await rig.Round();
+
+        Assert.True(rig.Store.Current.Console.WithoutSignal());
+        Assert.Null(rig.Store.Current.Console.SettingsInSync);
+    }
+
     private static void Hears(ConsoleFeedRig rig, bool hears) =>
         rig.Store.Update(s => s with { Console = s.Console with { Receiver = new ReceiverLink("0.1.0", hears) } });
 

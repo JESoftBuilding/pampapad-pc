@@ -18,7 +18,17 @@ internal sealed class ConsoleFeedRig : IAsyncDisposable
     {
         Log = new Log(_temp.Combine("log"), Clock);
         Store.Update(s => s with { Console = new ConsoleLink(ConsoleLinkState.Waiting, "COM7") });
-        Feed = new ConsoleFeed(Store, () => Config, (_, _, _) => Frame, Send, Log, Clock);
+        Feed = new ConsoleFeed(
+            Store,
+            () =>
+            {
+                OnConfig?.Invoke();
+                return Config;
+            },
+            (_, _, _) => Frame,
+            Send,
+            Log,
+            Clock);
     }
 
     public FakeTimeProvider Clock { get; } = new();
@@ -32,6 +42,9 @@ internal sealed class ConsoleFeedRig : IAsyncDisposable
     public Config Config { get; set; } = new();
 
     public ConsoleFrame Frame { get; set; } = Example();
+
+    /// <summary>Corre cada vez que la vuelta lee la configuración: ya tomó su foto del estado, así que sirve para meter algo en el medio.</summary>
+    public System.Action? OnConfig { get; set; }
 
     /// <summary>Lo que devuelve cada envío. Por defecto, que salió bien.</summary>
     public Func<string, Task<Result>> Answer { get; set; } = _ => Task.FromResult(Result.Success);

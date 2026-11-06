@@ -76,17 +76,38 @@ export function greetingText(hello: ConsoleHello = {}): string {
   return `firmware ${hello.firmware} · ${hello.settingsInSync === true ? "ajustes al día" : "ajustes sin confirmar"}`;
 }
 
-/** La consola por cable (05 §4.5). Conectada, el saludo dice si la placa contestó: el puerto abierto solo no lo dice. */
-export function consoleText(state: ConsoleState, port?: string, hello?: ConsoleHello): string {
+/** Lo que el enlace suma al saludo desde la 1.4.0: el receptor por radio y "Automático" (plan de la 1.4.0, decisiones 2 y 6). */
+export type ConsoleLinkInfo = ConsoleHello & { receiver?: { hearsConsole: boolean }; auto?: boolean };
+
+/** El puerto como lo nombra la ventana: "Automático · COM5", "Automático" mientras no encuentra placa, o el elegido a mano. Igual que la bandeja. */
+export function portLabel(port?: string, link: ConsoleLinkInfo = {}): string {
+  if (link.auto !== true) {
+    return port ?? "";
+  }
+
+  return port === undefined ? "Automático" : `Automático · ${port}`;
+}
+
+/**
+ * La consola (05 §4.5). Conectada, el saludo dice si la placa contestó: el puerto abierto solo no lo dice. Con el receptor, si la escucha
+ * o no (plan de la 1.4.0, decisión 7). Es el mismo texto que la bandeja (TraySummary.Console.cs).
+ */
+export function consoleText(state: ConsoleState, port?: string, link: ConsoleLinkInfo = {}): string {
   switch (state) {
     case "off":
       return "Sin consola: no hay puerto en local.json";
     case "waiting":
-      return `Consola ${port}: sin conexión, reintenta cada 2 s`;
+      return link.auto === true && port === undefined
+        ? "Automático: no hay un receptor ni una consola enchufados, reintenta cada 2 s"
+        : `Consola ${portLabel(port, link)}: sin conexión, reintenta cada 2 s`;
     case "connected":
-      return `Consola conectada · ${greetingText(hello)}`;
+      if (link.receiver === undefined) {
+        return `Consola conectada · ${greetingText(link)}`;
+      }
+
+      return link.receiver.hearsConsole ? `Consola conectada por radio · ${greetingText(link)}` : "Receptor conectado · consola sin señal";
     case "released":
-      return `Consola ${port}: suelta, se toma desde la bandeja`;
+      return `Consola ${portLabel(port, link)}: suelta, se toma desde la bandeja`;
   }
 }
 

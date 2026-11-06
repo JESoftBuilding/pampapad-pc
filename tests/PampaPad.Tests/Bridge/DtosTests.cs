@@ -69,6 +69,18 @@ public class DtosTests
         Assert.DoesNotContain("lastFailure", json);
     }
 
+    [Fact]
+    public void Automatic_travels_with_the_real_port_and_only_when_it_is_on()
+    {
+        var link = new ConsoleLink(ConsoleLinkState.Connected, "COM21") { Auto = true };
+
+        string with = JsonSerializer.Serialize(StateView.From(AppState.Initial with { Console = link }), Json.Compact);
+        string without = JsonSerializer.Serialize(StateView.From(AppState.Initial with { Console = link with { Auto = false } }), Json.Compact);
+
+        Assert.Contains("\"console\":{\"state\":\"connected\",\"port\":\"COM21\",\"auto\":true}", with);
+        Assert.DoesNotContain("\"auto\"", without);
+    }
+
     [Theory]
     [InlineData("""{ "count": 5, "lines": 3 }""")]
     [InlineData("""{ "count": "cinco" }""")]

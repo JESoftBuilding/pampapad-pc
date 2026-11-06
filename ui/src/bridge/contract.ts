@@ -59,6 +59,9 @@ export const stateSchema = z.object({
     // El receptor por radio, del último ReceiverHello; falta por cable (plan de la 1.4.0, decisión 2). Con hearsConsole en falso
     // y el enlace conectado, la consola está sin señal.
     receiver: z.object({ firmware: z.string(), hearsConsole: z.boolean() }).optional(),
+    // "Automático" en local.json (plan de la 1.4.0, decisión 6): port es entonces el que se eligió, o falta si no hay placa. El programa
+    // lo manda sólo en verdadero; sin él, el puerto es el elegido a mano.
+    auto: z.boolean().optional(),
   }),
   // El aviso grave a la vista (GraveAlert, plan de la 9b, E9b-3); falta si no hay ninguno.
   alert: z

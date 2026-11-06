@@ -126,6 +126,21 @@ public sealed class LocalSettingsTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Automatic_goes_and_comes_back_and_what_this_version_does_not_know_stays()
+    {
+        WriteFile("""{ "version": 1, "consolePort": "COM7", "inventado": { "a": 1 } }""");
+        var settings = new LocalSettings(_path, _log);
+        Assert.True(settings.Load().Ok);
+
+        Assert.True((await settings.SaveAsync(data => data with { ConsolePort = ConsolePorts.Auto }, CancellationToken.None)).Ok);
+        var again = new LocalSettings(_path, _log);
+        Assert.True(again.Load().Ok);
+
+        Assert.Equal("auto", again.Current.ConsolePort);
+        Assert.Contains("\"inventado\"", File.ReadAllText(_path), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Without_the_key_there_is_no_console_port()
     {
         WriteFile("""{ "version": 1 }""");

@@ -19,8 +19,13 @@ internal sealed partial class Composition
             return;
         }
 
-        state.Update(s => s with { Console = new ConsoleLink(ConsoleLinkState.Waiting, consolePort) });
-        _console = new SerialConsole(SerialPorts.Opener(consolePort), state, log, clock);
+        // "Automático" elige en cada intento entre las placas conocidas (plan de la 1.4.0, decisión 6); el puerto lo pone el abridor.
+        bool auto = ConsolePorts.IsAuto(consolePort);
+        state.Update(s => s with { Console = new ConsoleLink(ConsoleLinkState.Waiting, auto ? null : consolePort) { Auto = auto } });
+        Func<CancellationToken, Task<Stream>> open = auto
+            ? ConsolePorts.Opener(SerialPorts.List, (port, ct) => SerialPorts.Opener(port)(ct), state)
+            : SerialPorts.Opener(consolePort);
+        _console = new SerialConsole(open, state, log, clock);
 
         // La consola entra por la misma puerta que los atajos, y el Dispatcher le aplica la página que rige.
         dispatcher.Attach(_console);

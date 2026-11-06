@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace PampaPad.Core;
 
 /// <summary>Cómo está el enlace con la consola por cable.</summary>
@@ -48,8 +50,15 @@ public sealed record ConsoleLink(ConsoleLinkState State, string? Port)
     /// </summary>
     public bool WithoutSignal() => State == ConsoleLinkState.Connected && Receiver is { HearsConsole: false };
 
+    /// <summary>
+    /// "Automático" en local.json (plan de la 1.4.0, decisión 6). Port es entonces el puerto que se eligió en el último intento, o null
+    /// si no había ninguna placa conocida: nunca "auto". En falso no viaja, como lo que falta del saludo.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Auto { get; init; }
+
     /// <summary>El mismo enlace en otro estado y sin nada del saludo: un enlace nuevo tiene que volver a saludar.</summary>
-    public ConsoleLink Moved(ConsoleLinkState state) => new(state, Port);
+    public ConsoleLink Moved(ConsoleLinkState state) => new(state, Port) { Auto = Auto };
 }
 
 /// <summary>El receptor por radio en el enlace: la versión de su firmware y si escucha a la consola (04 §7, ReceiverHello).</summary>

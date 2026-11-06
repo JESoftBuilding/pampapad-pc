@@ -37,7 +37,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("la tarjeta dice el saludo de la consola, y sin consola que los ajustes se mandan cuando se conecte", async ({ page }) => {
-  await expect(screenCard(page).getByText("Consola conectada · firmware 0.1.5 · ajustes al día")).toBeVisible();
+  await expect(screenCard(page).getByText("Consola conectada por radio · firmware 0.1.5 · ajustes al día")).toBeVisible();
   await expect(screenCard(page).getByText("Siempre encendida mientras se graba o se está en pausa.")).toBeVisible();
 
   await withConsole(page, { state: "waiting" });

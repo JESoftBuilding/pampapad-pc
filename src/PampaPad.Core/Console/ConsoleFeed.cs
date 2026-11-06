@@ -210,7 +210,10 @@ public sealed partial class ConsoleFeed : IAsyncDisposable
         bool? inSync = link.SettingsFingerprint is { } hello ? hello == fingerprint : null;
         if (link.SettingsInSync != inSync)
         {
-            _state.Update(s => s.Console.State == ConsoleLinkState.Connected ? s with { Console = s.Console with { SettingsInSync = inSync } } : s);
+            // Sólo sobre el mismo saludo: si en el medio la consola quedó sin señal, su huella ya se borró y el inSync de la foto es viejo.
+            _state.Update(s => s.Console.State == ConsoleLinkState.Connected && !s.Console.WithoutSignal() && s.Console.SettingsFingerprint == link.SettingsFingerprint
+                ? s with { Console = s.Console with { SettingsInSync = inSync } }
+                : s);
         }
 
         if (inSync == false && !_warned && _settingsSent >= SettingsBeforeWarning)

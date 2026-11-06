@@ -78,21 +78,23 @@ public sealed class SettingsRequestsTests : IAsyncLifetime
         Assert.False(reply.RootElement.GetProperty("data").TryGetProperty("skippedVersion", out _));
     }
 
-    [Fact]
-    public async Task The_console_port_is_saved_in_local_json_and_the_rest_stays_as_it_was()
+    [Theory]
+    [InlineData("COM20")]
+    [InlineData(ConsolePorts.Auto)]
+    public async Task The_console_port_is_saved_in_local_json_and_the_rest_stays_as_it_was(string port)
     {
         File.WriteAllText(LocalPath, """{ "version": 1, "skippedVersion": "0.7.0", "inventado": { "a": 1 } }""");
         Assert.True(_local.Load().Ok);
         Bridge bridge = Installed();
 
-        using JsonDocument reply = await AskAsync(bridge, "settings.save", """{"consolePort":"COM20"}""");
+        using JsonDocument reply = await AskAsync(bridge, "settings.save", $$"""{"consolePort":"{{port}}"}""");
         JsonNode saved = JsonNode.Parse(File.ReadAllText(LocalPath))!;
 
         Assert.True(reply.RootElement.GetProperty("ok").GetBoolean(), reply.RootElement.ToString());
-        Assert.Equal("COM20", saved["consolePort"]!.GetValue<string>());
+        Assert.Equal(port, saved["consolePort"]!.GetValue<string>());
         Assert.Equal("0.7.0", saved["skippedVersion"]!.GetValue<string>());
         Assert.Equal(1, saved["inventado"]!["a"]!.GetValue<int>());
-        Assert.Equal("COM20", reply.RootElement.GetProperty("data").GetProperty("consolePort").GetString());
+        Assert.Equal(port, reply.RootElement.GetProperty("data").GetProperty("consolePort").GetString());
     }
 
     [Fact]

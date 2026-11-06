@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clock, consoleText, failureText, hotkeysText, libraryText, obsText, recordingText, updateText, type ObsLink } from "./status";
+import { clock, consoleText, failureText, portLabel, hotkeysText, libraryText, obsText, recordingText, updateText, type ObsLink } from "./status";
 
 describe("obsText, con los textos de la bandeja", () => {
   it.each([
@@ -74,6 +74,31 @@ describe("consoleText", () => {
 
   it("suelta", () => {
     expect(consoleText("released", "COM20")).toBe("Consola COM20: suelta, se toma desde la bandeja");
+  });
+
+  it("con el receptor y la consola sin señal (plan de la 1.4.0, decisión 7)", () => {
+    expect(consoleText("connected", "COM21", { receiver: { hearsConsole: false } })).toBe("Receptor conectado · consola sin señal");
+  });
+
+  it("con el receptor escuchando, por radio y con el saludo", () => {
+    expect(consoleText("connected", "COM21", { receiver: { hearsConsole: true }, firmware: "0.3.0", settingsInSync: true })).toBe(
+      "Consola conectada por radio · firmware 0.3.0 · ajustes al día",
+    );
+    expect(consoleText("connected", "COM21", { receiver: { hearsConsole: true } })).toBe("Consola conectada por radio · sin saludo todavía");
+  });
+
+  it("con Automático: esperando sin placa, y con el puerto que eligió", () => {
+    expect(consoleText("waiting", undefined, { auto: true })).toBe("Automático: no hay un receptor ni una consola enchufados, reintenta cada 2 s");
+    expect(consoleText("waiting", "COM21", { auto: true })).toBe("Consola Automático · COM21: sin conexión, reintenta cada 2 s");
+    expect(consoleText("released", "COM21", { auto: true })).toBe("Consola Automático · COM21: suelta, se toma desde la bandeja");
+  });
+});
+
+describe("portLabel", () => {
+  it("a mano, el puerto; con Automático, el elegido o nada", () => {
+    expect(portLabel("COM7")).toBe("COM7");
+    expect(portLabel("COM5", { auto: true })).toBe("Automático · COM5");
+    expect(portLabel(undefined, { auto: true })).toBe("Automático");
   });
 });
 
