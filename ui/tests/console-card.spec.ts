@@ -28,10 +28,10 @@ const openSettings = async (page: Page, ports?: unknown[]) => {
 test("muestra el puerto de ahora con su estado, la lista con la descripción de Windows y cuándo se aplica", async ({ page }) => {
   await openSettings(page);
 
-  await expect(consoleCard(page).getByText("COM20 · Consola conectada · firmware 0.1.5 · ajustes al día")).toBeVisible();
+  await expect(consoleCard(page).getByText("COM20 · Consola conectada por radio · firmware 0.1.5 · ajustes al día")).toBeVisible();
   await expect(consoleCard(page).getByText("todavía no saluda", { exact: false })).toHaveCount(0);
   await expect(portList(page).locator("option:checked")).toHaveText("COM20 · USB-Enhanced-SERIAL CH343");
-  await expect(portList(page).locator("option")).toHaveText(["Sin consola", "COM1 · Puerto de comunicaciones", "COM20 · USB-Enhanced-SERIAL CH343"]);
+  await expect(portList(page).locator("option")).toHaveText(["Automático", "Sin consola", "COM1 · Puerto de comunicaciones", "COM20 · USB-Enhanced-SERIAL CH343"]);
   await expect(consoleCard(page).getByText("Se aplica al volver a abrir PampaPad")).toBeVisible();
   await expect(consoleCard(page).getByRole("button", { name: /Automático|Soltar/ })).toHaveCount(0);
 });
@@ -67,4 +67,49 @@ test("sin puertos serie lo dice, y el puerto guardado que no está se sigue vien
 
   await expect(consoleCard(page).getByText("No hay puertos serie")).toBeVisible();
   await expect(portList(page).locator("option:checked")).toHaveText("COM20 (no está)");
+});
+
+// El estado de la consola de la muestra con algo cambiado, como lo mandaría el programa. after va subiendo: un seq repetido se descarta.
+const withConsole = (page: Page, more: Record<string, unknown>, after = 10) =>
+  page.evaluate(
+    ([change, step]) => {
+      const fake = (window as unknown as { pampapadFake: Fake }).pampapadFake;
+      const state = fake.sampleState();
+      fake.emit("state", { ...state, seq: state.seq + step, console: { ...state.console, ...change } }, state.seq + step);
+    },
+    [more, after] as const,
+  );
+
+test("Automático es la primera opción y guardarlo manda consolePort auto", async ({ page }) => {
+  await openSettings(page);
+  await answer(page, "settings.save", { ok: true, data: { hotkeysEnabled: true, startWithWindows: "on", mcpEnabled: true, consolePort: "auto" } });
+
+  await expect(portList(page).locator("option").first()).toHaveText("Automático");
+  await portList(page).selectOption({ label: "Automático" });
+  await page.getByRole("button", { name: "Guardar", exact: true }).click();
+
+  expect(await calls(page, "settings.save")).toEqual([{ consolePort: "auto" }]);
+  await expect(portList(page).locator("option:checked")).toHaveText("Automático");
+  await expect(portList(page).locator("option", { hasText: "(no está)" })).toHaveCount(0);
+});
+
+test("con el receptor dice si la consola está sin señal o conectada por radio, y con Automático el puerto que eligió", async ({ page }) => {
+  await openSettings(page);
+
+  await withConsole(page, { auto: true, port: "COM21", receiver: { firmware: "0.1.0", hearsConsole: false }, firmware: undefined, settingsInSync: undefined });
+  await expect(consoleCard(page).getByText("Automático · COM21 · Receptor conectado · consola sin señal")).toBeVisible();
+  await expect(page.getByLabel("Estado de un vistazo").getByText("Receptor conectado · consola sin señal")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Pantalla de la consola" }).getByText("Receptor conectado · consola sin señal")).toBeVisible();
+
+  await withConsole(page, { auto: true, port: "COM21" }, 11);
+  await expect(consoleCard(page).getByText("Automático · COM21 · Consola conectada por radio · firmware 0.1.5 · ajustes al día")).toBeVisible();
+});
+
+test("con Automático y sin placas dice que espera una de las dos", async ({ page }) => {
+  await openSettings(page);
+
+  await withConsole(page, { state: "waiting", auto: true, port: undefined, receiver: undefined, firmware: undefined, settingsInSync: undefined });
+
+  await expect(consoleCard(page).getByText("Automático · Esperando un receptor o una consola")).toBeVisible();
+  await expect(page.getByLabel("Estado de un vistazo").getByText("Automático: no hay un receptor ni una consola enchufados, reintenta cada 2 s")).toBeVisible();
 });

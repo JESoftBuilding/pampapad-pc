@@ -9,6 +9,9 @@ public sealed partial class SerialConsole
     // línea. Alcanza para que dos acciones a la vez no mezclen sus bytes (plan de la 8b, decisión 8).
     private readonly SemaphoreSlim _sending = new(1, 1);
 
+    // El flujo cuya escritura vencida ya se anotó; lo toca sólo quien tiene _sending.
+    private Stream? _stuckLogged;
+
     /// <summary>
     /// Escribe la línea con su fin de línea. Termina bien al escribirla: del otro lado nadie acusa (02 §5). Sin flujo, soltada o con la
     /// escritura rota da console_disconnected, y la lectura sigue por su cuenta: si se desenchufó, la que se entera y reconecta es ella.
@@ -48,14 +51,26 @@ public sealed partial class SerialConsole
                         stream.Flush();
                     },
                     ct).ConfigureAwait(false);
+                _stuckLogged = null;
                 return Result.Success;
             }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException or ObjectDisposedException or TimeoutException
+            catch (TimeoutException e)
+            {
+                // Vencida con el puerto abierto: la lectura no se entera, así que la anota quien escribe, una vez por conexión
+                // (el receptor 0.1.0 dejaba de aceptar bytes y en 11 minutos el registro no dijo nada, repaso de la 1.4.0).
+                if (!ReferenceEquals(_stuckLogged, stream))
+                {
+                    _stuckLogged = stream;
+                    _log.Warning(SourceId, $"La consola no acepta lo que escribe la PC: {e.Message} Se sigue intentando sin volver a anotarlo.");
+                }
+
+                return Disconnected($"No se pudo escribir en la consola: {e.Message}");
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or ObjectDisposedException
                                       || (e is OperationCanceledException && !ct.IsCancellationRequested))
             {
-                // Desenchufada (IOException, o el error 5 de Windows como UnauthorizedAccessException: SerialConsole.cs:229-233), cerrada
-                // por el bucle o por Release mientras escribía (ObjectDisposedException) o trabada más que el WriteTimeout de SerialPorts.
-                // Una cancelación que no pidió el paso es el puerto que abortó la escritura.
+                // Desenchufada (IOException, o el error 5 de Windows como UnauthorizedAccessException: SerialConsole.cs:229-233) o cerrada
+                // por el bucle o por Release mientras escribía (ObjectDisposedException). Una cancelación que no pidió el paso es el puerto que abortó la escritura.
                 return Disconnected($"No se pudo escribir en la consola: {e.Message}");
             }
         }

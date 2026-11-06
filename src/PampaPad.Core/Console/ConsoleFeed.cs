@@ -3,7 +3,7 @@ namespace PampaPad.Core;
 /// <summary>
 /// El único que le escribe la pantalla a la consola, además de lights (plan de la 9a, decisión 6). Cada vuelta proyecta el estado y
 /// manda lo que cambió y lo que toca por ritmo (decisión 5). Del otro lado nadie acusa, salvo la huella de los ajustes en el Hello:
-/// por eso se repite todo, y al conectar o cuando la consola recién arrancó se manda entero. Sin consola conectada se calla.
+/// por eso se repite todo, y al conectar o cuando la consola recién arrancó se manda entero. Sin consola conectada, o sin señal por radio, se calla.
 /// </summary>
 public sealed partial class ConsoleFeed : IAsyncDisposable
 {
@@ -95,7 +95,9 @@ public sealed partial class ConsoleFeed : IAsyncDisposable
     {
         var now = _clock.GetUtcNow();
         var current = _state.Current;
-        if (current.Console.State != ConsoleLinkState.Connected)
+        // Con la consola sin señal se calla como sin enlace, y al volver manda todo entero (plan de la 1.4.0, decisión 4). Las luces
+        // no pasan por acá: el receptor las manda directo.
+        if (current.Console.State != ConsoleLinkState.Connected || current.Console.WithoutSignal())
         {
             _wasConnected = false;
             return;
@@ -208,7 +210,10 @@ public sealed partial class ConsoleFeed : IAsyncDisposable
         bool? inSync = link.SettingsFingerprint is { } hello ? hello == fingerprint : null;
         if (link.SettingsInSync != inSync)
         {
-            _state.Update(s => s.Console.State == ConsoleLinkState.Connected ? s with { Console = s.Console with { SettingsInSync = inSync } } : s);
+            // Sólo sobre el mismo saludo: si en el medio la consola quedó sin señal, su huella ya se borró y el inSync de la foto es viejo.
+            _state.Update(s => s.Console.State == ConsoleLinkState.Connected && !s.Console.WithoutSignal() && s.Console.SettingsFingerprint == link.SettingsFingerprint
+                ? s with { Console = s.Console with { SettingsInSync = inSync } }
+                : s);
         }
 
         if (inSync == false && !_warned && _settingsSent >= SettingsBeforeWarning)

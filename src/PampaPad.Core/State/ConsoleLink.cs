@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace PampaPad.Core;
 
 /// <summary>Cómo está el enlace con la consola por cable.</summary>
@@ -39,6 +41,25 @@ public sealed record ConsoleLink(ConsoleLinkState State, string? Port)
     /// <summary>Si esa huella es la de los ajustes que manda la PC. Lo escribe el emisor, ConsoleFeed.</summary>
     public bool? SettingsInSync { get; init; }
 
+    /// <summary>Lo que dijo el último ReceiverHello de este enlace; null por cable, sin receptor (plan de la 1.4.0, decisión 2).</summary>
+    public ReceiverLink? Receiver { get; init; }
+
+    /// <summary>
+    /// "Consola sin señal": el puerto abierto es el receptor y no escucha a la consola. No es un estado del enlace sino una cuenta
+    /// (decisión 3); es un método para que no viaje en el estado del puente, donde ya va Receiver.
+    /// </summary>
+    public bool WithoutSignal() => State == ConsoleLinkState.Connected && Receiver is { HearsConsole: false };
+
+    /// <summary>
+    /// "Automático" en local.json (plan de la 1.4.0, decisión 6). Port es entonces el puerto que se eligió en el último intento, o null
+    /// si no había ninguna placa conocida: nunca "auto". En falso no viaja, como lo que falta del saludo.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Auto { get; init; }
+
     /// <summary>El mismo enlace en otro estado y sin nada del saludo: un enlace nuevo tiene que volver a saludar.</summary>
-    public ConsoleLink Moved(ConsoleLinkState state) => new(state, Port);
+    public ConsoleLink Moved(ConsoleLinkState state) => new(state, Port) { Auto = Auto };
 }
+
+/// <summary>El receptor por radio en el enlace: la versión de su firmware y si escucha a la consola (04 §7, ReceiverHello).</summary>
+public sealed record ReceiverLink(string Firmware, bool HearsConsole);

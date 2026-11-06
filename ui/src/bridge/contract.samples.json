@@ -107,7 +107,11 @@
               "capabilities": 199,
               "energy": 0,
               "settingsFingerprint": 27627,
-              "settingsInSync": true
+              "settingsInSync": true,
+              "receiver": {
+                "firmware": "0.1.0",
+                "hearsConsole": true
+              }
             },
             "alert": {
               "id": "mic_muted",
@@ -1395,7 +1399,11 @@
           "capabilities": 199,
           "energy": 0,
           "settingsFingerprint": 27627,
-          "settingsInSync": true
+          "settingsInSync": true,
+          "receiver": {
+            "firmware": "0.1.0",
+            "hearsConsole": true
+          }
         },
         "alert": {
           "id": "mic_muted",

@@ -75,6 +75,12 @@ public sealed partial class SerialConsole
             return;
         }
 
+        if (message.Type == ConsoleProtocol.ReceiverHelloType)
+        {
+            HandleReceiverHello(message.Payload);
+            return;
+        }
+
         if (message.Type != ConsoleProtocol.InputStateType)
         {
             // Un tipo desconocido se ignora y se cuenta (04 §7): es lo que deja crecer el protocolo sin recargar firmware.

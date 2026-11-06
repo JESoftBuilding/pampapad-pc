@@ -19,6 +19,9 @@ public static partial class ConsoleProtocol
     public const int MaxSettingsKeys = 10;
     public const int StripLeds = 8;
 
+    /// <summary>La carga más larga que viaja por radio en una trama: 35 cifrados menos el tipo interno (04 §7, decisión 46).</summary>
+    public const int MaxConsolePayload = 34;
+
     private const int LabelLetters = 6;
 
     // El destino que exige la consola (ConsoleWire.h:28-29): con otro, descarta la línea.
@@ -139,8 +142,13 @@ public static partial class ConsoleProtocol
         Ascii(face.Line2, LabelLetters).CopyTo(target[(1 + LabelLetters)..]);
     }
 
-    private static string ToConsoleLine(byte type, byte[] payload) =>
-        string.Create(CultureInfo.InvariantCulture, $"#{type:X2}{FromPc:X2}{ToConsole:X2}{Convert.ToBase64String(payload)}");
+    /// <summary>Una carga de más de 34 no viaja por radio: es un error de programación y no de datos, por eso tira.</summary>
+    public static string ToConsoleLine(byte type, byte[] payload)
+    {
+        ArgumentNullException.ThrowIfNull(payload);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(payload.Length, MaxConsolePayload, nameof(payload));
+        return string.Create(CultureInfo.InvariantCulture, $"#{type:X2}{FromPc:X2}{ToConsole:X2}{Convert.ToBase64String(payload)}");
+    }
 
     private static int Clamp(int value, int max) => Math.Clamp(value, 0, max);
 

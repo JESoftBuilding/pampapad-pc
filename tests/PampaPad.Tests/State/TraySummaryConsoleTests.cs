@@ -35,4 +35,32 @@ public class TraySummaryConsoleTests
 
         Assert.Equal(text, TraySummary.ConsoleText(state));
     }
+
+    [Fact]
+    public void With_the_receiver_and_the_console_without_signal_it_says_so()
+    {
+        var link = new ConsoleLink(ConsoleLinkState.Connected, "COM21") { Receiver = new ReceiverLink("0.1.0", false) };
+
+        Assert.Equal("Soltar la consola (COM21 · Receptor conectado · consola sin señal)", TraySummary.ConsoleText(new AppState() with { Console = link }));
+    }
+
+    [Fact]
+    public void With_the_receiver_hearing_the_console_it_says_by_radio_and_the_hello()
+    {
+        var link = new ConsoleLink(ConsoleLinkState.Connected, "COM21") { Receiver = new ReceiverLink("0.1.0", true), Firmware = "0.3.0", SettingsInSync = true };
+
+        Assert.Equal("Soltar la consola (COM21 · Consola conectada por radio · firmware 0.3.0 · ajustes al día)", TraySummary.ConsoleText(new AppState() with { Console = link }));
+    }
+
+    [Theory]
+    [InlineData(ConsoleLinkState.Waiting, null, "Soltar la consola (Automático, sin conexión)")]
+    [InlineData(ConsoleLinkState.Waiting, "COM21", "Soltar la consola (Automático · COM21, sin conexión)")]
+    [InlineData(ConsoleLinkState.Connected, "COM21", "Soltar la consola (Automático · COM21 · sin saludo todavía)")]
+    [InlineData(ConsoleLinkState.Released, "COM21", "Tomar la consola (Automático · COM21)")]
+    public void With_automatic_the_port_is_named_automatic_and_the_one_in_use(ConsoleLinkState state, string? port, string text)
+    {
+        var link = new ConsoleLink(state, port) { Auto = true };
+
+        Assert.Equal(text, TraySummary.ConsoleText(new AppState() with { Console = link }));
+    }
 }
