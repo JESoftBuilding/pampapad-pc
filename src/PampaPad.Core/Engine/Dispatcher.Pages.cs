@@ -15,6 +15,9 @@ public sealed partial class Dispatcher
     // La página encima de page.overlay; null es ninguna (02 §7, regla 8). Se escribe sólo bajo _refreshing.
     private string? _overlay;
 
+    // El Seq del estado que se veía al abrir o sacar la de encima: el aviso de una grabación que arrancó antes llega tarde, y no la cierra.
+    private long _overlaySeq;
+
     /// <summary>
     /// Pone target encima de la página que se ve, o la saca si ya estaba: es lo que hace page.overlay (02 §5 y §7, regla 8). Vale grabando:
     /// no cambia la base ni las fuentes, sólo lo que se ve. Una página que no existe, o que no es de teclas, falla con config_invalid.
@@ -35,6 +38,7 @@ public sealed partial class Dispatcher
             }
 
             _overlay = _overlay == target ? null : target;
+            _overlaySeq = _state.Current.Seq;
             PublishActive(config);
             _log.Info("dispatcher", _overlay is null ? $"Se cerró la página encima {target}." : $"Página encima: {target}.");
             return null;
@@ -86,11 +90,10 @@ public sealed partial class Dispatcher
     // la página registra atajos, que espera al hilo de Windows.
     private void OnStateChanged(AppState before, AppState after)
     {
-        string? overlay = Volatile.Read(ref _overlay);
         if (before.Obs.Recording == RecordingState.Stopped && after.Obs.Recording != RecordingState.Stopped
-            && (Volatile.Read(ref _chosen) is not null || overlay is not null))
+            && (Volatile.Read(ref _chosen) is not null || Volatile.Read(ref _overlay) is not null))
         {
-            ThreadPool.QueueUserWorkItem(_ => ReturnToMain(overlay));
+            ThreadPool.QueueUserWorkItem(_ => ReturnToMain(after.Seq));
         }
 
         if (before.Obs.IsOpen != after.Obs.IsOpen && _library.Current.MainPageWithoutObs is not null)
@@ -122,20 +125,21 @@ public sealed partial class Dispatcher
         }
     }
 
-    // overlay es la página encima que había al arrancar: si se la cerró y se abrió otra ya grabando antes de que esto corra, esa queda.
-    private void ReturnToMain(string? overlay)
+    // started es el Seq del cambio en que arrancó la grabación. Sólo se cierra la de encima que ya estaba: la que se abrió viéndola grabar
+    // queda, aunque este aviso corra después (RGB-2).
+    private void ReturnToMain(long started)
     {
         try
         {
             lock (_refreshing)
             {
-                bool closes = overlay is not null && _overlay == overlay;
+                bool closes = _overlay is not null && _overlaySeq < started;
                 if ((_chosen is null && !closes) || _state.Current.Obs.Recording == RecordingState.Stopped)
                 {
                     return;
                 }
 
-                string from = _chosen ?? overlay ?? "";
+                string from = _chosen ?? _overlay ?? "";
                 _chosen = null;
                 if (closes)
                 {
