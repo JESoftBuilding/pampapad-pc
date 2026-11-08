@@ -74,6 +74,9 @@ public sealed record AppState
 
     /// <summary>El enlace con la consola por cable y el puerto que dice local.json. Sin puerto, apagada.</summary>
     public ConsoleLink Console { get; init; } = ConsoleLink.None;
+
+    /// <summary>Las luces de la PC por OpenRGB, con la zona que se maneja (1.6.0). Sin zona en local.json, apagadas.</summary>
+    public PcLightsLink PcLights { get; init; } = PcLightsLink.Off;
 }
 
 public sealed record HotkeysState(int Registered, int Rejected);

@@ -18,13 +18,13 @@ internal sealed partial class Composition
     /// </summary>
     private static (IReadOnlyList<IStepType> Catalog, IReadOnlyList<ConditionType> Conditions, Executor Executor, ScriptRunner Scripts) ComposeChains(
         Library library, StateStore state, ObsClient obs, IWindows windows, Log log, TimeProvider clock, Func<string, Failure?> goToPage, ScriptOutputSink output,
-        Func<string, CancellationToken, Task<Result>> sendToConsole, Func<string, Failure?> toggleOverlay)
+        Func<string, CancellationToken, Task<Result>> sendToConsole, Func<string, Failure?> toggleOverlay, Action<LightCommand> copyToPc)
     {
         string? root = DataRoot.Read(name =>
             Environment.GetEnvironmentVariable(name) ?? Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.User));
         var scripts = new ScriptRunner(library, log, clock, root);
         IReadOnlyList<ConditionType> conditions = Conditions.Build(windows, state, obs);
-        IReadOnlyList<IStepType> catalog = Catalog.Build(obs, state, log, clock, new Chains(library, windows, scripts, goToPage, output, sendToConsole, toggleOverlay));
+        IReadOnlyList<IStepType> catalog = Catalog.Build(obs, state, log, clock, new Chains(library, windows, scripts, goToPage, output, sendToConsole, toggleOverlay, copyToPc));
         return (catalog, conditions, new Executor(catalog, conditions, clock), scripts);
     }
 

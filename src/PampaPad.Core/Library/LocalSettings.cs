@@ -23,6 +23,27 @@ public sealed record LocalData
     /// <summary>"Permitir que Claude maneje PampaPad" (05 §4.5). Sin valor, encendido (decisión 40, MCP-5).</summary>
     public bool? McpEnabled { get; init; }
 
+    /// <summary>Las luces de la PC: el dispositivo y la zona de OpenRGB que se manejan, y su último estado (1.6.0). Sin el campo, apagado.</summary>
+    public PcLightsSettings? PcLights { get; init; }
+
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement> Unknown { get; init; } = [];
+}
+
+/// <summary>
+/// pcLights en local.json (plan de la 1.6.0, decisiones 6 y 7). Device y Zone son nombres, porque los índices de OpenRGB cambian entre
+/// sesiones; Last lo escribe sólo PcLights. Conserva lo que no conoce, como LocalData.
+/// </summary>
+public sealed record PcLightsSettings(string? Device, string? Zone, PcLightState? Last = null)
+{
+    /// <summary>Si hay una zona elegida: sin dispositivo y zona, PampaPad no toca OpenRGB.</summary>
+    [JsonIgnore]
+    public bool Chosen => !string.IsNullOrEmpty(Device) && !string.IsNullOrEmpty(Zone);
+
+    /// <summary>"dispositivo · zona", como la muestra Ajustes.</summary>
+    [JsonIgnore]
+    public string Label => $"{Device} · {Zone}";
+
     [JsonExtensionData]
     public Dictionary<string, JsonElement> Unknown { get; init; } = [];
 }

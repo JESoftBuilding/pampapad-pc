@@ -105,12 +105,14 @@ public sealed partial class Dispatcher
     }
 
     // El adjustBrightness del paso lights, por el mismo camino, sin correr una acción: un giro no deja corridas en el registro. Una falla
-    // queda como advertencia y no suena (decisión 7).
+    // queda como advertencia y no suena (decisión 7). Las luces de la PC lo reciben antes del primer await, también sin consola (1.6.0).
     private async Task AdjustBrightnessAsync(int detents)
     {
         try
         {
-            string line = Lights.AdjustBrightnessLine(Math.Clamp(BrightnessPerDetent * detents, -Lights.MaxAdjust, Lights.MaxAdjust));
+            LightCommand command = Lights.AdjustBrightness(Math.Clamp(BrightnessPerDetent * detents, -Lights.MaxAdjust, Lights.MaxAdjust));
+            Lights.CopyToPc(_copyToPc, command);
+            string line = ConsoleProtocol.LightLine(command);
             Result sent = _sendToConsole is { } send
                 ? await send(line, CancellationToken.None).ConfigureAwait(false)
                 : Result.Fail(ErrorCodes.ConsoleDisconnected, "No hay consola en este programa.");

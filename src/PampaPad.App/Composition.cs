@@ -61,6 +61,10 @@ internal sealed partial class Composition : IAsyncDisposable
 
         var state = new StateStore(log);
 
+        // Antes de las cadenas: lights y la perilla le copian cada comando a las luces de la PC (plan de la 1.6.0, decisión 2).
+        var openRgb = new OpenRgbClient();
+        var pcLights = new PcLights(openRgb, settings, state, log, clock);
+
         // OBS: la dirección y la clave salen del archivo del propio OBS en cada intento (03 §2). El programa no guarda la clave.
         // "¿Hay proceso obs64?" separa closed, no_websocket, lost y exiting (03 §2): lo contesta IWindows (01 §3.1).
         var windows = new Win32Windows();
@@ -76,17 +80,18 @@ internal sealed partial class Composition : IAsyncDisposable
         var output = new ScriptOutputSink();
         Func<string, CancellationToken, Task<Result>> sendToConsole = (line, ct) => composition!.SendToConsoleAsync(line, ct);
         (IReadOnlyList<IStepType> catalog, IReadOnlyList<ConditionType> conditions, Executor executor, ScriptRunner scripts) =
-            ComposeChains(library, state, obs, windows, log, clock, target => dispatcher!.Go(target), output, sendToConsole, target => dispatcher!.ToggleOverlay(target));
+            ComposeChains(library, state, obs, windows, log, clock, target => dispatcher!.Go(target), output, sendToConsole, target => dispatcher!.ToggleOverlay(target), pcLights.Apply);
         var preflight = new Preflight(conditions, library, state, log, clock);
 
         // El umbral de mantener sale de console.holdMs de la biblioteca actual en cada gesto; si no está, es un segundo (02 §4.10).
         // En vivo: lo cambia Ajustes y rige sin reiniciar (plan de la 9b, decisión 12). El doble toque, igual: moduleKey.doubleTap (plan de la 1.3.0).
         var gestures = new Gestures(clock, () => Gestures.HoldFrom(library.Current.Console?.HoldMs), Gestures.DefaultFreshness, Gestures.ModuleKeyDoubleTap(() => library.Current));
-        dispatcher = new Dispatcher(library, state, executor, gestures, log, sendToConsole);
+        dispatcher = new Dispatcher(library, state, executor, gestures, log, sendToConsole, pcLights.Apply);
         var updater = new Updater(state, settings, log, clock);
         composition = new Composition(log, state, obs, updater);
         composition.Library = library;
         composition._dispatcher = dispatcher;
+        (composition._pcLights, composition._openRgb) = (pcLights, openRgb);
         composition.StepTypes = catalog;
         composition.ConditionTypes = conditions;
 
@@ -215,6 +220,7 @@ internal sealed partial class Composition : IAsyncDisposable
         }
 
         StartConsole();
+        StartPcLights();
 
         if (_dispatcher is not null)
         {
@@ -265,6 +271,7 @@ internal sealed partial class Composition : IAsyncDisposable
 
         _systemHotkeys?.Dispose();
         await DisposeConsoleAsync().ConfigureAwait(false);
+        await DisposePcLightsAsync().ConfigureAwait(false);
 
         await _obs.DisposeAsync().ConfigureAwait(false);
         await _state.DisposeAsync().ConfigureAwait(false);
