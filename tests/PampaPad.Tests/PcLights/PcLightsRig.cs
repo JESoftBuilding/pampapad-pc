@@ -10,6 +10,7 @@ internal sealed class PcLightsRig : IAsyncDisposable
 
     private readonly TempFolder _temp = new();
     private readonly CancellationTokenSource _stop = new();
+    private readonly WallClock _wall;
     private Task _running = Task.CompletedTask;
 
     /// <summary>localJson es lo que hay en local.json al arrancar; null, sin archivo.</summary>
@@ -25,7 +26,15 @@ internal sealed class PcLightsRig : IAsyncDisposable
         Settings = new LocalSettings(Path, Log);
         Settings.Load();
         OpenRgb.FailConnects = failConnects;
-        Lights = new PcLights(OpenRgb, Settings, State, Log, Clock);
+        _wall = new WallClock(Clock);
+        Lights = new PcLights(OpenRgb, Settings, State, Log, _wall);
+    }
+
+    /// <summary>Cuánto corrigió Windows la hora para atrás: retrocede la hora de pared, no el reloj monotónico ni los temporizadores.</summary>
+    public TimeSpan WallClockBack
+    {
+        get => _wall.Back;
+        set => _wall.Back = value;
     }
 
     public string Path { get; }
@@ -63,5 +72,22 @@ internal sealed class PcLightsRig : IAsyncDisposable
         await Log.DisposeAsync();
         _temp.Dispose();
         _stop.Dispose();
+    }
+
+    /// <summary>El reloj falso con la hora de pared corrida para atrás, como cuando Windows corrige la hora. Lo demás es el falso.</summary>
+    private sealed class WallClock(FakeTimeProvider inner) : TimeProvider
+    {
+        public TimeSpan Back { get; set; }
+
+        public override long TimestampFrequency => inner.TimestampFrequency;
+
+        public override TimeZoneInfo LocalTimeZone => inner.LocalTimeZone;
+
+        public override DateTimeOffset GetUtcNow() => inner.GetUtcNow() - Back;
+
+        public override long GetTimestamp() => inner.GetTimestamp();
+
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period) =>
+            inner.CreateTimer(callback, state, dueTime, period);
     }
 }

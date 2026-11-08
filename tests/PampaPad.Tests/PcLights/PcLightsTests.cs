@@ -72,6 +72,22 @@ public class PcLightsTests
     }
 
     [Fact]
+    public async Task A_clock_set_back_by_windows_does_not_hold_the_next_write()
+    {
+        await using var rig = new PcLightsRig(PcLightsRig.Chosen).Start();
+        await rig.UntilAsync(() => rig.Link == PcLightsLinkState.Connected, "conectado");
+        rig.Lights.Apply(new LightCommand(1, 255, 0, 0, 0));
+        await rig.UntilAsync(() => rig.OpenRgb.Writes.Count == 1, "la primera escritura");
+
+        // Windows corrige la hora una hora para atrás: los 50 ms entre escrituras no pueden volverse una hora (revisión de RGB-3).
+        rig.WallClockBack = TimeSpan.FromHours(1);
+        rig.Lights.Apply(new LightCommand(1, 0, 255, 0, 0));
+
+        await Eventually.AdvancingAsync(rig.Clock, PcLights.WriteEvery, () => rig.OpenRgb.Writes.Count == 2, "la segunda escritura");
+        Assert.Equal(new Rgb(0, 255, 0), Last(rig).Leds?[5]);
+    }
+
+    [Fact]
     public async Task At_start_the_saved_state_is_put_once_when_openrgb_answers_on_the_third_try()
     {
         string local = $$"""{ "pcLights": { "device": "{{FakeOpenRgb.Board}}", "zone": "{{FakeOpenRgb.Header}}", "last": { "on": true, "color": { "r": 0, "g": 0, "b": 255 }, "brightness": 255 } } }""";

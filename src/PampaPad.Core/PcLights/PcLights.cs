@@ -122,7 +122,7 @@ public sealed class PcLights
     private async Task WriteLoopAsync(CancellationToken ct)
     {
         IReadOnlyList<OpenRgbDevice>? devices = null;
-        DateTimeOffset lastWrite = DateTimeOffset.MinValue;
+        long? lastWrite = null;
         try
         {
             while (!ct.IsCancellationRequested)
@@ -176,7 +176,7 @@ public sealed class PcLights
 
     // Busca la zona por nombre y, si hay algo pendiente, escribe el último estado respetando los 50 ms. Connected se publica recién
     // cuando la zona está y la escritura, si la hubo, anduvo: si no, un reintento fallido dejaría dos líneas en el registro.
-    private async Task<DateTimeOffset> WriteAsync(PcLightsSettings chosen, IReadOnlyList<OpenRgbDevice> devices, DateTimeOffset lastWrite, CancellationToken ct)
+    private async Task<long?> WriteAsync(PcLightsSettings chosen, IReadOnlyList<OpenRgbDevice> devices, long? lastWrite, CancellationToken ct)
     {
         OpenRgbDevice device = devices.FirstOrDefault(d => d.Name == chosen.Device)
             ?? throw new InvalidOperationException($"OpenRGB no tiene el dispositivo \"{chosen.Device}\"");
@@ -199,7 +199,8 @@ public sealed class PcLights
             return lastWrite;
         }
 
-        TimeSpan wait = lastWrite + WriteEvery - _clock.GetUtcNow();
+        // Con el reloj monotónico y no con la hora: si Windows corrige la hora para atrás, la espera no se estira (revisión de RGB-3).
+        TimeSpan wait = lastWrite is { } written ? WriteEvery - _clock.GetElapsedTime(written) : TimeSpan.Zero;
         if (wait > TimeSpan.Zero)
         {
             await Task.Delay(wait, _clock, ct).ConfigureAwait(false);
@@ -235,7 +236,7 @@ public sealed class PcLights
         }
 
         Publish(connected, null);
-        return _clock.GetUtcNow();
+        return _clock.GetTimestamp();
     }
 
     private static int IndexOf(OpenRgbDevice device, string mode)
