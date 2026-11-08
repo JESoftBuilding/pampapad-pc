@@ -11,6 +11,7 @@ import { HotkeysCard } from "./HotkeysCard";
 import { ObsCard } from "./ObsCard";
 import { PageChangeCard } from "./PageChangeCard";
 import { PagesCard } from "./PagesCard";
+import { PcLightsCard } from "./PcLightsCard";
 import { ProgramCard } from "./ProgramCard";
 import { SettingsSaveBar } from "./SettingsSaveBar";
 
@@ -80,6 +81,7 @@ export function SettingsScreen({ bridge, view, editor, local }: ScreenProps) {
       <AlertsCard config={config} setDraft={editor.setDraft} />
       <ObsCard settings={local.shown} state={view.state} />
       <ConsoleCard bridge={bridge} settings={local.shown} state={view.state} onPort={(port) => local.set("consolePort", port)} />
+      <PcLightsCard bridge={bridge} settings={local.shown} state={view.state} onChoose={(choice) => local.set("pcLights", choice)} />
       <DataCard
         folder={view.state?.library.folder}
         reloadBlocked={editor.dirty ? "Recargar tira los cambios sin guardar de la biblioteca: primero guardá o descartá." : undefined}

@@ -588,3 +588,18 @@ Se repasa con la copia de desarrollo de `perfil-por-aplicacion`, contra una copi
   - fila 6: no quedó en el registro, porque no hay ninguna corrida de `prender-servidor`. Emmanuel la dio por probada;
   - fila 7: no dejó rastro. Guardar "Principal sin OBS" escribe la biblioteca, y la copia no cambió desde las 14:37 (P-3). Emmanuel la dio por probada;
   - además: el receptor perdió la señal 21 veces en la tarde (de 15:28 a 17:48), casi siempre por unos 2 s. La instalada la perdió 6 veces entre las 13:18 y las 13:58, y el 5 de noviembre ninguna de las dos. No viene de la 1.5.0: va a Hallazgos.
+
+## 1.6.0: las luces de la PC siguen a las de la sala
+
+Se repasa con la copia de desarrollo de `rgb-pc`, contra la biblioteca real, que el repaso no cambia, y con OpenRGB corriendo con su servidor (puerto 6742). Antes: la instalada cerrada (bandeja, Salir), la consola con el receptor, la tira de la sala prendida y Emmanuel frente a la PC. La 7 reinicia la PC: va al final.
+
+| N | Qué hacer | Qué tiene que pasar |
+|---|---|---|
+| 1 | En Ajustes, en "Luces de la PC", elegir "ASUS ROG STRIX B450-F GAMING II · RGB Header" y guardar | Estado dice "Conectadas a OpenRGB · ASUS ROG STRIX B450-F GAMING II · RGB Header" sin tocar ninguna tecla, y el registro lo anota una vez |
+| 2 | Abrir Luces con el doble toque de la tecla del módulo y tocar cada color | Cada color cambia a la vez la sala y las tiras; las 5 luces de atrás ("Back I/O") quedan apagadas |
+| 3 | Subir y bajar el brillo con la perilla | Cambian las dos, sin parpadeo en las tiras |
+| 4 | La tecla 1, dos veces | Apaga y prende las dos |
+| 5 | Respiración, ciclo, vela y amanecer | Mirar cómo se ve cada uno en las tiras: respiración y vela con su color, ciclo mueve toda la placa (también las de atrás), amanecer queda fijo en su color final |
+| 6 | Salir de PampaPad, poner otro color desde la ventana de OpenRGB y volver a abrir PampaPad | Vuelve el último color que puso PampaPad |
+| 7 | Reiniciar la PC | Al volver, las tiras tienen el último color |
+| 8 | Con PampaPad abierto, reiniciar el servicio de OpenRGB y tocar dos colores | El segundo llega a las tiras. Mirar en el registro si el primero se perdió sin error (la duda de la revisión de RGB-3) |
