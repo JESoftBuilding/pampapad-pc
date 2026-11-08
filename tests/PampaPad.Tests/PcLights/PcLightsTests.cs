@@ -72,6 +72,22 @@ public class PcLightsTests
     }
 
     [Fact]
+    public async Task A_write_right_after_another_waits_its_50_ms()
+    {
+        await using var rig = new PcLightsRig(PcLightsRig.Chosen).Start();
+        await rig.UntilAsync(() => rig.Link == PcLightsLinkState.Connected, "conectado");
+        rig.Lights.Apply(new LightCommand(1, 255, 0, 0, 0));
+        await rig.UntilAsync(() => rig.OpenRgb.Writes.Count == 1, "la primera escritura");
+
+        // Como mucho 20 escrituras por segundo, para no inundar el SMBus (decisión 9): con el reloj quieto, la siguiente no sale.
+        rig.Lights.Apply(new LightCommand(1, 0, 255, 0, 0));
+        await PcLightsRig.SettleAsync();
+        Assert.Single(rig.OpenRgb.Writes);
+
+        await Eventually.AdvancingAsync(rig.Clock, PcLights.WriteEvery, () => rig.OpenRgb.Writes.Count == 2, "la segunda, a los 50 ms");
+    }
+
+    [Fact]
     public async Task A_clock_set_back_by_windows_does_not_hold_the_next_write()
     {
         await using var rig = new PcLightsRig(PcLightsRig.Chosen).Start();
@@ -149,6 +165,9 @@ public class PcLightsTests
             await PcLightsRig.SettleAsync();
         }
 
+        // El reintento va a los 5 s y no antes (decisión 6): a los 4 s sigue el primer intento.
+        rig.Clock.Advance(PcLights.RetryEvery - TimeSpan.FromSeconds(1));
+        await PcLightsRig.SettleAsync();
         Assert.Equal(1, rig.OpenRgb.Connects);
         await Eventually.StepsAsync(rig.Clock, PcLights.RetryEvery, 2);
         Assert.Equal(3, rig.OpenRgb.Connects);
