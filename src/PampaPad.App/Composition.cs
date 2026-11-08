@@ -137,8 +137,10 @@ internal sealed partial class Composition : IAsyncDisposable
                 SettingsView.Startup(startup.IsEnabled),
                 new ObsSettingsView(obsFiles.Address().Authority),
                 settings.McpAllowed(),
-                InstallLayout.McpCommand(AppContext.BaseDirectory)),
-            SerialPorts.List);
+                InstallLayout.McpCommand(AppContext.BaseDirectory),
+                PcLightsChoice.Of(settings.Current.PcLights)),
+            SerialPorts.List,
+            pcLights.SettingsChanged);
         composition.ComposeBridge(state, library, dispatcher, executor, catalog, conditions, windows, ui, localFolder, scriptsSources, output, settingsSources, preflight);
 
         if (!headless)

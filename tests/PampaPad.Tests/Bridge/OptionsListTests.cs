@@ -110,4 +110,15 @@ public sealed class OptionsListTests : IAsyncLifetime
         Assert.Equal(ErrorCodes.InvalidData, unknown.RootElement.GetProperty("error").GetProperty("code").GetString());
         Assert.Equal(ErrorCodes.NoPermission, tray.RootElement.GetProperty("error").GetProperty("code").GetString());
     }
+
+    // Sin las luces de la PC armadas (una prueba, o el puente sin la composición) la lista dice por qué, igual que sin OBS.
+    [Fact]
+    public async Task Without_pc_lights_the_zones_are_unavailable()
+    {
+        using JsonDocument reply = await AskAsync("""{"list":"pcLightZones"}""");
+
+        JsonElement data = reply.RootElement.GetProperty("data");
+        Assert.Equal(0, data.GetProperty("items").GetArrayLength());
+        Assert.Equal(ActionsRequests.PcLightZonesUnavailable, data.GetProperty("unavailable").GetString());
+    }
 }

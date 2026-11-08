@@ -14,7 +14,7 @@ public sealed class LibraryRead(PipeClient pipe)
         config.json cambió desde que se leyó (lo guardó la ventana, Emmanuel lo editó a mano u otra llamada), esos guardados fallan con
         config_changed_on_disk y hay que volver a leer con esta herramienta antes de reintentar.
         Con options pide además una lista para elegir en un campo y la devuelve en "options": scenes y inputs (de OBS, con su
-        identificador; con OBS cerrado dice por qué no hay), scripts o windows. Anda siempre, también grabando.
+        identificador; con OBS cerrado dice por qué no hay), scripts, windows o pcLightZones. Anda siempre, también grabando.
         """;
 
     // Lo que no es de la biblioteca: lo da state_read.
@@ -23,7 +23,7 @@ public sealed class LibraryRead(PipeClient pipe)
     [McpServerTool(Name = "library_read", ReadOnly = true)]
     [Description(Text)]
     public Task<string> ReadAsync(
-        [Description("Una lista de opciones para traer también: scenes, inputs, scripts o windows.")] string? options = null,
+        [Description("Una lista de opciones para traer también: scenes, inputs, scripts, windows o pcLightZones (las zonas de OpenRGB).")] string? options = null,
         CancellationToken cancellationToken = default) =>
         pipe.RunAsync(PipeClient.RequestTimeout, async (session, ct) =>
         {

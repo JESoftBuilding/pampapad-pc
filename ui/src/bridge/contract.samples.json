@@ -126,7 +126,11 @@
               "light": true,
               "sound": true
             },
-            "overlayPage": "luces"
+            "overlayPage": "luces",
+            "pcLights": {
+              "state": "connected",
+              "zone": "ASUS ROG STRIX B450-F GAMING II · RGB Header"
+            }
           },
           "stepTypes": [
             {
@@ -529,7 +533,11 @@
               "password": "la guardada en OBS"
             },
             "mcpEnabled": true,
-            "mcpCommand": "claude mcp add --scope user pampapad -- \"C:\\Users\\Emmanuel\\AppData\\Local\\PampaPad\\current\\PampaPad.Mcp.exe\""
+            "mcpCommand": "claude mcp add --scope user pampapad -- \"C:\\Users\\Emmanuel\\AppData\\Local\\PampaPad\\current\\PampaPad.Mcp.exe\"",
+            "pcLights": {
+              "device": "ASUS ROG STRIX B450-F GAMING II",
+              "zone": "RGB Header"
+            }
           }
         }
       }
@@ -1044,7 +1052,11 @@
           "startWithWindows": false,
           "skippedVersion": "",
           "mcpEnabled": false,
-          "consolePort": "COM20"
+          "consolePort": "COM20",
+          "pcLights": {
+            "device": "ASUS ROG STRIX B450-F GAMING II",
+            "zone": "RGB Header"
+          }
         }
       },
       "response": {
@@ -1059,7 +1071,11 @@
             "password": "la guardada en OBS"
           },
           "mcpEnabled": false,
-          "mcpCommand": "claude mcp add --scope user pampapad -- \"C:\\Users\\Emmanuel\\AppData\\Local\\PampaPad\\current\\PampaPad.Mcp.exe\""
+          "mcpCommand": "claude mcp add --scope user pampapad -- \"C:\\Users\\Emmanuel\\AppData\\Local\\PampaPad\\current\\PampaPad.Mcp.exe\"",
+          "pcLights": {
+            "device": "ASUS ROG STRIX B450-F GAMING II",
+            "zone": "RGB Header"
+          }
         }
       }
     },
@@ -1420,7 +1436,11 @@
           "light": true,
           "sound": true
         },
-        "overlayPage": "luces"
+        "overlayPage": "luces",
+        "pcLights": {
+          "state": "connected",
+          "zone": "ASUS ROG STRIX B450-F GAMING II · RGB Header"
+        }
       }
     },
     "log": {

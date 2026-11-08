@@ -6,6 +6,12 @@ public readonly record struct Rgb(byte R, byte G, byte B)
     public static Rgb Black { get; } = new(0, 0, 0);
 }
 
+/// <summary>Una zona que da OpenRGB, para elegirla en Ajustes. Label es "dispositivo · zona".</summary>
+public sealed record PcLightZone(string Device, string Zone)
+{
+    public string Label => $"{Device} · {Zone}";
+}
+
 /// <summary>Una zona de un dispositivo de OpenRGB: su nombre y cuántos LEDs tiene. Los LEDs del dispositivo van zona tras zona, en orden.</summary>
 public sealed record OpenRgbZone(string Name, int LedCount);
 

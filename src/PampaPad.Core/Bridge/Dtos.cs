@@ -49,13 +49,17 @@ public sealed record ActionTestResponse(Guid RunId);
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record WindowDirtyRequest(bool Dirty);
 
-/// <summary>Las listas de opciones que pide options.list (05 §4.2): lo que un campo de un paso ofrece elegir.</summary>
+/// <summary>
+/// Las listas de opciones que pide options.list (05 §4.2): lo que un campo de un paso ofrece elegir. PcLightZones son las zonas de OpenRGB
+/// para la tarjeta Luces de la PC (plan de la 1.6.0, decisión 7): Name es la zona y Detail el dispositivo.
+/// </summary>
 public enum OptionsList
 {
     Scenes,
     Inputs,
     Scripts,
     Windows,
+    PcLightZones,
 }
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
@@ -109,7 +113,10 @@ public sealed record ConditionTypeView(string Id, string Name, IReadOnlyList<Fie
     }
 }
 
-/// <summary>El estado tal como viaja: el de AppState, con el tiempo grabado en milisegundos y el enlace con OBS con guion bajo. Alert es el aviso grave a la vista (9b).</summary>
+/// <summary>
+/// El estado tal como viaja: el de AppState, con el tiempo grabado en milisegundos y el enlace con OBS con guion bajo. Alert es el aviso
+/// grave a la vista (9b). PcLights, las luces de la PC con su zona (1.6.0, decisión 8): por app.snapshot llega también a state_read.
+/// </summary>
 public sealed record StateView(
     long Seq,
     UpdateState Update,
@@ -123,7 +130,8 @@ public sealed record StateView(
     ActionFailure? LastFailure,
     ConsoleLink Console,
     GraveAlert? Alert,
-    string? OverlayPage)
+    string? OverlayPage,
+    PcLightsLink PcLights)
 {
     public static StateView From(AppState state)
     {
@@ -141,7 +149,8 @@ public sealed record StateView(
             state.LastFailure,
             state.Console,
             state.Alert,
-            state.OverlayPage);
+            state.OverlayPage,
+            state.PcLights);
     }
 }
 

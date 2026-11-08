@@ -33,10 +33,13 @@ public static class RequestChecks
     public static Failure? ConsolePreview(ConsolePreviewRequest request) =>
         (Missing(request.Config, "config") ?? Config(request.Config!, "config")) is { } failed ? failed with { Code = ErrorCodes.ConfigInvalid } : null;
 
+    // pcLights lleva dispositivo y zona, o los dos vacíos ("No manejar"): uno solo no es una zona.
     public static Failure? SettingsSave(SettingsSaveRequest request) =>
-        request is { StartWithWindows: null, SkippedVersion: null, McpEnabled: null, ConsolePort: null }
-            ? new Failure(ErrorCodes.InvalidData, "settings.save no trae ningún ajuste: van startWithWindows, skippedVersion, mcpEnabled o consolePort.", "data")
-            : null;
+        request is { StartWithWindows: null, SkippedVersion: null, McpEnabled: null, ConsolePort: null, PcLights: null }
+            ? new Failure(ErrorCodes.InvalidData, "settings.save no trae ningún ajuste: van startWithWindows, skippedVersion, mcpEnabled, consolePort o pcLights.", "data")
+            : request.PcLights is { None: false } pc && (string.IsNullOrEmpty(pc.Device) || string.IsNullOrEmpty(pc.Zone))
+                ? new Failure(ErrorCodes.InvalidData, "pcLights lleva device y zone, o los dos vacíos para no manejar las luces de la PC.", "pcLights")
+                : null;
 
     private static Failure? Config(Config config, string at) =>
         NullIn(config.Pages, at + ".pages", (page, here) => NullIn(page.Keys, here + ".keys", (key, inKey) => NullIn(key.ShortLabel, inKey + ".shortLabel")))

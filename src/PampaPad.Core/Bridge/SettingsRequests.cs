@@ -4,7 +4,7 @@ namespace PampaPad.Core;
 /// Lo que necesitan los pedidos de Ajustes que no son de la biblioteca: local.json, el arranque con Windows, buscar y saltear una
 /// actualización y cómo se arma el SettingsView de la foto. Las dos de la actualización son null en una copia sin instalar. Lo arma
 /// Composition, también sin ventana: la prueba de humo cuenta los manejadores. Ports lista los puertos serie: lee el registro de Windows,
-/// que es de la cáscara (etapa 8b); sin ella, la lista vacía.
+/// que es de la cáscara (etapa 8b); sin ella, la lista vacía. PcLightsChanged despierta a PcLights después de guardar su zona (1.6.0).
 /// </summary>
 public sealed record SettingsSources(
     LocalSettings Local,
@@ -12,7 +12,8 @@ public sealed record SettingsSources(
     Func<CancellationToken, Task<Result>>? CheckUpdate,
     Func<CancellationToken, Task<Result>>? SkipUpdate,
     Func<SettingsView> View,
-    Func<IReadOnlyList<ConsolePortView>>? Ports = null);
+    Func<IReadOnlyList<ConsolePortView>>? Ports = null,
+    System.Action? PcLightsChanged = null);
 
 /// <summary>
 /// Los pedidos de Ajustes de esta PC (05 §4.5 y §11). settings.save escribe sólo lo que cambió y contesta los ajustes como quedaron (la
@@ -76,6 +77,20 @@ public static class SettingsRequests
             {
                 return failed;
             }
+        }
+
+        if (request.PcLights is { } pc)
+        {
+            // Con with sobre lo que hay, para no perder last ni lo que este programa no conoce; "No manejar" saca el campo entero.
+            if (await sources.Local.SaveAsync(
+                    data => data with { PcLights = pc.None ? null : (data.PcLights ?? new PcLightsSettings(null, null)) with { Device = pc.Device, Zone = pc.Zone } },
+                    ct).ConfigureAwait(false) is { Ok: false, Failure: { } failed })
+            {
+                return failed;
+            }
+
+            // Sin esto el trabajador vería la zona nueva recién con el próximo comando: Estado cambia en el acto (revisión de RGB-3).
+            sources.PcLightsChanged?.Invoke();
         }
 
         return sources.View();

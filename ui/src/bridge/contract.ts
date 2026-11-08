@@ -78,6 +78,8 @@ export const stateSchema = z.object({
       sound: z.boolean(),
     })
     .optional(),
+  // Las luces de la PC por OpenRGB (plan de la 1.6.0, decisión 8): off sin zona elegida; zone es "dispositivo · zona".
+  pcLights: z.object({ state: z.enum(["off", "connected", "unreachable"]), zone: z.string().optional() }),
 });
 
 // config.json (02 §4), tipado sin cerrar ningún nivel: z.looseObject deja pasar lo que la página no conoce, que vuelve igual en
@@ -200,7 +202,8 @@ export const requests = {
   "action.test": { request: z.strictObject({ action: actionSchema }), response: z.object({ runId: z.string() }) },
   "window.dirty": { request: z.strictObject({ dirty: z.boolean() }), response: z.object({}) },
   "options.list": {
-    request: z.strictObject({ list: z.enum(["scenes", "inputs", "scripts", "windows"]) }),
+    // pcLightZones son las zonas de OpenRGB (1.6.0): name es la zona y detail el dispositivo; sin OpenRGB, unavailable.
+    request: z.strictObject({ list: z.enum(["scenes", "inputs", "scripts", "windows", "pcLightZones"]) }),
     response: z.object({
       items: z.array(z.object({ name: z.string(), uuid: z.string().optional(), detail: z.string().optional() })),
       unavailable: z.string().optional(),

@@ -1,22 +1,15 @@
-using System.Collections.Concurrent;
 using System.Threading.Channels;
 
 namespace PampaPad.Core;
-
-/// <summary>Una zona que da OpenRGB, para elegirla en Ajustes. Label es "dispositivo · zona".</summary>
-public sealed record PcLightZone(string Device, string Zone)
-{
-    public string Label => $"{Device} · {Zone}";
-}
 
 /// <summary>
 /// Las luces de la PC siguen a las de la sala (plan de la 1.6.0, decisiones 2 a 9). Cada comando cambia el modelo en el acto y deja una
 /// escritura pendiente; un solo trabajador escribe el último estado, como mucho cada 50 ms, y llama a IOpenRgb de a una vez. Sin
 /// conexión, o si una llamada falla, queda unreachable y reintenta cada 5 s. No lee ni corrige lo que haga otro programa: escribe sólo
-/// cuando hay algo pendiente, un comando o el estado guardado al arrancar. La zona se lee de local.json cada vez, así que cambiarla en
-/// Ajustes vale sin reiniciar.
+/// cuando hay algo pendiente, un comando o el estado guardado al arrancar. La zona se lee de local.json cada vez y Ajustes avisa con
+/// SettingsChanged, así que cambiarla vale en el acto.
 /// </summary>
-public sealed class PcLights
+public sealed partial class PcLights
 {
     public static readonly TimeSpan WriteEvery = TimeSpan.FromMilliseconds(50);
     public static readonly TimeSpan SaveEvery = TimeSpan.FromSeconds(2);
@@ -31,7 +24,8 @@ public sealed class PcLights
 
     // Un solo aviso pendiente alcanza: el trabajador lee el último estado, no cada comando.
     private readonly Channel<bool> _wake = Channel.CreateBounded<bool>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropWrite, SingleReader = true });
-    private readonly ConcurrentQueue<TaskCompletionSource<IReadOnlyList<PcLightZone>?>> _zoneRequests = new();
+    // Corta la espera del reintento: lo escriben Ajustes y el pedido de zonas, no los comandos, así la perilla no reintenta cada 50 ms.
+    private readonly Channel<bool> _cut = Channel.CreateBounded<bool>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropWrite, SingleReader = true });
     private PcLightState _model;
     private bool _pending;
     private PcLightState _saved;
@@ -71,17 +65,11 @@ public sealed class PcLights
             _pending = true;
         }
 
-        _wake.Writer.TryWrite(true);
+        Wake(cutRetry: false);
     }
 
-    /// <summary>Las zonas que da OpenRGB, por la misma cola que las escrituras. null si OpenRGB no responde (el motivo va al registro).</summary>
-    public Task<IReadOnlyList<PcLightZone>?> ZonesAsync(CancellationToken ct)
-    {
-        var request = new TaskCompletionSource<IReadOnlyList<PcLightZone>?>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _zoneRequests.Enqueue(request);
-        _wake.Writer.TryWrite(true);
-        return request.Task.WaitAsync(ct);
-    }
+    /// <summary>Ajustes guardó otra zona, o "No manejar": el trabajador lo nota ya, sin esperar un comando ni el reintento.</summary>
+    public void SettingsChanged() => Wake(cutRetry: true);
 
     /// <summary>El trabajador y el guardado cada 2 s, hasta que se cancele. Al salir falta SaveAsync, que lo llama la composición.</summary>
     public Task RunAsync(CancellationToken ct) => Task.WhenAll(Task.Run(() => WriteLoopAsync(ct)), Task.Run(() => SaveLoopAsync(ct)));
@@ -137,6 +125,8 @@ public sealed class PcLights
 
                 try
                 {
+                    // Un corte que llegó antes de este intento ya lo tiene en cuenta: no tiene que acortar la espera que siga.
+                    _cut.Reader.TryRead(out _);
                     if (devices is null)
                     {
                         _openRgb.Connect();
@@ -161,8 +151,8 @@ public sealed class PcLights
                         continue;
                     }
 
-                    Publish(new PcLightsLink(PcLightsLinkState.Unreachable, chosen?.Label), error.Message);
-                    await Task.Delay(RetryEvery, _clock, ct).ConfigureAwait(false);
+                    Publish(new PcLightsLink(PcLightsLinkState.Unreachable, chosen.Label), error.Message);
+                    await RetryDelayAsync(ct).ConfigureAwait(false);
                     continue;
                 }
 
@@ -172,6 +162,25 @@ public sealed class PcLights
         catch (OperationCanceledException)
         {
         }
+    }
+
+    private void Wake(bool cutRetry)
+    {
+        if (cutRetry)
+        {
+            _cut.Writer.TryWrite(true);
+        }
+
+        _wake.Writer.TryWrite(true);
+    }
+
+    // Los 5 s del reintento, o menos si Ajustes o la tarjeta piden algo: sigue siendo un solo ciclo, que prueba una vez más antes.
+    private async Task RetryDelayAsync(CancellationToken ct)
+    {
+        using var done = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        await Task.WhenAny(Task.Delay(RetryEvery, _clock, done.Token), _cut.Reader.ReadAsync(done.Token).AsTask()).ConfigureAwait(false);
+        await done.CancelAsync().ConfigureAwait(false);
+        ct.ThrowIfCancellationRequested();
     }
 
     // Busca la zona por nombre y, si hay algo pendiente, escribe el último estado respetando los 50 ms. Connected se publica recién
@@ -243,28 +252,6 @@ public sealed class PcLights
     {
         int index = device.Modes.ToList().IndexOf(mode);
         return index >= 0 ? index : throw new InvalidOperationException($"\"{device.Name}\" no tiene el modo {mode}");
-    }
-
-    private void ServeZones()
-    {
-        if (_zoneRequests.IsEmpty)
-        {
-            return;
-        }
-
-        PcLightZone[] zones = [.. _openRgb.Devices().SelectMany(d => d.Zones.Select(z => new PcLightZone(d.Name, z.Name)))];
-        while (_zoneRequests.TryDequeue(out var request))
-        {
-            request.TrySetResult(zones);
-        }
-    }
-
-    private void FailZones()
-    {
-        while (_zoneRequests.TryDequeue(out var request))
-        {
-            request.TrySetResult(null);
-        }
     }
 
     // Una línea en el registro al conectarse y otra al perderlo, con el motivo; no una por comando ni por reintento (decisión 8).
