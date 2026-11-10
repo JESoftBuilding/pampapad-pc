@@ -42,7 +42,9 @@ export function PcLightsCard({ bridge, settings, state, onChoose }: Props) {
 
   const chosen = settings?.pcLights;
   const listed = zones.kind === "ready" ? zones.zones : [];
-  const missing = chosen !== undefined && zones.kind !== "loading" && !listed.some((zone) => key(zone) === key(chosen));
+  const notListed = chosen !== undefined && zones.kind !== "loading" && !listed.some((zone) => key(zone) === key(chosen));
+  // "(no está)" sólo si OpenRGB dio la lista: sin respuesta no se sabe, y la tarjeta ya dice que se conserva (revisión de RGB-4).
+  const missing = notListed && zones.kind === "ready" && zones.unavailable === undefined;
   const byKey = new Map(listed.map((zone) => [key(zone), zone]));
   if (chosen !== undefined) {
     byKey.set(key(chosen), chosen);
@@ -61,7 +63,7 @@ export function PcLightsCard({ bridge, settings, state, onChoose }: Props) {
           onChange={(event) => onChoose(byKey.get(event.target.value) ?? noPcLights)}
         >
           <option value="">No manejar</option>
-          {chosen !== undefined && (zones.kind === "loading" || missing) && (
+          {chosen !== undefined && (zones.kind === "loading" || notListed) && (
             <option value={key(chosen)}>
               {label(chosen)}
               {missing ? " (no está)" : ""}

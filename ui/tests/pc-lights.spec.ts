@@ -78,7 +78,8 @@ test("sin OpenRGB lo dice y conserva la zona elegida aunque no esté en la lista
   await openSettings(page, { ok: true, data: { items: [], unavailable: "OpenRGB no responde: ¿está corriendo con su servidor?" } });
 
   await expect(card(page).getByText("OpenRGB no responde: ¿está corriendo con su servidor? Se conserva la zona elegida.")).toBeVisible();
-  await expect(zoneList(page).locator("option:checked")).toHaveText(`${board} · RGB Header (no está)`);
+  // Sin respuesta no se sabe si la zona sigue: no se la marca "(no está)" (revisión de RGB-4).
+  await expect(zoneList(page).locator("option:checked")).toHaveText(`${board} · RGB Header`);
   expect(await calls(page, "settings.save")).toEqual([]);
 });
 
