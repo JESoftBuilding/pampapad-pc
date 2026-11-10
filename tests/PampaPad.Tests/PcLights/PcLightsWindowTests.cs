@@ -91,6 +91,22 @@ public sealed class PcLightsWindowTests : IAsyncLifetime
         Assert.Equal(1, (int?)file["futuro"]!["a"]);
     }
 
+    // Guardar otro ajuste de Ajustes no toca pcLights: la tarjeta sin OpenRGB conserva la zona elegida (revisión de RGB-4).
+    [Fact]
+    public async Task Saving_another_setting_keeps_pcLights_as_it_was()
+    {
+        Start($$"""{ "version": 1, "pcLights": { "device": "{{FakeOpenRgb.Board}}", "zone": "{{FakeOpenRgb.Header}}", "last": { "on": true, "color": { "r": 1, "g": 2, "b": 3 }, "brightness": 9 } } }""");
+
+        using JsonDocument reply = await AskAsync("settings.save", """{"consolePort":"COM7"}""");
+
+        Assert.Equal(FakeOpenRgb.Header, Data(reply).GetProperty("pcLights").GetProperty("zone").GetString());
+        JsonNode file = JsonNode.Parse(File.ReadAllText(_lights!.Path))!;
+        Assert.Equal("COM7", (string?)file["consolePort"]);
+        Assert.Equal(FakeOpenRgb.Board, (string?)file["pcLights"]!["device"]);
+        Assert.Equal(FakeOpenRgb.Header, (string?)file["pcLights"]!["zone"]);
+        Assert.Equal(9, (int?)file["pcLights"]!["last"]!["brightness"]);
+    }
+
     [Fact]
     public async Task Do_not_handle_takes_the_whole_pcLights_out_of_local_json()
     {
@@ -160,8 +176,11 @@ public sealed class PcLightsWindowTests : IAsyncLifetime
             lights.Settings, startup, null, null, () => new SettingsView(false, null, null, PcLights: PcLightsChoice.Of(lights.Settings.Current.PcLights)), PcLightsChanged: lights.Lights.SettingsChanged));
     }
 
+    // Con tope de tiempo real: un pedido que se queda esperando el reloj falso hace fallar la prueba en vez de colgar la corrida (con el
+    // corte desactivado, el pedido de zonas esperaba para siempre el reintento de 5 s; revisión de RGB-4).
     private async Task<JsonDocument> AskAsync(string request, string data) =>
-        JsonDocument.Parse(await _bridge!.HandleAsync($$"""{"id":1,"request":"{{request}}","data":{{data}}}""", Caller.Window, CancellationToken.None));
+        JsonDocument.Parse(await _bridge!.HandleAsync($$"""{"id":1,"request":"{{request}}","data":{{data}}}""", Caller.Window, CancellationToken.None)
+            .WaitAsync(TimeSpan.FromSeconds(15)));
 
     private static JsonElement Data(JsonDocument reply)
     {
