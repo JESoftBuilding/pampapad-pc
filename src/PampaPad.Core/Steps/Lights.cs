@@ -8,9 +8,10 @@ public sealed record LightsParameters(string? Command, JsonElement? Value, strin
 /// <summary>
 /// lights: manda un comando a la tira de luces por la consola (02 §5; 04 §7). Una línea por paso, y termina bien al escribirla: las luces
 /// no acusan. Value es texto con power y un entero con los demás; se lee como JsonElement para que "50" no pase por 50 ni al revés
-/// (plan de la 8b, decisión 9). brightness no prende la tira: lo hace luces-rgb y no se corrige acá.
+/// (plan de la 8b, decisión 9). brightness no prende la tira: lo hace luces-rgb y no se corrige acá. copyToPc es PcLights.Apply: el mismo
+/// comando va a las luces de la PC, también sin consola, sin esperar y sin cambiar el resultado del paso (plan de la 1.6.0, decisión 2).
 /// </summary>
-public sealed class Lights(Func<string, CancellationToken, Task<Result>>? send) : StepType<LightsParameters>
+public sealed class Lights(Func<string, CancellationToken, Task<Result>>? send, Action<LightCommand>? copyToPc = null) : StepType<LightsParameters>
 {
     public const string TypeId = "lights";
 
@@ -54,6 +55,7 @@ public sealed class Lights(Func<string, CancellationToken, Task<Result>>? send) 
             return new StepResult(new Failure(ErrorCodes.ConfigInvalid, problem.Message));
         }
 
+        CopyToPc(copyToPc, command);
         if (send is null)
         {
             return new StepResult(new Failure(ErrorCodes.ConsoleDisconnected, "No hay consola en este programa."));
@@ -116,8 +118,22 @@ public sealed class Lights(Func<string, CancellationToken, Task<Result>>? send) 
     }
 
     /// <summary>La línea de un adjustBrightness, de -127 a 127: la que manda el giro de la perilla en brightness (plan de la 1.3.0, decisión 7).</summary>
-    public static string AdjustBrightnessLine(int value) =>
-        ConsoleProtocol.LightLine(new LightCommand(AdjustCmd, 0, 0, 0, unchecked((byte)value)));
+    public static string AdjustBrightnessLine(int value) => ConsoleProtocol.LightLine(AdjustBrightness(value));
+
+    /// <summary>El adjustBrightness de -127 a 127 que arma el giro de la perilla: va a la consola y a las luces de la PC.</summary>
+    public static LightCommand AdjustBrightness(int value) => new(AdjustCmd, 0, 0, 0, unchecked((byte)value));
+
+    /// <summary>La copia a las luces de la PC no puede cambiar ni frenar lo de la sala: si tira, se ignora (decisión 2).</summary>
+    public static void CopyToPc(Action<LightCommand>? copy, LightCommand command)
+    {
+        try
+        {
+            copy?.Invoke(command);
+        }
+        catch (Exception)
+        {
+        }
+    }
 
     private static bool TryColor(string? text, out byte r, out byte g, out byte b)
     {

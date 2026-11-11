@@ -16,14 +16,18 @@ internal sealed class DispatcherRig : IAsyncDisposable
 
     private readonly TempFolder _temp = new();
 
-    /// <summary>send es el SendToConsole que recibe el despachador: el puerto falso por el que la perilla manda el brillo.</summary>
+    /// <summary>
+    /// send es el SendToConsole que recibe el despachador: el puerto falso por el que la perilla manda el brillo. copyToPc, la copia a las
+    /// luces de la PC (1.6.0).
+    /// </summary>
     public DispatcherRig(
         string? config,
         Action<FakeSystemHotkeys>? beforeWindows = null,
         Action<FakeStep>? beforeDispatcher = null,
         bool attach = true,
         TimeProvider? clock = null,
-        Func<string, CancellationToken, Task<Result>>? send = null)
+        Func<string, CancellationToken, Task<Result>>? send = null,
+        Action<LightCommand>? copyToPc = null)
     {
         Directory.CreateDirectory(_temp.Combine("biblioteca"));
         if (config is not null)
@@ -40,7 +44,7 @@ internal sealed class DispatcherRig : IAsyncDisposable
         var steps = new IStepType[] { Marker, Scene, Record, Mute, Request, Script, WaitWindow, Page, new PageOverlay(Library, target => Dispatcher!.ToggleOverlay(target)) };
         ConditionType[] conditions = [FakeCondition.Met(Conditions.WindowExists).Type, FakeCondition.Met(Conditions.RecordingIs).Type];
         Executor = new Executor(steps, conditions, TimeProvider.System);
-        Dispatcher = new Dispatcher(Library, State, Executor, new Gestures(clock ?? TimeProvider.System, () => Gestures.HoldFrom(null), Gestures.DefaultFreshness, Gestures.ModuleKeyDoubleTap(() => Library.Current)), Log, send);
+        Dispatcher = new Dispatcher(Library, State, Executor, new Gestures(clock ?? TimeProvider.System, () => Gestures.HoldFrom(null), Gestures.DefaultFreshness, Gestures.ModuleKeyDoubleTap(() => Library.Current)), Log, send, copyToPc);
         Dispatcher.Finished += Finished.Enqueue;
         Hotkeys = new HotkeySource(Windows, State, Log);
         _ = Hotkeys.StartAsync(CancellationToken.None);

@@ -1,9 +1,9 @@
 import type { Snapshot, State } from "@/bridge/contract";
-import { consoleText, hotkeysText, obsText, recordingText } from "@/model/status";
+import { consoleText, hotkeysText, obsText, pcLightsText, recordingText } from "@/model/status";
 import { Card, CardTitle } from "@/ui/card";
 
 /**
- * Conexiones (05 §4.4): OBS, la consola y los atajos, que son las dos fuentes de entrada de hoy. Los atajos que rechazó Windows son los
+ * Conexiones (05 §4.4): OBS, la consola y los atajos, que son las dos fuentes de entrada de hoy, y las luces de la PC (1.6.0). Los atajos que rechazó Windows son los
  * problemas hotkey_taken del estado (AppState.Problems): se listan con su ubicación debajo de la cuenta.
  */
 export function Connections({ state, settings }: { state: State; settings: Snapshot["settings"] }) {
@@ -21,6 +21,8 @@ export function Connections({ state, settings }: { state: State; settings: Snaps
         <dd>{obs.micName === undefined ? "sin dato" : `${obs.micName}${obs.micMuted ? ", silenciado" : ""}`}</dd>
         <dt className="text-muted">Consola</dt>
         <dd>{consoleText(state.console.state, state.console.port, state.console)}</dd>
+        <dt className="text-muted">Luces de la PC</dt>
+        <dd>{pcLightsText(state.pcLights.state, state.pcLights.zone)}</dd>
         <dt className="text-muted">Atajos</dt>
         <dd>
           {hotkeysText(settings.hotkeysEnabled, state.hotkeys.registered, state.hotkeys.rejected)}

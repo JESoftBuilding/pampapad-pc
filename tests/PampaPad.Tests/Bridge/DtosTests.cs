@@ -69,6 +69,19 @@ public class DtosTests
         Assert.DoesNotContain("lastFailure", json);
     }
 
+    // Las luces de la PC viajan en el estado y, por app.snapshot, en state_read del MCP (plan de la 1.6.0, decisión 8). Sin zona, sólo off.
+    [Fact]
+    public void The_pc_lights_travel_with_their_state_and_zone()
+    {
+        var link = new PcLightsLink(PcLightsLinkState.Unreachable, "ASUS ROG STRIX B450-F GAMING II · RGB Header");
+
+        string with = JsonSerializer.Serialize(StateView.From(AppState.Initial with { PcLights = link }), Json.Compact);
+        string off = JsonSerializer.Serialize(StateView.From(AppState.Initial), Json.Compact);
+
+        Assert.Contains("\"pcLights\":{\"state\":\"unreachable\",\"zone\":\"ASUS ROG STRIX B450-F GAMING II · RGB Header\"}", with);
+        Assert.Contains("\"pcLights\":{\"state\":\"off\"}", off);
+    }
+
     [Fact]
     public void Automatic_travels_with_the_real_port_and_only_when_it_is_on()
     {

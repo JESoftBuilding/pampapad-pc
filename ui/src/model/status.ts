@@ -111,6 +111,18 @@ export function consoleText(state: ConsoleState, port?: string, link: ConsoleLin
   }
 }
 
+/** Las luces de la PC por OpenRGB (05 §4.4, 1.6.0): sin zona no se tocan; sin respuesta, PampaPad reintenta solo. */
+export function pcLightsText(state: "off" | "connected" | "unreachable", zone?: string): string {
+  switch (state) {
+    case "off":
+      return "Sin manejar: no hay una zona elegida en Ajustes";
+    case "connected":
+      return `Conectadas a OpenRGB · ${zone ?? ""}`;
+    case "unreachable":
+      return `OpenRGB no responde · ${zone ?? ""} · reintenta cada 5 s`;
+  }
+}
+
 /** Los atajos globales. Apagados es lo normal en la copia de desarrollo (05 §10). */
 export function hotkeysText(enabled: boolean, registered: number, rejected: number): string {
   if (!enabled) {

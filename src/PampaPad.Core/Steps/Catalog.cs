@@ -5,6 +5,7 @@ namespace PampaPad.Core;
 /// cambia de página. GoToPage es Dispatcher.Go, que se arma después del catálogo (01 §4.3): por eso llega como función. SendToConsole,
 /// lo mismo con la consola, que es una fuente de entrada y se arma después (etapa 8b); sin ella, lights da console_disconnected.
 /// ToggleOverlay es Dispatcher.ToggleOverlay, por lo mismo que GoToPage (plan de la 1.3.0); sin ella, page.overlay no hace nada.
+/// CopyToPc es PcLights.Apply: lights copia cada comando a las luces de la PC (plan de la 1.6.0); sin ella, sólo la sala.
 /// </summary>
 public sealed record Chains(
     Library Library,
@@ -13,7 +14,8 @@ public sealed record Chains(
     Func<string, Failure?> GoToPage,
     ScriptOutputSink? Output = null,
     Func<string, CancellationToken, Task<Result>>? SendToConsole = null,
-    Func<string, Failure?>? ToggleOverlay = null);
+    Func<string, Failure?>? ToggleOverlay = null,
+    Action<LightCommand>? CopyToPc = null);
 
 /// <summary>
 /// El menú fijo de pasos (Decidido 8): una línea por tipo, y cada uno recibe por constructor sólo lo que usa. La marca va primera.
@@ -36,7 +38,7 @@ public static class Catalog
             new ScriptRun(chains.Scripts, chains.Library, chains.Output),
             new PageGo(chains.Library, chains.GoToPage),
             new PageOverlay(chains.Library, chains.ToggleOverlay ?? (_ => null)),
-            new Lights(chains.SendToConsole),
+            new Lights(chains.SendToConsole, chains.CopyToPc),
         ];
     }
 }

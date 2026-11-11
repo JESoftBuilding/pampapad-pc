@@ -95,7 +95,8 @@ public class ScriptRunTests
     public async Task Cancelling_the_chain_kills_the_script_of_the_step_and_what_it_launched()
     {
         // El Executor corta la cadena igual con su WaitAsync: esta mira que el token llegue al script y que no quede vivo lo que lanzó,
-        // como el scrcpy de bancocam (01 §4.5).
+        // como el scrcpy de bancocam (01 §4.5). Por ese WaitAsync la cadena vuelve antes de que el runner mate el árbol: se espera su
+        // línea de cierre, que escribe después de matarlo, y recién ahí se mira el hijo (RGB-2).
         await using var rig = new ScriptRig();
         string folder = rig.AddPs1("lento", ScriptRig.LaunchesPing, """, "timeoutSec": 60""");
         var executor = new Executor([new ScriptRun(rig.Runner, rig.Library)], TimeProvider.System);
@@ -107,8 +108,8 @@ public class ScriptRunTests
         ActionResult result = await running.WaitAsync(TimeSpan.FromSeconds(20));
 
         Assert.Equal(ErrorCodes.Cancelled, result.Failure?.Code);
-        Assert.True(ScriptRig.Gone(child));
         await Poll.Until(() => rig.Log.Recent().Any(entry => entry.Message == "Se canceló el script \"lento\": se cortó, con lo que había lanzado."), 15_000);
+        Assert.True(ScriptRig.Gone(child));
     }
 
     [Fact]

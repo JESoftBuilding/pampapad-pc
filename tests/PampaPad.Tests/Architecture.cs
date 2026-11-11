@@ -2,15 +2,18 @@ using System.Reflection;
 
 namespace PampaPad.Tests;
 
-/// <summary>La barrera de dependencias de 01 §1 (con el SDK de MCP, que vive sólo en PampaPad.Mcp) y el tope de 300 líneas por archivo.</summary>
+/// <summary>
+/// La barrera de dependencias de 01 §1 (con el SDK de MCP, que vive sólo en PampaPad.Mcp, y OpenRGB.NET, sólo en la cáscara desde la
+/// 1.6.0) y el tope de 300 líneas por archivo.
+/// </summary>
 public class Architecture
 {
     private const int MaxLines = 300;
 
-    private static readonly string[] ForbiddenInCore = ["System.Windows.Forms", "Microsoft.Web.WebView2", "Velopack", "ModelContextProtocol"];
+    private static readonly string[] ForbiddenInCore = ["System.Windows.Forms", "Microsoft.Web.WebView2", "Velopack", "ModelContextProtocol", "OpenRGB.NET"];
 
     [Fact]
-    public void Core_references_no_windows_ui_no_velopack_and_no_mcp_sdk()
+    public void Core_references_no_windows_ui_no_velopack_no_mcp_sdk_and_no_openrgb()
     {
         var core = Assembly.Load("PampaPad.Core");
 
@@ -29,6 +32,8 @@ public class Architecture
     [InlineData("Velopack", true)]
     [InlineData("ModelContextProtocol", true)]
     [InlineData("ModelContextProtocol.Core", true)]
+    [InlineData("OpenRGB.NET", true)]
+    [InlineData("OpenRGB.NETExtras", false)]
     [InlineData("System.Text.Json", false)]
     [InlineData("VelopackExtras", false)]
     public void Forbidden_assemblies_are_recognized_by_name_or_prefix(string name, bool forbidden)

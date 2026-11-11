@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+// La zona de OpenRGB de las luces de la PC, por nombre (plan de la 1.6.0, decisión 7).
+export const pcLightsChoiceSchema = z.object({ device: z.string(), zone: z.string() });
+
 // Los ajustes de esta PC (etapa 8): espejo de src/PampaPad.Core/Bridge/SettingsDtos.cs, aparte de contract.ts por el tope de 300
 // líneas. startWithWindows sale de Windows; unavailable en una copia sin instalar. La clave de OBS nunca viaja: password dice de dónde sale.
 export const settingsViewSchema = z.object({
@@ -11,6 +14,8 @@ export const settingsViewSchema = z.object({
   // El interruptor del MCP y el comando para registrarlo en Claude Code; mcpCommand falta en una copia sin instalar (etapa MCP).
   mcpEnabled: z.boolean(),
   mcpCommand: z.string().optional(),
+  // La zona elegida para las luces de la PC; falta con "No manejar" (1.6.0).
+  pcLights: pcLightsChoiceSchema.optional(),
 });
 
 export const consolePortSchema = z.object({ port: z.string(), description: z.string(), usbId: z.string().optional() });
@@ -24,6 +29,8 @@ export const settingsRequests = {
       mcpEnabled: z.boolean().optional(),
       // "" es "Sin consola" y borra la clave; el puerto se usa al volver a abrir PampaPad (etapa 8b).
       consolePort: z.string().optional(),
+      // Una zona, o device y zone vacíos para "No manejar", que saca pcLights de local.json. Vale en el acto (1.6.0).
+      pcLights: z.strictObject({ device: z.string(), zone: z.string() }).optional(),
     }),
     response: settingsViewSchema,
   },
@@ -36,3 +43,4 @@ export const settingsRequests = {
 
 export type SettingsView = z.output<typeof settingsViewSchema>;
 export type ConsolePort = z.output<typeof consolePortSchema>;
+export type PcLightsChoice = z.output<typeof pcLightsChoiceSchema>;

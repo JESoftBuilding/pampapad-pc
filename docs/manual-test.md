@@ -588,3 +588,32 @@ Se repasa con la copia de desarrollo de `perfil-por-aplicacion`, contra una copi
   - fila 6: no quedó en el registro, porque no hay ninguna corrida de `prender-servidor`. Emmanuel la dio por probada;
   - fila 7: no dejó rastro. Guardar "Principal sin OBS" escribe la biblioteca, y la copia no cambió desde las 14:37 (P-3). Emmanuel la dio por probada;
   - además: el receptor perdió la señal 21 veces en la tarde (de 15:28 a 17:48), casi siempre por unos 2 s. La instalada la perdió 6 veces entre las 13:18 y las 13:58, y el 5 de noviembre ninguna de las dos. No viene de la 1.5.0: va a Hallazgos.
+
+## 1.6.0: las luces de la PC siguen a las de la sala
+
+Se repasa con la copia de desarrollo de `rgb-pc`, contra la biblioteca real, que el repaso no cambia, y con OpenRGB corriendo con su servidor (puerto 6742). Antes: la instalada cerrada (bandeja, Salir), la consola con el receptor, la tira de la sala prendida y Emmanuel frente a la PC. La 7 reinicia la PC: va al final.
+
+| N | Qué hacer | Qué tiene que pasar |
+|---|---|---|
+| 1 | En Ajustes, en "Luces de la PC", elegir "ASUS ROG STRIX B450-F GAMING II · RGB Header" y guardar | Estado dice "Conectadas a OpenRGB · ASUS ROG STRIX B450-F GAMING II · RGB Header" sin tocar ninguna tecla, y el registro lo anota una vez |
+| 2 | Abrir Luces con el doble toque de la tecla del módulo y tocar cada color | Cada color cambia a la vez la sala y las tiras; las 5 luces de atrás ("Back I/O") quedan apagadas |
+| 3 | Subir y bajar el brillo con la perilla | Cambian las dos, sin parpadeo en las tiras |
+| 4 | La tecla 1, dos veces | Apaga y prende las dos |
+| 5 | Respiración, ciclo, vela y amanecer | Mirar cómo se ve cada uno en las tiras: respiración y vela con su color, ciclo mueve toda la placa (también las de atrás), amanecer queda fijo en su color final |
+| 6 | Salir de PampaPad, poner otro color desde la ventana de OpenRGB y volver a abrir PampaPad | Vuelve el último color que puso PampaPad |
+| 7 | Reiniciar la PC | Al volver, las tiras tienen el último color |
+| 8 | Con PampaPad abierto, reiniciar el servicio de OpenRGB y tocar dos colores | El segundo llega a las tiras. Mirar en el registro si el primero se perdió sin error (la duda de la revisión de RGB-3) |
+
+- **El repaso del 2026-11-10**, con `49785ad`. Fue contra la biblioteca real, que desde ese día abre Escenas encima, con el receptor 0.1.2 (COM5), la consola 0.3.1 y OpenRGB 1.0rc3, ya con la RTX 3090 en la PC:
+  - fila 1: la zona se guardó en Ajustes, y el registro anotó una sola vez "Luces de la PC: conectadas a OpenRGB, zona ASUS ROG STRIX B450-F GAMING II · RGB Header" (18:13:57);
+  - fila 2: Luces quedó encima a las 18:14:01, y verde, azul, rojo y blanco corrieron de 18:14:02 a 18:14:24, sin advertencias. Que las 5 de atrás quedaran apagadas no deja rastro: Emmanuel lo dio por bueno ("ya probé que funciona");
+  - fila 3: la perilla no deja corridas en el registro, pero el brillo guardado de la PC (`pcLights.last`) pasó de 255 a 207, que son tres detentes de 16. Del parpadeo, Emmanuel no dijo nada;
+  - fila 4: la tecla 1 corrió tres veces, de 18:55:38 a 18:55:42, y la PC quedó apagada en `pcLights.last`, que es lo que dan tres toques desde prendida. La sala no deja rastro en el registro;
+  - fila 5: respiración, ciclo y vela corrieron a las 18:14 y otra vez a las 18:48; el amanecer, tres veces, a las 18:48:28, :30 y :32. Emmanuel: "el amanecer de las tiras no prende (sala) y las tiras de la pc sí". No es una falla:
+    - en luces-rgb el amanecer arranca a oscuras y sube en 5 minutos, y cada toque lo vuelve a empezar (`lib/core/LightController.cpp:164-172`);
+    - la PC va directo al color final, por la decisión 5.
+
+    Emmanuel eligió dejarlo así;
+  - fila 6: la copia salió en orden a las 18:22:30 con azul guardado, y Emmanuel puso otro color desde la ventana de OpenRGB. La copia volvió a abrir a las 18:23:32 y dijo "conectadas" a los 300 ms; con un estado guardado, eso sale recién después de escribirlo. Emmanuel: "sí, volvieron al azul";
+  - fila 7: va después de instalar la 1.6.0 (RGB-6), porque al prender Windows arranca la instalada y no esta copia;
+  - fila 8: sin probar. `Restart-Service OpenRGB` pide una terminal de administrador, y la del panel de Claude no lo es ("No se puede abrir el servicio OpenRGB en el equipo '.'"). El servidor siguió siendo el proceso 4184 toda la tarde. Emmanuel eligió saltearla.

@@ -84,7 +84,7 @@ internal sealed partial class Composition
                 catalog,
                 conditions,
                 settings.View),
-            new EditSources(library, state, Log, executor, catalog, conditions, dispatcher, windows, _hotkeys, preflight),
+            new EditSources(library, state, Log, executor, catalog, conditions, dispatcher, windows, _hotkeys, preflight, _pcLights),
             scripts,
             settings);
         output.Published += line => bridge.Publish(EventNames.ScriptOutput, line);

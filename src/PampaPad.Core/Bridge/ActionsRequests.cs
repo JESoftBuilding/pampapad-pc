@@ -7,10 +7,13 @@ namespace PampaPad.Core;
 /// como está en la ventana, sin guardarla, con los pasos de verdad (cambia la escena, corre el script, cambia de página), y contesta
 /// en el acto con el runId: el tope de espera de la página no tiene que cortar una acción larga (05 §4). El resultado llega por
 /// action.finished, y se cancela con action.cancel. Con una toma en curso no corre (BridgePolicy). options.list da las opciones de los
-/// campos de un paso: las escenas y entradas de OBS que ya refleja el estado, los scripts de la biblioteca y las ventanas abiertas.
+/// campos de un paso: las escenas y entradas de OBS que ya refleja el estado, los scripts de la biblioteca y las ventanas abiertas; y las
+/// zonas de OpenRGB de la tarjeta Luces de la PC.
 /// </summary>
 public static class ActionsRequests
 {
+    public const string PcLightZonesUnavailable = "OpenRGB no responde: ¿está corriendo con su servidor?";
+
     public static void Register(Bridge bridge, EditSources sources)
     {
         ArgumentNullException.ThrowIfNull(bridge);
@@ -18,7 +21,7 @@ public static class ActionsRequests
         bridge.Register<ActionTestRequest, ActionTestResponse>(
             RequestNames.ActionTest, RequestKind.Execute, Doors.Window, (request, caller, _) => Task.FromResult(Test(sources, request, caller)), RequestChecks.ActionTest);
         bridge.Register<OptionsListRequest, OptionsListResponse>(
-            RequestNames.OptionsList, RequestKind.Read, Doors.WindowAndMcp, (request, _, _) => Task.FromResult(Options(sources, request)));
+            RequestNames.OptionsList, RequestKind.Read, Doors.WindowAndMcp, (request, _, ct) => OptionsAsync(sources, request, ct));
         bridge.Register<ScriptsTestRequest, ActionTestResponse>(
             RequestNames.ScriptsTest, RequestKind.Execute, Doors.WindowAndMcp, (request, caller, _) => Task.FromResult(TestScript(sources, request.Id, caller)), RequestChecks.ScriptsTest);
         bridge.Register<ActionRunRequest, ActionFinishedView>(
@@ -54,6 +57,20 @@ public static class ActionsRequests
         return Test(sources, new ActionTestRequest(new Action { Name = $"Probar {id}", Steps = [step] }), caller);
     }
 
+    // Las zonas preguntan a OpenRGB por la cola de PcLights; las demás listas salen de lo que ya está en memoria.
+    private static async Task<Result<OptionsListResponse>> OptionsAsync(EditSources sources, OptionsListRequest request, CancellationToken ct)
+    {
+        if (request.List != OptionsList.PcLightZones)
+        {
+            return Options(sources, request);
+        }
+
+        IReadOnlyList<PcLightZone>? zones = sources.PcLights is { } lights ? await lights.ZonesAsync(ct).ConfigureAwait(false) : null;
+        return zones is null
+            ? new OptionsListResponse([], PcLightZonesUnavailable)
+            : new OptionsListResponse([.. zones.Select(zone => new OptionItem(zone.Zone, Detail: zone.Device))]);
+    }
+
     private static Result<OptionsListResponse> Options(EditSources sources, OptionsListRequest request)
     {
         ObsState obs = sources.State.Current.Obs;
@@ -64,7 +81,7 @@ public static class ActionsRequests
             OptionsList.Scripts => new OptionsListResponse([.. sources.Library.ListScripts().Select(script => new OptionItem(script.Id, Detail: script.Manifest.Name))]),
             OptionsList.Windows => new OptionsListResponse(
                 [.. sources.Windows.List().Select(window => new OptionItem(window.Title, Detail: window.Process)).DistinctBy(item => (item.Name, item.Detail)).OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase)]),
-            _ => Result<OptionsListResponse>.Fail(ErrorCodes.InvalidData, $"No hay una lista {request.List}: van scenes, inputs, scripts o windows.", "list"),
+            _ => Result<OptionsListResponse>.Fail(ErrorCodes.InvalidData, $"No hay una lista {request.List}: van scenes, inputs, scripts, windows o pcLightZones.", "list"),
         };
     }
 

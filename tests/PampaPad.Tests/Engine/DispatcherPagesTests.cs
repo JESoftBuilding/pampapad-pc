@@ -210,6 +210,23 @@ public class DispatcherPagesTests
     }
 
     [Fact]
+    public async Task A_page_put_on_top_already_recording_stays_although_the_notice_of_the_take_arrives_later()
+    {
+        // Abierta encima viendo ya la grabación: no es una que estaba al arrancar, y la regla 2 no la cierra (regla 8; RGB-2).
+        await using var rig = new DispatcherRig(DispatcherRig.Example);
+        bool noticed = false;
+        using IDisposable watch = rig.State.Subscribe((_, after) => Volatile.Write(ref noticed, noticed || after.Obs.Recording == RecordingState.Recording));
+        System.Action release = HoldStateNotices(rig);
+        Recording(rig, RecordingState.Recording);
+        rig.Dispatcher.ToggleOverlay("escenas");
+        release();
+        await Poll.Until(() => Volatile.Read(ref noticed));
+
+        Assert.Equal("escenas", rig.State.Current.OverlayPage);
+        Assert.DoesNotContain(rig.Log.Recent(), entry => entry.Message.StartsWith("La grabación arrancó", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task A_key_hotkey_of_the_base_that_no_longer_rules_does_nothing()
     {
         // Grabando, hasta que la regla 2 registra los de la principal, siguen tomados los atajos de la elegida. HotkeySource manda sólo la

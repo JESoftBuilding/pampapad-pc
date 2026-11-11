@@ -134,7 +134,7 @@ public class Contract
                 [RequestNames.ScriptsReveal] = Pair(Envelope.Request(17, RequestNames.ScriptsReveal, new ScriptsRevealRequest("bancocam")), Envelope.Response(17, new NoData())),
                 [RequestNames.LibraryReveal] = Pair(Envelope.Request(18, RequestNames.LibraryReveal, new NoData()), Envelope.Response(18, new NoData())),
                 [RequestNames.SettingsSave] = Pair(
-                    Envelope.Request(20, RequestNames.SettingsSave, new SettingsSaveRequest(StartWithWindows: false, SkippedVersion: "", McpEnabled: false, ConsolePort: "COM20")), Envelope.Response(20, settingsSaved)),
+                    Envelope.Request(20, RequestNames.SettingsSave, new SettingsSaveRequest(StartWithWindows: false, SkippedVersion: "", McpEnabled: false, ConsolePort: "COM20", PcLights: new PcLightsChoice("ASUS ROG STRIX B450-F GAMING II", "RGB Header"))), Envelope.Response(20, settingsSaved)),
                 [RequestNames.ConsolePorts] = Pair(
                     Envelope.Request(23, RequestNames.ConsolePorts, new NoData()),
                     Envelope.Response(23, new ConsolePortsResponse([new ConsolePortView("COM1", "Puerto de comunicaciones", null), new ConsolePortView("COM20", "USB-Enhanced-SERIAL CH343", "1A86:55D3")]))),
@@ -168,7 +168,8 @@ public class Contract
     }
 
     private static readonly SettingsView SampleSettings = new(
-        true, "COM20", null, StartupStatus.On, new ObsSettingsView("127.0.0.1:4455"), McpEnabled: true, McpCommand: @"claude mcp add --scope user pampapad -- ""C:\Users\Emmanuel\AppData\Local\PampaPad\current\PampaPad.Mcp.exe""");
+        true, "COM20", null, StartupStatus.On, new ObsSettingsView("127.0.0.1:4455"), McpEnabled: true, McpCommand: @"claude mcp add --scope user pampapad -- ""C:\Users\Emmanuel\AppData\Local\PampaPad\current\PampaPad.Mcp.exe""",
+        PcLights: new PcLightsChoice("ASUS ROG STRIX B450-F GAMING II", "RGB Header"));
 
     // El texto de un .cmd, que viaja sólo al MCP (scripts.read con content, scripts.write con files).
     private const string BancocamText = "@echo off\r\nscrcpy --window-title Banco\r\n";
@@ -232,6 +233,7 @@ public class Contract
         OverlayPage = "luces",
         Running = [new RunningAction(RunId, "marca-largo", Trigger.Key)],
         Console = new ConsoleLink(ConsoleLinkState.Connected, "COM20") { Firmware = "0.1.5", Capabilities = 0xC7, Energy = 0, SettingsFingerprint = 0x6BEB, SettingsInSync = true, Receiver = new ReceiverLink("0.1.0", true) },
+        PcLights = new PcLightsLink(PcLightsLinkState.Connected, "ASUS ROG STRIX B450-F GAMING II · RGB Header"),
         Alert = new GraveAlert(AlertTexts.MicMuted, 2, 2, "MIC MUDO", "ESTAS GRABANDO", "", "MIC: ABRIR   CLICK: YA SE", At, Light: true, Sound: true),
     });
 
